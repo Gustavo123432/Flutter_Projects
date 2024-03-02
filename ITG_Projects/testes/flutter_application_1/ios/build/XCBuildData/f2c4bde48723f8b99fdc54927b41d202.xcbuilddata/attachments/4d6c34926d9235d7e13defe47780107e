@@ -1,0 +1,15 @@
+{
+  "" : {
+    "const-values" : "/Users/itgdevops/ITG_Projects/flutter_application_1/ios/build/Runner.build/Release-iphoneos/RunnerTests.build/Objects-normal/arm64/RunnerTests-master.swiftconstvalues",
+    "dependencies" : "/Users/itgdevops/ITG_Projects/flutter_application_1/ios/build/Runner.build/Release-iphoneos/RunnerTests.build/Objects-normal/arm64/RunnerTests-master.d",
+    "diagnostics" : "/Users/itgdevops/ITG_Projects/flutter_application_1/ios/build/Runner.build/Release-iphoneos/RunnerTests.build/Objects-normal/arm64/RunnerTests-master.dia",
+    "emit-module-dependencies" : "/Users/itgdevops/ITG_Projects/flutter_application_1/ios/build/Runner.build/Release-iphoneos/RunnerTests.build/Objects-normal/arm64/RunnerTests-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/itgdevops/ITG_Projects/flutter_application_1/ios/build/Runner.build/Release-iphoneos/RunnerTests.build/Objects-normal/arm64/RunnerTests-master-emit-module.dia",
+    "swift-dependencies" : "/Users/itgdevops/ITG_Projects/flutter_application_1/ios/build/Runner.build/Release-iphoneos/RunnerTests.build/Objects-normal/arm64/RunnerTests-master.swiftdeps"
+  },
+  "/Users/itgdevops/ITG_Projects/flutter_application_1/ios/RunnerTests/RunnerTests.swift" : {
+    "index-unit-output-path" : "/Runner.build/Release-iphoneos/RunnerTests.build/Objects-normal/arm64/RunnerTests.o",
+    "llvm-bc" : "/Users/itgdevops/ITG_Projects/flutter_application_1/ios/build/Runner.build/Release-iphoneos/RunnerTests.build/Objects-normal/arm64/RunnerTests.bc",
+    "object" : "/Users/itgdevops/ITG_Projects/flutter_application_1/ios/build/Runner.build/Release-iphoneos/RunnerTests.build/Objects-normal/arm64/RunnerTests.o"
+  }
+}
