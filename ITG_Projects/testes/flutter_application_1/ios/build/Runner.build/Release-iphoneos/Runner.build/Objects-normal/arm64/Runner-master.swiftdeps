@@ -1,0 +1,8 @@
+version: "Apple Swift version 5.9 (swiftlang-5.9.0.128.108 clang-1500.0.40.1)"
+options: "b7d64e83082e449dae0dba38977213425ab9cc667d747eb795599c4634881030"
+build_start_time: [1701771359, 413028000]
+build_end_time: [1701771403, 35592000]
+inputs:
+  "/Users/itgdevops/ITG_Projects/flutter_application_1/ios/Runner/AppDelegate.swift": [1695920863, 410772576]
+  ? "/Users/itgdevops/ITG_Projects/flutter_application_1/ios/build/Runner.build/Release-iphoneos/Runner.build/DerivedSources/GeneratedAssetSymbols.swift"
+  : [1701771359, 268425828]

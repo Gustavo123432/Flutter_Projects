@@ -1,0 +1,20 @@
+dependencies: \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/ios/Runner/GeneratedPluginRegistrant.m \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/ios/Runner/GeneratedPluginRegistrant.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Modules/module.modulemap \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/Flutter.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterAppDelegate.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterMacros.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterPlugin.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterBinaryMessenger.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterChannels.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterCodecs.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterPlatformViews.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterTexture.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterCallbackCache.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterDartProject.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterEngine.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterEngineGroup.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterHeadlessDartRunner.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterPluginAppLifeCycleDelegate.h \
+  /Users/itgdevops/ITG_Projects/flutter_application_1/build/ios/Debug-iphonesimulator/Flutter.framework/Headers/FlutterViewController.h
