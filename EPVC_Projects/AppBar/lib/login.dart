@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:my_flutter_project/Admin/users.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter/foundation.dart';
@@ -22,6 +23,18 @@ class LoginForm extends StatefulWidget {
 class _LoginFormState extends State<LoginForm> {
   final TextEditingController NameController = TextEditingController();
   final TextEditingController PwdController = TextEditingController();
+  bool _obscureText = true;
+
+  void _togglePasswordVisibility() {
+    setState(() {
+      _obscureText = !_obscureText;
+    });
+    Future.delayed(Duration(seconds: 10), () {
+      setState(() {
+        _obscureText = true;
+      });
+    });
+  }
 
   void login() async {
     // print("Iniciando login...");
@@ -61,9 +74,8 @@ class _LoginFormState extends State<LoginForm> {
       //print("Resposta da API: $responseData");
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('permissao', tar[0]['Permissao'].toString());
-      await prefs.setString('username', tar[0]['User'].toString());
+      await prefs.setString('username', tar[0]['Email'].toString());
       await prefs.setString('idUser', tar[0]['IdUser'].toString());
-      verifylogin(context);
     } else if (tar == 'false') {
       final snackBar = SnackBar(
         behavior: SnackBarBehavior.floating,
@@ -152,9 +164,13 @@ class _LoginFormState extends State<LoginForm> {
                   child: TextField(
                     controller: NameController,
                     decoration: const InputDecoration(
-                      labelText: 'Username',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person), // User icon
+                      labelText: 'Email',
+                      border: OutlineInputBorder(
+                  borderSide: BorderSide(
+                      color: Color.fromARGB(
+                          255, 130, 201, 189)), // Change border color here
+                ),
+                      prefixIcon: Icon(Icons.email), // User icon
                     ),
                   ),
                 ),
@@ -166,17 +182,27 @@ class _LoginFormState extends State<LoginForm> {
                 width: 350,
                 child: Container(
                   color: Colors.white,
-                  child: TextField(
-                    controller: PwdController,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.lock), // Lock icon
+                child: TextField(
+                  controller: PwdController,
+                  obscureText: _obscureText,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color.fromARGB(
+                            255, 130, 201, 189), // Change border color here
+                      ),
                     ),
-                    obscureText: true,
+                    prefixIcon: Icon(Icons.lock), // User icon
+                    suffixIcon: IconButton(
+                      icon: _obscureText
+                          ? Icon(Icons.visibility)
+                          : Icon(Icons.visibility_off),
+                      onPressed: _togglePasswordVisibility,
+                    ),
                   ),
                 ),
-              ),
+              ),),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
@@ -184,7 +210,8 @@ class _LoginFormState extends State<LoginForm> {
                 },
                 style: ElevatedButton.styleFrom(
                   // ignore: deprecated_member_use
-                  backgroundColor: Color.fromARGB(255, 246, 141, 45), // Button color
+                  backgroundColor:
+                      Color.fromARGB(255, 246, 141, 45), // Button color
                   minimumSize: const Size(350, 50), // Button size
                 ),
                 child: const Text(
@@ -204,7 +231,7 @@ class _LoginFormState extends State<LoginForm> {
 
   Widget mobileScreenLayout() {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color.fromARGB(255, 255, 255, 255),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -218,27 +245,61 @@ class _LoginFormState extends State<LoginForm> {
               ),
             ),
           ),
+          const SizedBox(
+            height: 20,
+          ),
           SizedBox(
             width: 350,
             child: TextField(
               controller: NameController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(
+                      color: Color.fromARGB(
+                          255, 130, 201, 189)), // Change border color here
+                ),
+                prefixIcon: Icon(Icons.email), // User icon
+              ),
             ),
+          ),
+          const SizedBox(
+            height: 20,
           ),
           SizedBox(
             width: 350,
             child: TextField(
               controller: PwdController,
-              decoration: const InputDecoration(labelText: 'Palavra Passe'),
-              obscureText: true,
+              obscureText: _obscureText,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Color.fromARGB(
+                        255, 130, 201, 189), // Change border color here
+                  ),
+                ),
+                prefixIcon: Icon(Icons.lock), // User icon
+                suffixIcon: IconButton(
+                  icon: _obscureText
+                      ? Icon(Icons.visibility)
+                      : Icon(Icons.visibility_off),
+                  onPressed: _togglePasswordVisibility,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
+            style: ButtonStyle(
+              backgroundColor: MaterialStateProperty.all<Color>(
+                Color.fromARGB(255, 246, 141, 45), // Button color
+              ),
+            ),
             onPressed: () {
               login();
             },
-            child: const Text('Login'),
+            child: Text('Login'), // Add a child widget to the button
           ),
         ],
       ),
@@ -258,8 +319,8 @@ void verifylogin(context) async {
     if (type == "Administrador") //é adm
     {
       print("Administrador");
-      /*Navigator.push(
-          context, MaterialPageRoute(builder: (context) => Dashboard()));*/
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => UserTable()));
     } else if (type == "Utilizador") {
       //é user
       print("User");
