@@ -42,7 +42,7 @@ class _UserTableState extends State<UserTable> {
     var user = prefs.getString("username");
 
     final response = await http.post(
-      Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
+      Uri.parse('https://services.interagit.com/registarCallAPI_Post.php'),
       body: {
         'query_param': '1',
         'user': user,
@@ -213,7 +213,7 @@ class _UserTableState extends State<UserTable> {
             SizedBox(
               width: 8,
             ),
-           /* users != null && users.toString() != "null"
+            users != null && users.toString() != "null"
                 ? Text(
                     'Bem Vindo(a): ' +
                         users[0]['Nome'] +
@@ -221,7 +221,7 @@ class _UserTableState extends State<UserTable> {
                         users[0]['Apelido'],
                     style: TextStyle(color: Colors.white), // Texto será branco
                   )
-                : Text(""),*/
+                : Text(""),
           ],
         ),
         actions: [

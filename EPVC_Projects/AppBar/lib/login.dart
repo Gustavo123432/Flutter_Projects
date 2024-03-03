@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Admin/users.dart';
+import 'package:my_flutter_project/Aluno/barList.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter/foundation.dart';
@@ -320,7 +321,7 @@ void verifylogin(context) async {
     {
       print("Administrador");
       Navigator.push(
-          context, MaterialPageRoute(builder: (context) => UserTable()));
+          context, MaterialPageRoute(builder: (context) => ListaProdutos()));
     } else if (type == "Utilizador") {
       //é user
       print("User");
