@@ -73,8 +73,8 @@ class _DrawerAdminState extends State<DrawerAdmin> {
                   MaterialPageRoute(builder: (context) => Dados()),
                 );*/
               },
-              leading: Icon(Icons.sd_card),
-              title: Text('Dados'),
+              leading: Icon(Icons.local_pizza),
+              title: Text('Produtos'),
             ),
             Spacer(),
             DefaultTextStyle(

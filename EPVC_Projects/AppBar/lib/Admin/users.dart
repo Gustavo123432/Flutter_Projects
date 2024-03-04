@@ -20,6 +20,7 @@ class _UserTableState extends State<UserTable> {
   // Mapa para armazenar os controladores de texto para cada linha da tabela
   Map<int, TextEditingController> nomeControllers = {};
   Map<int, TextEditingController> apelidoControllers = {};
+  Map<int, TextEditingController> turmaController = {};
   Map<int, TextEditingController> usercontrollers = {};
 
   void _toggleEditMode() {
@@ -61,11 +62,12 @@ class _UserTableState extends State<UserTable> {
     var user = prefs.getString("username");
 
     var response = await http.get(Uri.parse(
-        'https://services.interagit.com/registarCallAPI_GET.php?query_param=2'));
+        'http://api.gfserver.pt/appBarAPI_GET.php?query_param=2'));
 
     if (response.statusCode == 200) {
       setState(() {
         tableUsers = json.decode(response.body);
+        print (tableUsers);
       });
     }
   }
@@ -87,12 +89,17 @@ class _UserTableState extends State<UserTable> {
     return apelidoControllers[index];
   }
 
+   TextEditingController? getTurmaController(int index, String turma) {
+    turmaController[index] ??= TextEditingController(text: turma);
+    return turmaController[index];
+  }
+
   // Função para atualizar um usuário
   Future<void> updateUser(String userId, String user, String nome,
-      String apelido, String permissao) async {
+      String apelido,String turma, String permissao) async {
     try {
       var response = await http.get(Uri.parse(
-          'https://services.interagit.com/registarCallAPI_GET.php?query_param=3&userId=$userId&user=$user&nome=$nome&apelido=$apelido&permissao=$permissao'));
+          'http://api.gfserver.pt/appBarAPI_GET.php?query_param=3&userId=$userId&user=$user&nome=$nome&apelido=$apelido&turma=$turma&permissao=$permissao'));
       if (response.statusCode == 200) {
         // Se a atualização foi bem-sucedida, exiba uma mensagem ou faça qualquer outra ação necessária
         ScaffoldMessenger.of(context).showSnackBar(
@@ -213,7 +220,7 @@ class _UserTableState extends State<UserTable> {
             SizedBox(
               width: 8,
             ),
-           /* users != null && users.toString() != "null"
+           users != null && users.toString() != "null"
                 ? Text(
                     'Bem Vindo(a): ' +
                         users[0]['Nome'] +
@@ -221,7 +228,7 @@ class _UserTableState extends State<UserTable> {
                         users[0]['Apelido'],
                     style: TextStyle(color: Colors.white), // Texto será branco
                   )
-                : Text(""),*/
+                : Text(""),
           ],
         ),
         actions: [
@@ -251,7 +258,7 @@ class _UserTableState extends State<UserTable> {
               child: Container(
                 decoration: BoxDecoration(
                   color: Color.fromARGB(255, 255, 255, 255)
-                      .withOpacity(0.90), // Cor preta com opacidade de 40%
+                      .withOpacity(0.80), // Cor preta com opacidade de 40%
                 ),
               ),
             ),
@@ -263,6 +270,7 @@ class _UserTableState extends State<UserTable> {
                   DataColumn(label: Text('Email')),
                   DataColumn(label: Text('Nome')),
                   DataColumn(label: Text('Apelido')),
+                  DataColumn(label: Text('Turma')),
                   DataColumn(label: Text('Permissão')),
                   DataColumn(label: Text('')),
                   DataColumn(label: Text('')),
@@ -274,7 +282,7 @@ class _UserTableState extends State<UserTable> {
                   return DataRow(
                     cells: [
                       DataCell(Text(user['IdUser'])),
-                      DataCell(Text(user['User'])),
+                      DataCell(Text(user['Email'])),
                       DataCell(isEditing
                           ? TextField(
                               controller:
@@ -297,6 +305,17 @@ class _UserTableState extends State<UserTable> {
                               },
                             )
                           : Text(user['Apelido'])),
+                          DataCell(isEditing
+                          ? TextField(
+                              controller:
+                                  getTurmaController(index, user['Turma']),
+                              onChanged: (newValue) {
+                                setState(() {
+                                  user['Turma'] = newValue;
+                                });
+                              },
+                            )
+                          : Text(user['Turma'])),
                       DataCell(
                         isEditing
                             ? DropdownButtonFormField<String>(
@@ -325,6 +344,7 @@ class _UserTableState extends State<UserTable> {
                                     user['Email'],
                                     user['Nome'],
                                     user['Apelido'],
+                                    user['Turma'],
                                     user['Permissao'],
                                   );
                                   isEditing = false;

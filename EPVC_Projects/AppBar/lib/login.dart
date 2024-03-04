@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Admin/users.dart';
 import 'package:my_flutter_project/Aluno/barList.dart';
+import 'package:my_flutter_project/Aluno/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter/foundation.dart';
@@ -158,6 +159,9 @@ class _LoginFormState extends State<LoginForm> {
                   height: 150,
                 ),
               ),
+              const SizedBox(
+            height: 20,
+          ),
               SizedBox(
                 width: 350,
                 child: Container(
@@ -321,7 +325,7 @@ void verifylogin(context) async {
     {
       print("Administrador");
       Navigator.push(
-          context, MaterialPageRoute(builder: (context) => ListaProdutos()));
+          context, MaterialPageRoute(builder: (context) => homeAluno()));
     } else if (type == "Utilizador") {
       //é user
       print("User");
