@@ -325,8 +325,21 @@ void verifylogin(context) async {
     {
       print("Administrador");
       Navigator.push(
-          context, MaterialPageRoute(builder: (context) => homeAluno()));
-    } else if (type == "Utilizador") {
+          context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+    } 
+    else if (type == "Professor") {
+      //é user
+      print("Professor");
+      /*Navigator.push(
+          context, MaterialPageRoute(builder: (context) => DashboardUsers()));*/
+    }
+     else if (type == "Funcionária") {
+      //é user
+      print("Funcionária");
+      /*Navigator.push(
+          context, MaterialPageRoute(builder: (context) => DashboardUsers()));*/
+    }
+    else if (type == "Utilizador") {
       //é user
       print("User");
       /*Navigator.push(

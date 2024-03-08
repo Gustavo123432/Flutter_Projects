@@ -24,7 +24,7 @@ class _ListaProdutosState extends State<ListaProdutos> {
       );
       if (response.statusCode == 200) {
         final dynamic responseData = json.decode(response.body);
-        print(responseData); // Debugging: Print response data to console
+     // Debugging: Print response data to console
         if (responseData is List<dynamic>) {
           setState(() {
             items = responseData.cast<Map<String, dynamic>>(); // Cast to List<Map<String, dynamic>>

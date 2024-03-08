@@ -32,9 +32,10 @@ class _DrawerAdminState extends State<DrawerAdmin> {
                 shape: BoxShape.circle,
               ),
               child: Image.asset(
-                'lib/assets/logoCalldo.png',
+                'lib/assets/barapp.png',
                 fit: BoxFit.contain,
               ),
+              
             ),
             ListTile(
               onTap: () {
