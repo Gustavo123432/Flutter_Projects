@@ -152,7 +152,14 @@ class _HomeAlunoState extends State<HomeAluno> {
           children: [
             IconButton(
               icon: Icon(Icons.home, color: Colors.white),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HomeAlunoMain(),
+                  ),
+                );
+              },
             ),
             IconButton(
               icon: Icon(Icons.notifications, color: Colors.white),
@@ -273,6 +280,7 @@ class CategoryPage extends StatefulWidget {
 
 class _CategoryPageState extends State<CategoryPage> {
   List<dynamic> items = [];
+  
 
   @override
   void initState() {
@@ -297,7 +305,6 @@ class _CategoryPageState extends State<CategoryPage> {
         if (responseData is List<dynamic>) {
           setState(() {
             items = responseData.cast<Map<String, dynamic>>();
-            print(items);
           });
         } else {
           throw Exception('Response data is not a List<dynamic>');
@@ -309,6 +316,7 @@ class _CategoryPageState extends State<CategoryPage> {
       print('Error fetching data: $e');
     }
   }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -320,6 +328,8 @@ class _CategoryPageState extends State<CategoryPage> {
         itemCount: items.length,
         itemBuilder: (context, index) {
           final item = items[index];
+          final double preco = double.parse(item['Preco']);
+          
           return Card(
             child: ListTile(
               leading: Image.memory(
@@ -330,7 +340,7 @@ class _CategoryPageState extends State<CategoryPage> {
               ),
               title: Text(item['Nome']),
               subtitle: Text(
-                items[index]['Qtd'] == "1" ? "Disponível" : "Indisponível",
+                items[index]['Qtd'] == "1" ? "Disponível - ${preco.toStringAsFixed(2).toString()..replaceAll('.', ',')}€" : "Indisponível",
               ),
               trailing: Visibility(
                 visible: items[index]['Qtd'] == "1",
@@ -354,7 +364,14 @@ class _CategoryPageState extends State<CategoryPage> {
           children: [
             IconButton(
               icon: Icon(Icons.home, color: Colors.white),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HomeAlunoMain(),
+                  ),
+                );
+              },
             ),
             IconButton(
               icon: Icon(Icons.notifications, color: Colors.white),
@@ -420,43 +437,54 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     return min + rng.nextInt(max - min + 1);
   }
 
-  void sendOrderToApi(List<Map<String, dynamic>> cartItems) async {
+ 
+
+  void sendOrderToApi(List<Map<String, dynamic>> cartItems, String total) async {
+  // Generate a random order number
   int orderNumber = generateRandomNumber(1000, 9999);
- /* try {
+
+  try {
     // Extracting names from cart items
-    */List<dynamic> itemNames = cartItems.map((item) => item['Nome']).toList();
-/*
-    // URL da sua API para enviar os detalhes do pedido
-    String apiUrl = 'https://example.com/api/order';
-    */
-    // Gera um número único de pedido (por exemplo, usando um timestamp)
-    //    
-    // Corpo da requisição POST contendo os detalhes do pedido
-    Map<String, dynamic> requestBody = {
-      'firstName': users[0]['Nome'],
-      'lastName': users[0]['Apelido'],
-      'orderNumber': orderNumber,
-      'orderDetails': itemNames,
-    };
-    print (requestBody);
-    // Enviar a requisição POST para a API
-    /*var response = await http.post(
-      Uri.parse(apiUrl),
-      body: json.encode(requestBody),
-      headers: {'Content-Type': 'application/json'},
-    );
+    List<String> itemNames = cartItems.map((item) => item['Nome'] as String).toList();
     
-    // Verificar se a requisição foi bem-sucedida (código de status 200)
+    // Extract user information
+    var turma = users[0]['Turma'];
+    var nome = users[0]['Nome'];
+    var apelido = users[0]['Apelido'];
+
+    // Encode cartItems to JSON string
+    String cartItemsJson = json.encode(cartItems);
+
+    // Send GET request to API
+    var response = await http.get(Uri.parse(
+      'http://api.gfserver.pt/appBarAPI_GET.php?query_param=5&nome=$nome&apelido=$apelido&orderNumber=$orderNumber&turma=$turma&descricao=$itemNames&total=$total',
+    ));
+
     if (response.statusCode == 200) {
-      print('Pedido enviado com sucesso para a API');
+      // If the request is successful, show a success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pedido enviado com sucesso para a API'),
+        ),
+      );
     } else {
-      print('Erro ao enviar o pedido para a API: ${response.reasonPhrase}');
+      // If there's an error, show an error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao enviar o pedido para a API'),
+        ),
+      );
     }
   } catch (e) {
-    print('Erro ao enviar o pedido para a API: $e');
-  }*/
+    print('Erro ao fazer a requisição GET: $e');
+    // Show error message if request fails
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Erro ao enviar o pedido para a API'),
+      ),
+    );
+  }
 }
-
   void updateItemCountMap() {
     itemCountMap.clear();
     for (var item in cartItems) {
@@ -469,8 +497,19 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
+  double calculateTotal() {
+  double total = 0.0;
+  for (var item in cartItems) {
+    double preco = double.parse(item['Preco']);
+    total += preco;
+  }
+  return total;
+}
+
+
   @override
   Widget build(BuildContext context) {
+    double total = calculateTotal();
     return Scaffold(
       appBar: AppBar(
         title: Text('Carrinho Compras'),
@@ -527,11 +566,18 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               },
             ),
           ),
+          
           Container(
-            margin: EdgeInsets.only(
-                bottom: 16.0), // Define a margem na parte inferior
-            child: ElevatedButton(
-              onPressed: () {
+          margin: EdgeInsets.only(
+              bottom: 16.0), // Define a margem na parte inferior
+          child: Column(
+            children: [
+              Text(
+                'Total: ${total.toStringAsFixed(2).replaceAll('.', ',')}€',
+                style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+              ),
+              ElevatedButton(
+                onPressed: () {
                 showDialog(
                   context: context,
                   builder: (BuildContext context) {
@@ -548,7 +594,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                       'Confirmação de Pedido com Sucesso')),
                             );
 
-                            sendOrderToApi(cartItems);
+                            sendOrderToApi(cartItems, total.toString());
 
                             cartItems.clear(); // Clear the cart after confirming the order
                             updateItemCountMap();
@@ -567,10 +613,12 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                 );
               },
               child: Text('Fazer Pedido'),
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
+    ),
       bottomNavigationBar: BottomAppBar(
         color: Colors.blueGrey[900],
         child: Row(
@@ -578,7 +626,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           children: [
             IconButton(
               icon: Icon(Icons.home, color: Colors.white),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HomeAlunoMain(),
+                  ),
+                );
+              },
             ),
             IconButton(
               icon: Icon(Icons.notifications, color: Colors.white),
