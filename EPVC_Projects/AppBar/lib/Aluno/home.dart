@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +13,7 @@ void main() {
 
 List<Map<String, dynamic>> cartItems =
     []; // Lista global para armazenar os itens no carrinho
+List<Map<String, dynamic>> recentBuysMapped = [];
 
 class HomeAlunoMain extends StatelessWidget {
   @override
@@ -32,17 +34,14 @@ class HomeAluno extends StatefulWidget {
 }
 
 class _HomeAlunoState extends State<HomeAluno> {
-
- dynamic users;
- dynamic recentBuy;
+  dynamic users;
+  List<dynamic> recentBuys = [];
 
   @override
   void initState() {
     super.initState();
     UserInfo();
-     Timer.periodic(Duration(seconds: 1), (timer) {
-      viewrecent();
-    });
+
 
   }
 
@@ -60,34 +59,44 @@ class _HomeAlunoState extends State<HomeAluno> {
     if (response.statusCode == 200) {
       setState(() {
         users = json.decode(response.body);
+    viewRecent(users);
       });
     }
   }
 
-  Future<void> viewrecent() async {
+  Future<void> viewRecent(dynamic userr) async {
     try {
-      // Obter informações do usuário do primeiro usuário na lista de usuários
-      var nome = users[0]['Nome'];
-      var apelido = users[0]['Apelido'];
+      if (userr != null) {
+         for (var userData in userr) {
+          var nome = userData['Nome'];
+          var apelido = userData['Apelido'];
+          var user = nome + " " + apelido;
+         
 
-      var user = nome + " " + apelido;
-        // Enviar solicitação POST para a API para cada pedido
-        var response = await http.post(
-          Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
-          body: {
-            'query_param': '7',
-            'user': user,
-          },
-        );
-        if (response.statusCode == 200) {
-          setState(() {
-        recentBuy = json.decode(response.body);
-        print (recentBuy);
-      });
-        } else {
-          // Se houver um erro, mostrar uma mensagem de erro
-          print('Erro ao enviar pedido para a API');
+          var response = await http.post(
+            Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
+            body: {
+              'query_param': '7',
+              'user': user,
+            },
+          );
+
+          if (response.statusCode == 200) {
+            setState(() {
+              // Adiciona diretamente o mapa à lista recentBuys
+              recentBuys = json.decode(response.body);
+              recentBuysMapped = recentBuys.map((productString) {
+                Map<String, dynamic> productMap = productString;
+                return productMap;
+              }).toList();
+            });
+          } else {
+            print('Erro ao enviar pedido para a API');
+          }
         }
+      } else {
+        print('Usuários não carregados ainda');
+      }
     } catch (e) {
       print('Erro ao enviar pedidos para a API: $e');
     }
@@ -130,22 +139,27 @@ class _HomeAlunoState extends State<HomeAluno> {
             ),
           ),
           Container(
-            height: 150.0,
+            margin: EdgeInsets.symmetric(vertical: 8.0),
+            height: 180.0,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: 5,
+              itemCount: recentBuysMapped.length,
               itemBuilder: (context, index) {
+                var product = recentBuysMapped[index];
+                var title = product['Descricao'];
+                var price = product['Preco'].toString();
+                var imageBase64 = product['Imagem'];
+
                 return buildProductSection(
-                  imagePath: 'path/to/image_$index.jpg',
-                  title: 'Product $index',
-                  price: '5.55',
+                  imagePath: imageBase64,
+                  title: title,
+                  price: price,
                 );
               },
             ),
           ),
-          SizedBox(height: 50.0),
           Container(
-            margin: EdgeInsets.only(left: 16.0, right: 16.0, top: 32),
+            margin: EdgeInsets.only(left: 16.0, right: 16.0, top: 50.0),
             child: Text(
               "Categorias",
               style: TextStyle(
@@ -201,6 +215,20 @@ class _HomeAlunoState extends State<HomeAluno> {
                       );
                     },
                   ),
+                  buildCategoryCard(
+                    title: 'Snacks',
+                    backgroundImagePath: 'lib/assets/snacks.jpg',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CategoryPage(
+                            title: 'Snacks',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -245,11 +273,16 @@ class _HomeAlunoState extends State<HomeAluno> {
   }
 
   Widget buildProductSection({
-    required String imagePath,
-    required String title,
-    required String price,
-  }) {
-    return Container(
+  required String imagePath,
+  required String title,
+  required String price,
+}) {
+  return GestureDetector(
+    onTap: () {
+      // Adicionar o item ao carrinho quando o card for clicado
+      addToCart(imagePath, title, price);
+    },
+    child: Container(
       width: MediaQuery.of(context).size.width / 2,
       margin: EdgeInsets.symmetric(horizontal: 4.0),
       decoration: BoxDecoration(
@@ -268,9 +301,12 @@ class _HomeAlunoState extends State<HomeAluno> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Image.asset(imagePath, height: 80.0),
+            Image.memory(
+              base64.decode(imagePath),
+              height: 80.0,
+            ),
             Text(
-              title,
+              title.replaceAll('"', ''),
               style: TextStyle(
                 fontSize: 18.0,
                 fontWeight: FontWeight.bold,
@@ -280,11 +316,11 @@ class _HomeAlunoState extends State<HomeAluno> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'R\$',
+                  'Preço:',
                   style: TextStyle(fontSize: 14.0),
                 ),
                 Text(
-                  price,
+                  "${double.parse(price).toStringAsFixed(2).replaceAll('.', ',')}€",
                   style: TextStyle(fontSize: 16.0),
                 ),
               ],
@@ -292,8 +328,41 @@ class _HomeAlunoState extends State<HomeAluno> {
           ],
         ),
       ),
+    ),
+  );
+}
+
+void addToCart(String imagePath, String title, String price) {
+  // Verifica se os parâmetros necessários não são nulos
+  if (imagePath != null && title != null && price != null) {
+    // Cria um mapa representando o item a ser adicionado ao carrinho
+    Map<String, dynamic> item = {
+      'Imagem': imagePath,
+      'Nome': title.replaceAll('"', ''),
+      'Preco': price,
+    };
+
+    // Atualiza a interface do usuário e adiciona o item ao carrinho
+    setState(() {
+      cartItems.add(item);
+    });
+
+    // Exibe um snackbar para informar ao usuário que o item foi adicionado ao carrinho
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Item adicionado ao carrinho com sucesso!'),
+      ),
+    );
+  } else {
+    // Exibe uma mensagem de erro se algum dos parâmetros for nulo
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Erro: Não foi possível adicionar o item ao carrinho.'),
+      ),
     );
   }
+}
+
 
   Widget buildCategoryCard({
     required String title,
@@ -688,46 +757,47 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
                 ),
                 ElevatedButton(
-  onPressed: () {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        // Calculate itemCount here
-        int itemCount = itemCountMap.length;
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        // Calculate itemCount here
+                        int itemCount = itemCountMap.length;
 
-        return AlertDialog(
-          title: Text('Confirmação do Pedido'),
-          content: Text('Deseja confirmar o pedido?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Confirmação de Pedido com Sucesso'),
-                  ),
-                );
-                sendOrderToApi(cartItems, total.toString());
-                sendRecentOrderToApi(cartItems);
-                cartItems.clear(); // Clear the cart after confirming the order
-                updateItemCountMap();
-              },
-              child: Text('Confirmar'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancelar'),
-            ),
-          ],
-        );
-      },
-    );
-  },
-  child: Text('Fazer Pedido'),
-),
-
+                        return AlertDialog(
+                          title: Text('Confirmação do Pedido'),
+                          content: Text('Deseja confirmar o pedido?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        'Confirmação de Pedido com Sucesso'),
+                                  ),
+                                );
+                                sendOrderToApi(cartItems, total.toString());
+                                sendRecentOrderToApi(cartItems);
+                                cartItems
+                                    .clear(); // Clear the cart after confirming the order
+                                updateItemCountMap();
+                              },
+                              child: Text('Confirmar'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text('Cancelar'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  child: Text('Fazer Pedido'),
+                ),
               ],
             ),
           ),
