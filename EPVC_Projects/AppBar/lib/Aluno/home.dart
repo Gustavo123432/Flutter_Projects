@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
+import 'package:intl/intl.dart';
 
 void main() {
   runApp(HomeAlunoMain());
@@ -31,6 +32,67 @@ class HomeAluno extends StatefulWidget {
 }
 
 class _HomeAlunoState extends State<HomeAluno> {
+
+ dynamic users;
+ dynamic recentBuy;
+
+  @override
+  void initState() {
+    super.initState();
+    UserInfo();
+     Timer.periodic(Duration(seconds: 1), (timer) {
+      viewrecent();
+    });
+
+  }
+
+  void UserInfo() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var user = prefs.getString("username");
+
+    final response = await http.post(
+      Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
+      body: {
+        'query_param': '1',
+        'user': user,
+      },
+    );
+    if (response.statusCode == 200) {
+      setState(() {
+        users = json.decode(response.body);
+      });
+    }
+  }
+
+  Future<void> viewrecent() async {
+    try {
+      // Obter informações do usuário do primeiro usuário na lista de usuários
+      var nome = users[0]['Nome'];
+      var apelido = users[0]['Apelido'];
+
+      var user = nome + " " + apelido;
+        // Enviar solicitação POST para a API para cada pedido
+        var response = await http.post(
+          Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
+          body: {
+            'query_param': '7',
+            'user': user,
+          },
+        );
+        if (response.statusCode == 200) {
+          setState(() {
+        recentBuy = json.decode(response.body);
+        print (recentBuy);
+      });
+        } else {
+          // Se houver um erro, mostrar uma mensagem de erro
+          print('Erro ao enviar pedido para a API');
+        }
+    } catch (e) {
+      print('Erro ao enviar pedidos para a API: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -280,7 +342,6 @@ class CategoryPage extends StatefulWidget {
 
 class _CategoryPageState extends State<CategoryPage> {
   List<dynamic> items = [];
-  
 
   @override
   void initState() {
@@ -316,7 +377,6 @@ class _CategoryPageState extends State<CategoryPage> {
       print('Error fetching data: $e');
     }
   }
-  
 
   @override
   Widget build(BuildContext context) {
@@ -329,7 +389,7 @@ class _CategoryPageState extends State<CategoryPage> {
         itemBuilder: (context, index) {
           final item = items[index];
           final double preco = double.parse(item['Preco']);
-          
+
           return Card(
             child: ListTile(
               leading: Image.memory(
@@ -340,7 +400,9 @@ class _CategoryPageState extends State<CategoryPage> {
               ),
               title: Text(item['Nome']),
               subtitle: Text(
-                items[index]['Qtd'] == "1" ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€" : "Indisponível",
+                items[index]['Qtd'] == "1"
+                    ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
+                    : "Indisponível",
               ),
               trailing: Visibility(
                 visible: items[index]['Qtd'] == "1",
@@ -437,55 +499,56 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     return min + rng.nextInt(max - min + 1);
   }
 
- 
+  void sendOrderToApi(
+      List<Map<String, dynamic>> cartItems, String total) async {
+    // Generate a random order number
+    int orderNumber = generateRandomNumber(1000, 9999);
 
-  void sendOrderToApi(List<Map<String, dynamic>> cartItems, String total) async {
-  // Generate a random order number
-  int orderNumber = generateRandomNumber(1000, 9999);
+    try {
+      // Extracting names from cart items
+      List<String> itemNames =
+          cartItems.map((item) => item['Nome'] as String).toList();
 
-  try {
-    // Extracting names from cart items
-    List<String> itemNames = cartItems.map((item) => item['Nome'] as String).toList();
-    
-    // Extract user information
-    var turma = users[0]['Turma'];
-    var nome = users[0]['Nome'];
-    var apelido = users[0]['Apelido'];
-    var permissao = users[0]['Permissao'];
+      // Extract user information
+      var turma = users[0]['Turma'];
+      var nome = users[0]['Nome'];
+      var apelido = users[0]['Apelido'];
+      var permissao = users[0]['Permissao'];
 
-    // Encode cartItems to JSON string
-    String cartItemsJson = json.encode(cartItems);
+      // Encode cartItems to JSON string
+      String cartItemsJson = json.encode(cartItems);
 
-    // Send GET request to API
-    var response = await http.get(Uri.parse(
-      'http://api.gfserver.pt/appBarAPI_GET.php?query_param=5&nome=$nome&apelido=$apelido&orderNumber=$orderNumber&turma=$turma&permissao=$permissao&descricao=$itemNames&total=$total',
-    ));
+      // Send GET request to API
+      var response = await http.get(Uri.parse(
+        'http://api.gfserver.pt/appBarAPI_GET.php?query_param=5&nome=$nome&apelido=$apelido&orderNumber=$orderNumber&turma=$turma&permissao=$permissao&descricao=$itemNames&total=$total',
+      ));
 
-    if (response.statusCode == 200) {
-      // If the request is successful, show a success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pedido enviado com sucesso para a API'),
-        ),
-      );
-    } else {
-      // If there's an error, show an error message
+      if (response.statusCode == 200) {
+        // If the request is successful, show a success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pedido enviado com sucesso para a API'),
+          ),
+        );
+      } else {
+        // If there's an error, show an error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao enviar o pedido para a API'),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Erro ao fazer a requisição GET: $e');
+      // Show error message if request fails
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erro ao enviar o pedido para a API'),
         ),
       );
     }
-  } catch (e) {
-    print('Erro ao fazer a requisição GET: $e');
-    // Show error message if request fails
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Erro ao enviar o pedido para a API'),
-      ),
-    );
   }
-}
+
   void updateItemCountMap() {
     itemCountMap.clear();
     for (var item in cartItems) {
@@ -499,14 +562,62 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   double calculateTotal() {
-  double total = 0.0;
-  for (var item in cartItems) {
-    double preco = double.parse(item['Preco']);
-    total += preco;
+    double total = 0.0;
+    for (var item in cartItems) {
+      double preco = double.parse(item['Preco']);
+      total += preco;
+    }
+    return total;
   }
-  return total;
-}
 
+  String getLocalDate() {
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat('yyyy-MM-dd').format(now);
+    return formattedDate;
+  }
+
+  Future<void> sendRecentOrderToApi(
+      List<Map<String, dynamic>> recentOrders) async {
+    try {
+      // Obter informações do usuário do primeiro usuário na lista de usuários
+      var nome = users[0]['Nome'];
+      var apelido = users[0]['Apelido'];
+      print(recentOrders);
+
+      for (var order in recentOrders) {
+        // Concatenar informações do usuário para formar o identificador do usuário
+        var user = nome + " " + apelido;
+        var localData = getLocalDate();
+
+        // Extrair a imagem se não for nula, caso contrário, use uma string vazia
+        var imagem = order['Imagem'] ?? '';
+        var preco = order['Preco'] ?? '';
+
+        // Enviar solicitação POST para a API para cada pedido
+        var response = await http.post(
+          Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
+          body: {
+            'query_param': '6',
+            'user': user,
+            'orderDetails': json.encode(order['Nome']),
+            'data': localData.toString(),
+            'imagem': imagem,
+            'preco': preco,
+          },
+        );
+
+        if (response.statusCode == 200) {
+          // Se a solicitação for bem-sucedida, mostrar uma mensagem de sucesso
+          print('Pedido enviado com sucesso para a API');
+        } else {
+          // Se houver um erro, mostrar uma mensagem de erro
+          print('Erro ao enviar pedido para a API');
+        }
+      }
+    } catch (e) {
+      print('Erro ao enviar pedidos para a API: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -567,59 +678,61 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               },
             ),
           ),
-          
           Container(
-          margin: EdgeInsets.only(
-              bottom: 16.0), // Define a margem na parte inferior
-          child: Column(
-            children: [
-              Text(
-                'Total: ${total.toStringAsFixed(2).replaceAll('.', ',')}€',
-                style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text('Confirmação do Pedido'),
-                      content: Text('Deseja confirmar o pedido?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(
-                                      'Confirmação de Pedido com Sucesso')),
-                            );
+            margin: EdgeInsets.only(
+                bottom: 16.0), // Define a margem na parte inferior
+            child: Column(
+              children: [
+                Text(
+                  'Total: ${total.toStringAsFixed(2).replaceAll('.', ',')}€',
+                  style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                ),
+                ElevatedButton(
+  onPressed: () {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        // Calculate itemCount here
+        int itemCount = itemCountMap.length;
 
-                            sendOrderToApi(cartItems, total.toString());
-
-                            cartItems.clear(); // Clear the cart after confirming the order
-                            updateItemCountMap();
-                          },
-                          child: Text('Confirmar'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: Text('Cancelar'),
-                        ),
-                      ],
-                    );
-                  },
+        return AlertDialog(
+          title: Text('Confirmação do Pedido'),
+          content: Text('Deseja confirmar o pedido?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Confirmação de Pedido com Sucesso'),
+                  ),
                 );
+                sendOrderToApi(cartItems, total.toString());
+                sendRecentOrderToApi(cartItems);
+                cartItems.clear(); // Clear the cart after confirming the order
+                updateItemCountMap();
               },
-              child: Text('Fazer Pedido'),
-              ),
-            ],
+              child: Text('Confirmar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancelar'),
+            ),
+          ],
+        );
+      },
+    );
+  },
+  child: Text('Fazer Pedido'),
+),
+
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
+        ],
+      ),
       bottomNavigationBar: BottomAppBar(
         color: Color.fromARGB(255, 246, 141, 45),
         child: Row(
