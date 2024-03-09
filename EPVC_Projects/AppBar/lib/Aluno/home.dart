@@ -146,7 +146,7 @@ class _HomeAlunoState extends State<HomeAluno> {
         ],
       ),
       bottomNavigationBar: BottomAppBar(
-        color: Colors.blueGrey[900],
+        color: Color.fromARGB(255, 246, 141, 45),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -340,7 +340,7 @@ class _CategoryPageState extends State<CategoryPage> {
               ),
               title: Text(item['Nome']),
               subtitle: Text(
-                items[index]['Qtd'] == "1" ? "Disponível - ${preco.toStringAsFixed(2).toString()..replaceAll('.', ',')}€" : "Indisponível",
+                items[index]['Qtd'] == "1" ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€" : "Indisponível",
               ),
               trailing: Visibility(
                 visible: items[index]['Qtd'] == "1",
@@ -350,7 +350,7 @@ class _CategoryPageState extends State<CategoryPage> {
                       cartItems.add(item);
                     });
                   },
-                  child: Text('Buy'),
+                  child: Text('Comprar'),
                 ),
               ),
             ),
@@ -358,7 +358,7 @@ class _CategoryPageState extends State<CategoryPage> {
         },
       ),
       bottomNavigationBar: BottomAppBar(
-        color: Colors.blueGrey[900],
+        color: Color.fromARGB(255, 246, 141, 45),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -451,13 +451,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     var turma = users[0]['Turma'];
     var nome = users[0]['Nome'];
     var apelido = users[0]['Apelido'];
+    var permissao = users[0]['Permissao'];
 
     // Encode cartItems to JSON string
     String cartItemsJson = json.encode(cartItems);
 
     // Send GET request to API
     var response = await http.get(Uri.parse(
-      'http://api.gfserver.pt/appBarAPI_GET.php?query_param=5&nome=$nome&apelido=$apelido&orderNumber=$orderNumber&turma=$turma&descricao=$itemNames&total=$total',
+      'http://api.gfserver.pt/appBarAPI_GET.php?query_param=5&nome=$nome&apelido=$apelido&orderNumber=$orderNumber&turma=$turma&permissao=$permissao&descricao=$itemNames&total=$total',
     ));
 
     if (response.statusCode == 200) {
@@ -620,7 +621,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       ],
     ),
       bottomNavigationBar: BottomAppBar(
-        color: Colors.blueGrey[900],
+        color: Color.fromARGB(255, 246, 141, 45),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
