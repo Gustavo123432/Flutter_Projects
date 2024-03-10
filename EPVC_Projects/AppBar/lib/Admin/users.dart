@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_flutter_project/Admin/addUser.dart';
 import 'package:my_flutter_project/Admin/drawerAdmin.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -140,7 +141,7 @@ class _UserTableState extends State<UserTable> {
       );
     } else {
       var response = await http.get(Uri.parse(
-          'https://services.interagit.com/registarCallAPI_GET.php?query_param=5&idUser=$idUser'));
+          'http://api.gfserver.pt/appBarAPI_GET.php?query_param=11&idUser=$idUser'));
 
       if (response.statusCode == 200) {
         setState(() {
@@ -390,10 +391,10 @@ class _UserTableState extends State<UserTable> {
           SpeedDialChild(
             child: Icon(Icons.add),
             onTap: () {
-              /*Navigator.push(
+              Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => AddUserPage()),
-              );*/
+              );
             },
           ),
         ],

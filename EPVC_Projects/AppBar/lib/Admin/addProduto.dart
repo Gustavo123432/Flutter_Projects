@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,9 +16,11 @@ class _AddProdutoPageState extends State<AddProdutoPage> {
   final _nomeController = TextEditingController();
   final _precoController = TextEditingController();
   String? _role = 'Disponível'; // Default to 'utilizador'
-  File? _image;
   dynamic _selectedImage;
   String _categoryValue = 'Comidas';
+  //Uint8List? _selectedImage;
+File? _image;
+
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +94,6 @@ body: Padding(
         TextFormField(
           controller: _precoController,
           decoration: InputDecoration(labelText: 'Preço (0,70)'),
-          obscureText: true,
           validator: (value) {
             if (value!.isEmpty) {
               return 'Insira o Preço ';
@@ -160,16 +162,15 @@ body: Padding(
             'query_param': '8',
             'nome': nome,
             'categoria': categoria,
-            'preco': preco,
+            'qtd': _role,
+            'preco': preco.replaceAll(',', '.'),
             'imagem': base64Image,
             'permissao': permissao,
           });
 
       if (response.statusCode == 200) {
         dynamic res = json.decode(response.body);
-        print(res);
         String teste = res[0].toString();
-        print(teste);
         if (teste == "1") {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -203,19 +204,14 @@ body: Padding(
       );
     }
   }
+ Future<void> _getImage() async {
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
 
-Future<void> _getImage() async {
-  final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    dynamic imagefile = await pickedFile!.readAsBytes();
 
-  if (pickedFile != null) {
     setState(() {
-      _image = File(pickedFile.path);
-    });
-
-    // You can use _image directly instead of converting it to bytes
-    setState(() {
-      _selectedImage = _image;
+      _selectedImage = imagefile;
     });
   }
-}
 }

@@ -107,7 +107,14 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
         build: (pw.Context context) => [
           pw.Table.fromTextArray(
             data: <List<String>>[
-              ['Nº Pedido', 'Quem pediu', 'Turma', 'Descrição', 'Total    ', 'Estado      '],
+              [
+                'Nº Pedido',
+                'Quem pediu',
+                'Turma',
+                'Descrição',
+                'Total    ',
+                'Estado      '
+              ],
               for (var order in orders)
                 [
                   order.number,
@@ -149,7 +156,6 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 246, 141, 45),
         title: Text('Registo de Pedidos'),
@@ -170,13 +176,13 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return CircularProgressIndicator();
             } else if (snapshot.hasError) {
-              return Text('Error: ${snapshot.error}');
+              return Text('Sem Dados');
             } else {
               return ListView.builder(
                 itemCount: snapshot.data!.length,
                 itemBuilder: (context, index) {
                   PurchaseOrder order = snapshot.data![index];
-                  
+
                   try {
                     formattedTotal = double.parse(order.total)
                         .toStringAsFixed(2)
@@ -194,7 +200,8 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
                         children: [
                           Text('Quem pediu: ${order.requester}'),
                           Text('Turma: ${order.group}'),
-                          Text('Descrição: ${order.description.replaceAll('[', '').replaceAll(']', '')}'),
+                          Text(
+                              'Descrição: ${order.description.replaceAll('[', '').replaceAll(']', '')}'),
                           Text('Total: $formattedTotal€'),
                           Text(
                             'Estado: ${order.status == '0' ? 'Por Fazer' : 'Concluído'}',
@@ -223,10 +230,58 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
           ),
           SpeedDialChild(
             child: Icon(Icons.recycling),
-            onTap: () {},
+            onTap: () {
+              removeAll(context);
+            },
           ),
         ],
       ),
     );
+  }
+
+  Future<void> removeAll(context) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Eliminar'),
+          content: const Text('Pretende Eliminar todos os Dados?'),
+          actions: [
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Fecha o AlertDialog
+              },
+            ),
+            TextButton(
+              child: const Text('Confirmar'),
+              onPressed: () async {
+                removeAllApi();
+                Navigator.of(context).pop();
+                setState(() {
+                  // Atualiza os dados chamando novamente fetchPurchaseOrders
+                  futurePurchaseOrders = fetchPurchaseOrders();
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> removeAllApi() async {
+    var response = await http.get(
+        Uri.parse('http://api.gfserver.pt/appBarAPI_GET.php?query_param=12'));
+
+    if (response.statusCode == 200) {
+      setState(() {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pedidos eliminados com Sucesso'),
+          ),
+        );
+      });
+    }
   }
 }

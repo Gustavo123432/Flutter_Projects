@@ -1,8 +1,9 @@
-/*import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:my_flutter_project/Admin/users.dart';
 
 class AddUserPage extends StatefulWidget {
   @override
@@ -16,8 +17,8 @@ class _AddUserPageState extends State<AddUserPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordConfirmController = TextEditingController();
-    String _categoryValue = '';
-  String? _role = 'utilizador'; // Default to 'utilizador'
+  String _turma = '_______';
+  String _role = 'Administrador'; // Default to 'utilizador'
   File? _image;
   dynamic _selectedImage;
 
@@ -26,7 +27,7 @@ class _AddUserPageState extends State<AddUserPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Adicionar Utilizador'),
-        backgroundColor: Colors.red,
+        backgroundColor: Color.fromARGB(255, 246, 141, 45),
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
@@ -42,67 +43,12 @@ class _AddUserPageState extends State<AddUserPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               SizedBox(height: 20),
-              TextFormField(
-                controller: _nomeController,
-                decoration: InputDecoration(labelText: 'Nome'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Insira o seu nome.';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _apelidoController,
-                decoration: InputDecoration(labelText: 'Apelido'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Insira o seu Apelido.';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _usernameController,
-                decoration: InputDecoration(labelText: 'Utilizador'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Insira o seu Utilizador.';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _passwordController,
-                decoration: InputDecoration(labelText: 'Password'),
-                obscureText: true,
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Insira a sua Password.';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _passwordConfirmController,
-                decoration: InputDecoration(labelText: 'Confirmar Password'),
-                obscureText: true,
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Confirme a Password';
-                  }
-                  /*if (value != null && value != _passwordController) {
-                    return 'Password não coicide';
-                  }*/
-                  return null;
-                },
-              ),
               Text("\nImagem de Perfil\n"),
               GestureDetector(
                   onTap: _getImage,
                   child: CircleAvatar(
                     radius: 50.0,
-                    backgroundColor: Colors.red,
+                    backgroundColor: Color.fromARGB(255, 246, 141, 45),
                     child: ClipOval(
                       child: (_selectedImage != null)
                           ? Image.memory(
@@ -119,29 +65,122 @@ class _AddUserPageState extends State<AddUserPage> {
                             ),
                     ),
                   )),
-              ListTile(
-                title: Text('Administrador'),
-                leading: Radio(
-                  value: 'Administrador',
-                  groupValue: _role,
-                  onChanged: (value) {
-                    setState(() {
-                      _role = value as String?;
-                    });
-                  },
-                ),
+              SizedBox(height: 20),
+              TextFormField(
+                controller: _nomeController,
+                decoration: InputDecoration(labelText: 'Nome'),
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return 'Insira o nome.';
+                  }
+                  return null;
+                },
               ),
-              ListTile(
-                title: Text('Utilizador'),
-                leading: Radio(
-                  value: 'Utilizador',
-                  groupValue: _role,
-                  onChanged: (value) {
-                    setState(() {
-                      _role = value as String?;
-                    });
-                  },
-                ),
+              SizedBox(height: 20),
+              TextFormField(
+                controller: _apelidoController,
+                decoration: InputDecoration(labelText: 'Apelido'),
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return 'Insira o Apelido.';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+              TextFormField(
+                controller: _usernameController,
+                decoration: InputDecoration(labelText: 'Email'),
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return 'Insira o Email.';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+              TextFormField(
+                controller: _passwordController,
+                decoration: InputDecoration(labelText: 'Password'),
+                obscureText: true,
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return 'Insira a sua Password.';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+              TextFormField(
+                controller: _passwordConfirmController,
+                decoration: InputDecoration(labelText: 'Confirmar Password'),
+                obscureText: true,
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return 'Confirme a Password';
+                  }
+                  /*if (value != null && value != _passwordController) {
+                    return 'Password não coicide';
+                  }*/
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+              Text("\nTurma\n"),
+              DropdownButton<String>(
+                value: _turma,
+                items: [
+                  '_______',
+                  'ANIM23_26',
+                  'ANIM22_25',
+                  'ANIM21_24',
+                  'ELE23_26',
+                  'ELE22_25',
+                  'ELE21_24',
+                  'OPT21_24',
+                  'TUR23_26',
+                  'TUR22_25',
+                  'INF23_26',
+                  'INF22_25',
+                  'INF21_24',
+                  'COM.DIG23_26',
+                  'COM.DIG22_25',
+                  'COM.DIG21_24',
+                  'DESP23_26'
+                ].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (String? value) {
+                  setState(() {
+                    _turma = value!;
+                  });
+                },
+              ),
+
+              SizedBox(height: 20),
+              Text("\nPermissão\n"),
+              DropdownButton<String>(
+                value: _role,
+                items: [
+                  'Administrador',
+                  'Professor',
+                  'Funcionária',
+                  'Bar',
+                  'Aluno'
+                ].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (String? value) {
+                  setState(() {
+                    _role = value!;
+                  });
+                },
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -166,8 +205,8 @@ class _AddUserPageState extends State<AddUserPage> {
     String apelido = _apelidoController.text;
     String username = _usernameController.text;
     String password = _passwordController.text;
-    String passwordc = _passwordConfirmController.text;
-    String permissao = _role.toString();
+    String permissao = _role;
+    String turma = _turma;
 
     String? base64Image;
     if (_selectedImage != null) {
@@ -177,7 +216,7 @@ class _AddUserPageState extends State<AddUserPage> {
 
     try {
       var response = await http.post(
-          Uri.parse('https://services.interagit.com/registarCallAPI_POST.php'),
+          Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
           body: {
             'query_param': '2',
             'nome': nome,
@@ -186,6 +225,7 @@ class _AddUserPageState extends State<AddUserPage> {
             'imagem': base64Image,
             'pwd': password,
             'permissao': permissao,
+            'turma': turma,
           });
 
       if (response.statusCode == 200) {
@@ -238,4 +278,3 @@ class _AddUserPageState extends State<AddUserPage> {
     });
   }
 }
-*/

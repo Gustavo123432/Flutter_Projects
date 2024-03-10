@@ -39,7 +39,7 @@ class _HomeAlunoState extends State<HomeAluno> {
   dynamic users;
   List<dynamic> recentBuys = [];
   dynamic checkquantidade;
-    var contador = 1;
+  var contador = 1;
 
   @override
   void initState() {
@@ -100,30 +100,27 @@ class _HomeAlunoState extends State<HomeAluno> {
     );
   }
 
-void CheckQuantidade(String productName) async {
-  // Remove double quotes from the product name
-  String productNamee = productName.replaceAll('"', '');
+  void CheckQuantidade(String productName) async {
+    // Remove double quotes from the product name
+    String productNamee = productName.replaceAll('"', '');
 
-  var response = await http.get(Uri.parse(
-      'http://api.gfserver.pt/appBarAPI_GET.php?query_param=8&nome=$productNamee'));
+    var response = await http.get(Uri.parse(
+        'http://api.gfserver.pt/appBarAPI_GET.php?query_param=8&nome=$productNamee'));
 
-  if (response.statusCode == 200) {
-    setState(() {
-      // Cast the decoded JSON objects to List<Map<String, dynamic>>
-      data = json.decode(response.body).cast<Map<String, dynamic>>();
-      //print(data);
-      //print(json.decode(response.body));
-      if (data.isNotEmpty) {
-  
-  //print(quantidadeDisponivel);
-} else {
-  print('Data is empty');
-}
-
-    });
+    if (response.statusCode == 200) {
+      setState(() {
+        // Cast the decoded JSON objects to List<Map<String, dynamic>>
+        data = json.decode(response.body).cast<Map<String, dynamic>>();
+        //print(data);
+        //print(json.decode(response.body));
+        if (data.isNotEmpty) {
+          //print(quantidadeDisponivel);
+        } else {
+          print('Data is empty');
+        }
+      });
+    }
   }
-}
-
 
   Future<void> viewRecent(dynamic userr) async {
     try {
@@ -170,7 +167,7 @@ void CheckQuantidade(String productName) async {
           '',
           style: TextStyle(color: Colors.white),
         ),
-         actions: [
+        actions: [
           IconButton(
             onPressed: () {
               logout(context);
@@ -226,7 +223,8 @@ void CheckQuantidade(String productName) async {
             ),
           ),
           Container(
-            margin: EdgeInsets.only(left: 16.0, right: 16.0, top: 50.0, bottom: 16.0),
+            margin: EdgeInsets.only(
+                left: 16.0, right: 16.0, top: 50.0, bottom: 16.0),
             child: Text(
               "Categorias",
               style: TextStyle(
@@ -344,22 +342,21 @@ void CheckQuantidade(String productName) async {
     required String title,
     required String price,
   }) {
-  
-
-    if(contador == 1){
+    if (contador == 1) {
       CheckQuantidade(title.replaceAll('"', ''));
       contador = 0;
     }
     Timer.periodic(Duration(seconds: 30), (timer) {
-            CheckQuantidade(title.replaceAll('"', ''));
+      CheckQuantidade(title.replaceAll('"', ''));
     });
     return GestureDetector(
       onTap: () async {
         contador = 1;
-        CheckQuantidade(title.replaceAll('"', '')); // Adiciona essa chamada para inicializar checkquantidade
+        CheckQuantidade(title.replaceAll(
+            '"', '')); // Adiciona essa chamada para inicializar checkquantidade
         var quantidadeDisponivel = data[0]['Qtd'];
-        print (quantidadeDisponivel);
-        
+        print(quantidadeDisponivel);
+
         if (quantidadeDisponivel == 1) {
           addToCart(imagePath, title, price);
         } else {
@@ -775,7 +772,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         if (response.statusCode == 200) {
           // Se a solicitação for bem-sucedida, mostrar uma mensagem de sucesso
           print('Pedido enviado com sucesso para a API');
-
         } else {
           // Se houver um erro, mostrar uma mensagem de erro
           print('Erro ao enviar pedido para a API');
@@ -877,8 +873,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                 );
                                 sendOrderToApi(cartItems, total.toString());
                                 sendRecentOrderToApi(cartItems);
-                                cartItems.clear(); // Clear the cart after confirming the order
-                                updateItemCountMap();
+                                setState(() {
+                                  cartItems
+                                      .clear(); // Limpar o carrinho após confirmar o pedido
+                                  updateItemCountMap(); // Atualizar itemCountMap
+                                });
                               },
                               child: Text('Confirmar'),
                             ),
