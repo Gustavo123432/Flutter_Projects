@@ -141,7 +141,7 @@ class _ProductPageState extends State<ProdutoPage> {
       appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 246, 141, 45),
         title: Text(
-          'Product Catalog',
+          'Produtos',
           style: TextStyle(color: Colors.white),
         ),
         actions: [

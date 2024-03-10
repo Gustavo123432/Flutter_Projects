@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 import 'package:intl/intl.dart';
@@ -63,6 +64,40 @@ class _HomeAlunoState extends State<HomeAluno> {
         viewRecent(users);
       });
     }
+  }
+
+  void logout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Log Out'),
+          content: const Text('Pretende fazer Log Out?'),
+          actions: [
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Fecha o AlertDialog
+              },
+            ),
+            TextButton(
+              child: const Text('Confirmar'),
+              onPressed: () async {
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                await prefs.clear();
+
+                // ignore: use_build_context_synchronously
+                Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (BuildContext ctx) => const LoginForm()));
+                ModalRoute.withName('/');
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
 void CheckQuantidade(String productName) async {
@@ -135,6 +170,14 @@ void CheckQuantidade(String productName) async {
           '',
           style: TextStyle(color: Colors.white),
         ),
+         actions: [
+          IconButton(
+            onPressed: () {
+              logout(context);
+            },
+            icon: Icon(Icons.logout),
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -183,7 +226,7 @@ void CheckQuantidade(String productName) async {
             ),
           ),
           Container(
-            margin: EdgeInsets.only(left: 16.0, right: 16.0, top: 50.0),
+            margin: EdgeInsets.only(left: 16.0, right: 16.0, top: 50.0, bottom: 16.0),
             child: Text(
               "Categorias",
               style: TextStyle(
@@ -542,7 +585,7 @@ class _CategoryPageState extends State<CategoryPage> {
           );
         },
       ),
-      bottomNavigationBar: BottomAppBar(
+      /*bottomNavigationBar: BottomAppBar(
         color: Color.fromARGB(255, 246, 141, 45),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -575,7 +618,7 @@ class _CategoryPageState extends State<CategoryPage> {
             ),
           ],
         ),
-      ),
+      ),*/
     );
   }
 }
@@ -748,7 +791,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     double total = calculateTotal();
     return Scaffold(
       appBar: AppBar(
-        title: Text('Carrinho Compras'),
+        title: Text('Carrinho de Compras'),
       ),
       body: Column(
         children: [

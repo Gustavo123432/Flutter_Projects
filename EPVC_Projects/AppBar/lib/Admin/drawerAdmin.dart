@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_advanced_drawer/flutter_advanced_drawer.dart';
+import 'package:my_flutter_project/Admin/pedidosPage.dart';
 import 'package:my_flutter_project/Admin/produtoPage.dart';
 import 'package:my_flutter_project/Admin/users.dart';
 
@@ -60,10 +61,10 @@ class _DrawerAdminState extends State<DrawerAdmin> {
             ),
             ListTile(
               onTap: () {
-                /*Navigator.push(
+                Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => UserTable()),
-                );*/
+                  MaterialPageRoute(builder: (context) => PedidosPage()),
+                );
               },
               leading: Icon(Icons.archive),
               title: Text('Registos'),

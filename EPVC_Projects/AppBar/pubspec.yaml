@@ -42,6 +42,10 @@ dependencies:
   firebase_database: ^10.4.0
   flutterfire_cli: ^0.1.1+2
   collection: ^1.18.0
+  path_provider: ^2.1.2
+  pdf: ^3.8.4
+  open_file: ^3.2.1
+  file_picker: ^6.2.0
 
 
 dev_dependencies:
