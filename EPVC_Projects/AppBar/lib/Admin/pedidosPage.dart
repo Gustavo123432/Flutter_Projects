@@ -107,14 +107,14 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
         build: (pw.Context context) => [
           pw.Table.fromTextArray(
             data: <List<String>>[
-              ['Nº Pedido', 'Quem pediu', 'Turma', 'Descrição', 'Total    ', 'Estado'],
+              ['Nº Pedido', 'Quem pediu', 'Turma', 'Descrição', 'Total    ', 'Estado      '],
               for (var order in orders)
                 [
                   order.number,
                   order.requester,
                   order.group,
                   order.description.replaceAll('[', '').replaceAll(']', ''),
-                  totall + "€",
+                  totall,
                   order.status == '0' ? 'Por Fazer' : 'Concluído',
                 ],
             ],
@@ -131,7 +131,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     pdf.addPage(pw.Page(
       build: (pw.Context context) {
         return pw.Center(
-          child: pw.Text('Total: ${total.toStringAsFixed(2)}€'),
+          child: pw.Text('Total: ${total.toStringAsFixed(2)}'),
         );
       },
     ));

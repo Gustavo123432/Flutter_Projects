@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_flutter_project/Admin/addProduto.dart';
 import 'package:my_flutter_project/Admin/drawerAdmin.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,8 +28,6 @@ class Product {
     required this.base64Image,
   });
 }
-
-
 
 class ProdutoPage extends StatefulWidget {
   @override
@@ -172,6 +172,26 @@ class _ProductPageState extends State<ProdutoPage> {
                 );
               },
             ),
+      floatingActionButton: SpeedDial(
+        icon: Icons.more_horiz,
+        iconTheme: IconThemeData(color: Colors.white),
+        backgroundColor: Color.fromARGB(255, 130, 201, 189),
+        children: [
+          SpeedDialChild(
+            child: Icon(Icons.add),
+            onTap: () async {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AddProdutoPage()),
+              );
+            },
+          ),
+          /*SpeedDialChild(
+            child: Icon(Icons.recycling),
+            onTap: () {},
+          ),*/
+        ],
+      ),
     );
   }
 }

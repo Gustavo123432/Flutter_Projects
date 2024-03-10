@@ -46,6 +46,7 @@ dependencies:
   pdf: ^3.8.4
   open_file: ^3.2.1
   file_picker: ^6.2.0
+  image_picker: ^1.0.7
 
 
 dev_dependencies:
@@ -76,6 +77,9 @@ flutter:
     - lib/assets/cafe.JPG
     - lib/assets/comida.jpg
     - lib/assets/snacks.jpg
+    - lib/assets/fonts/Roboto-Regular.ttf
+    - lib/assets/fonts/Helvetica.ttf
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 
