@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_advanced_drawer/flutter_advanced_drawer.dart';
+import 'package:my_flutter_project/Admin/produtoPage.dart';
 import 'package:my_flutter_project/Admin/users.dart';
 
 class DrawerAdmin extends StatefulWidget {
@@ -61,7 +62,7 @@ class _DrawerAdminState extends State<DrawerAdmin> {
               onTap: () {
                 /*Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => Registo()),
+                  MaterialPageRoute(builder: (context) => UserTable()),
                 );*/
               },
               leading: Icon(Icons.archive),
@@ -69,10 +70,10 @@ class _DrawerAdminState extends State<DrawerAdmin> {
             ),
             ListTile(
               onTap: () {
-                /*Navigator.push(
+                Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => Dados()),
-                );*/
+                  MaterialPageRoute(builder: (context) => ProdutoPage()),
+                );
               },
               leading: Icon(Icons.local_pizza),
               title: Text('Produtos'),

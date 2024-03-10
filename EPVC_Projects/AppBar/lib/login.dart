@@ -325,25 +325,31 @@ void verifylogin(context) async {
     {
       print("Administrador");
       Navigator.push(
-          context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+          context, MaterialPageRoute(builder: (context) => UserTable()));
     } 
     else if (type == "Professor") {
       //é user
       print("Professor");
-      /*Navigator.push(
-          context, MaterialPageRoute(builder: (context) => DashboardUsers()));*/
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
     }
      else if (type == "Funcionária") {
       //é user
       print("Funcionária");
-      /*Navigator.push(
-          context, MaterialPageRoute(builder: (context) => DashboardUsers()));*/
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
     }
-    else if (type == "Utilizador") {
+    else if (type == "Bar") {
       //é user
-      print("User");
-      /*Navigator.push(
-          context, MaterialPageRoute(builder: (context) => DashboardUsers()));*/
+      print("Bar");
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+    }
+    else if (type == "Aluno") {
+      //é user
+      print("Aluno");
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
     }
   } else //é a primeira vez
   {}

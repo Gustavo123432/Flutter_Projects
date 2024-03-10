@@ -14,6 +14,7 @@ void main() {
 List<Map<String, dynamic>> cartItems =
     []; // Lista global para armazenar os itens no carrinho
 List<Map<String, dynamic>> recentBuysMapped = [];
+List<Map<String, dynamic>> data = [];
 
 class HomeAlunoMain extends StatelessWidget {
   @override
@@ -36,13 +37,13 @@ class HomeAluno extends StatefulWidget {
 class _HomeAlunoState extends State<HomeAluno> {
   dynamic users;
   List<dynamic> recentBuys = [];
+  dynamic checkquantidade;
+    var contador = 1;
 
   @override
   void initState() {
     super.initState();
     UserInfo();
-
-
   }
 
   void UserInfo() async {
@@ -59,20 +60,43 @@ class _HomeAlunoState extends State<HomeAluno> {
     if (response.statusCode == 200) {
       setState(() {
         users = json.decode(response.body);
-    viewRecent(users);
+        viewRecent(users);
       });
     }
   }
 
+void CheckQuantidade(String productName) async {
+  // Remove double quotes from the product name
+  String productNamee = productName.replaceAll('"', '');
+
+  var response = await http.get(Uri.parse(
+      'http://api.gfserver.pt/appBarAPI_GET.php?query_param=8&nome=$productNamee'));
+
+  if (response.statusCode == 200) {
+    setState(() {
+      // Cast the decoded JSON objects to List<Map<String, dynamic>>
+      data = json.decode(response.body).cast<Map<String, dynamic>>();
+      //print(data);
+      //print(json.decode(response.body));
+      if (data.isNotEmpty) {
+  
+  //print(quantidadeDisponivel);
+} else {
+  print('Data is empty');
+}
+
+    });
+  }
+}
+
+
   Future<void> viewRecent(dynamic userr) async {
     try {
       if (userr != null) {
-         for (var userData in userr) {
+        for (var userData in userr) {
           var nome = userData['Nome'];
           var apelido = userData['Apelido'];
           var user = nome + " " + apelido;
-         
-
           var response = await http.post(
             Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
             body: {
@@ -273,96 +297,126 @@ class _HomeAlunoState extends State<HomeAluno> {
   }
 
   Widget buildProductSection({
-  required String imagePath,
-  required String title,
-  required String price,
-}) {
-  return GestureDetector(
-    onTap: () {
-      // Adicionar o item ao carrinho quando o card for clicado
-      addToCart(imagePath, title, price);
-    },
-    child: Container(
-      width: MediaQuery.of(context).size.width / 2,
-      margin: EdgeInsets.symmetric(horizontal: 4.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2.0,
-            blurRadius: 4.0,
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Image.memory(
-              base64.decode(imagePath),
-              height: 80.0,
-            ),
-            Text(
-              title.replaceAll('"', ''),
-              style: TextStyle(
-                fontSize: 18.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Preço:',
-                  style: TextStyle(fontSize: 14.0),
-                ),
-                Text(
-                  "${double.parse(price).toStringAsFixed(2).replaceAll('.', ',')}€",
-                  style: TextStyle(fontSize: 16.0),
+    required String imagePath,
+    required String title,
+    required String price,
+  }) {
+  
+
+    if(contador == 1){
+      CheckQuantidade(title.replaceAll('"', ''));
+      contador = 0;
+    }
+    Timer.periodic(Duration(seconds: 30), (timer) {
+            CheckQuantidade(title.replaceAll('"', ''));
+    });
+    return GestureDetector(
+      onTap: () async {
+        contador = 1;
+        CheckQuantidade(title.replaceAll('"', '')); // Adiciona essa chamada para inicializar checkquantidade
+        var quantidadeDisponivel = data[0]['Qtd'];
+        print (quantidadeDisponivel);
+        
+        if (quantidadeDisponivel == 1) {
+          addToCart(imagePath, title, price);
+        } else {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text('Produto Indisponível'),
+              content: Text('Desculpe, este produto está indisponível.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Fechar o diálogo
+                  },
+                  child: Text('OK'),
                 ),
               ],
             ),
+          );
+        }
+      },
+      child: Container(
+        width: MediaQuery.of(context).size.width / 2,
+        margin: EdgeInsets.symmetric(horizontal: 4.0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 2.0,
+              blurRadius: 4.0,
+            ),
           ],
         ),
-      ),
-    ),
-  );
-}
-
-void addToCart(String imagePath, String title, String price) {
-  // Verifica se os parâmetros necessários não são nulos
-  if (imagePath != null && title != null && price != null) {
-    // Cria um mapa representando o item a ser adicionado ao carrinho
-    Map<String, dynamic> item = {
-      'Imagem': imagePath,
-      'Nome': title.replaceAll('"', ''),
-      'Preco': price,
-    };
-
-    // Atualiza a interface do usuário e adiciona o item ao carrinho
-    setState(() {
-      cartItems.add(item);
-    });
-
-    // Exibe um snackbar para informar ao usuário que o item foi adicionado ao carrinho
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Item adicionado ao carrinho com sucesso!'),
-      ),
-    );
-  } else {
-    // Exibe uma mensagem de erro se algum dos parâmetros for nulo
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Erro: Não foi possível adicionar o item ao carrinho.'),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Image.memory(
+                base64.decode(imagePath),
+                height: 80.0,
+              ),
+              Text(
+                title.replaceAll('"', ''),
+                style: TextStyle(
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Preço:',
+                    style: TextStyle(fontSize: 14.0),
+                  ),
+                  Text(
+                    "${double.parse(price).toStringAsFixed(2).replaceAll('.', ',')}€",
+                    style: TextStyle(fontSize: 16.0),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
-}
 
+  void addToCart(String imagePath, String title, String price) {
+    // Verifica se os parâmetros necessários não são nulos
+    if (imagePath != null && title != null && price != null) {
+      // Cria um mapa representando o item a ser adicionado ao carrinho
+      Map<String, dynamic> item = {
+        'Imagem': imagePath,
+        'Nome': title.replaceAll('"', ''),
+        'Preco': price,
+      };
+
+      // Atualiza a interface do usuário e adiciona o item ao carrinho
+      setState(() {
+        cartItems.add(item);
+      });
+
+      // Exibe um snackbar para informar ao usuário que o item foi adicionado ao carrinho
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Item adicionado ao carrinho com sucesso!'),
+        ),
+      );
+    } else {
+      // Exibe uma mensagem de erro se algum dos parâmetros for nulo
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro: Não foi possível adicionar o item ao carrinho.'),
+        ),
+      );
+    }
+  }
 
   Widget buildCategoryCard({
     required String title,
@@ -678,6 +732,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         if (response.statusCode == 200) {
           // Se a solicitação for bem-sucedida, mostrar uma mensagem de sucesso
           print('Pedido enviado com sucesso para a API');
+
         } else {
           // Se houver um erro, mostrar uma mensagem de erro
           print('Erro ao enviar pedido para a API');
@@ -779,8 +834,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                 );
                                 sendOrderToApi(cartItems, total.toString());
                                 sendRecentOrderToApi(cartItems);
-                                cartItems
-                                    .clear(); // Clear the cart after confirming the order
+                                cartItems.clear(); // Clear the cart after confirming the order
                                 updateItemCountMap();
                               },
                               child: Text('Confirmar'),

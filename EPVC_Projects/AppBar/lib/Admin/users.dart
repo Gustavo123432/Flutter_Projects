@@ -195,7 +195,7 @@ class _UserTableState extends State<UserTable> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.red,
+        backgroundColor: Color.fromARGB(255, 246, 141, 45),
         title: Row(
           children: [
             ClipOval(
@@ -325,7 +325,7 @@ class _UserTableState extends State<UserTable> {
                                     user['Permissao'] = newValue;
                                   });
                                 },
-                                items: ['Administrador', 'Utilizador']
+                                items: ['Administrador','Professor','Funcionária' ,'Bar' ,'Aluno']
                                     .map((String value) {
                                   return DropdownMenuItem<String>(
                                     value: value,
@@ -378,7 +378,8 @@ class _UserTableState extends State<UserTable> {
         icon: Icons.more_horiz,
         iconTheme:
             IconThemeData(color: Colors.white), // Set icon color to white
-        backgroundColor: Colors.red,
+        backgroundColor: Color.fromARGB(
+                        255, 130, 201, 189),
         children: [
           SpeedDialChild(
             child: Icon(Icons.edit),
