@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
@@ -99,59 +98,63 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     );
   }
 
-  Future<void> exportToPdf(List<PurchaseOrder> orders, var totall) async {
-    final pdf = pw.Document();
+  Future<void> exportToPdf(List<PurchaseOrder> orders) async {
+  final pdf = pw.Document();
 
-    pdf.addPage(
-      pw.MultiPage(
-        build: (pw.Context context) => [
-          pw.Table.fromTextArray(
-            data: <List<String>>[
-              [
-                'Nº Pedido',
-                'Quem pediu',
-                'Turma',
-                'Descrição',
-                'Total    ',
-                'Estado      '
-              ],
-              for (var order in orders)
-                [
-                  order.number,
-                  order.requester,
-                  order.group,
-                  order.description.replaceAll('[', '').replaceAll(']', ''),
-                  totall,
-                  order.status == '0' ? 'Por Fazer' : 'Concluído',
-                ],
+  pdf.addPage(
+    pw.MultiPage(
+      build: (pw.Context context) => [
+        pw.Table.fromTextArray(
+          data: <List<String>>[
+            [
+              'Nº Pedido',
+              'Quem pediu',
+              'Turma',
+              'Descrição',
+              'Total    ',
+              'Estado      '
             ],
-          ),
-        ],
-      ),
-    );
+            for (var order in orders)
+              [
+                order.number,
+                order.requester,
+                order.group,
+                order.description.replaceAll('[', '').replaceAll(']', ''),
+                order.total,
+                order.status == '0' ? 'Por Fazer' : 'Concluído',
+              ],
+          ],
+        ),
+      ],
+    ),
+  );
 
-    double total = 0;
-    for (var order in orders) {
-      total += double.tryParse(order.total) ?? 0;
-    }
-
-    pdf.addPage(pw.Page(
-      build: (pw.Context context) {
-        return pw.Center(
-          child: pw.Text('Total: ${total.toStringAsFixed(2)}'),
-        );
-      },
-    ));
-
-    final bytes = await pdf.save();
-    final blob = html.Blob([bytes], 'application/pdf');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute('download', 'purchase_orders.pdf')
-      ..click();
-
-    html.Url.revokeObjectUrl(url);
+  double total = 0;
+  for (var order in orders) {
+    total += double.tryParse(order.total) ?? 0;
   }
+
+  pdf.addPage(pw.Page(
+    build: (pw.Context context) {
+      return pw.Center(
+        child: pw.Text('Total: ${total.toStringAsFixed(2)}'),
+      );
+    },
+  ));
+
+  final output = await getTemporaryDirectory();
+  final file = File("${output.path}/purchase_orders.pdf");
+  await file.writeAsBytes(await pdf.save());
+
+  // Após salvar o arquivo PDF, você pode exibir uma mensagem ou realizar outra ação.
+  // Por exemplo, mostrar um SnackBar informando que o PDF foi exportado com sucesso.
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('PDF exportado com sucesso'),
+    ),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +228,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
             child: Icon(Icons.backup),
             onTap: () async {
               final orders = await futurePurchaseOrders;
-              exportToPdf(orders, formattedTotal);
+              exportToPdf(orders);
             },
           ),
           SpeedDialChild(

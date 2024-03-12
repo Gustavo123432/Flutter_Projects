@@ -161,7 +161,7 @@ class _HomeAlunoState extends State<HomeAluno> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      /*appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 255, 255, 255),
         title: Text(
           '',
@@ -175,10 +175,12 @@ class _HomeAlunoState extends State<HomeAluno> {
             icon: Icon(Icons.logout),
           ),
         ],
-      ),
+      ),*/
+
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          SizedBox(height: 20),
           Container(
             margin: EdgeInsets.only(
                 left: 16.0, right: 16.0, top: 25.0, bottom: 32.0),
@@ -224,7 +226,7 @@ class _HomeAlunoState extends State<HomeAluno> {
           ),
           Container(
             margin: EdgeInsets.only(
-                left: 16.0, right: 16.0, top: 50.0, bottom: 16.0),
+                left: 16.0, right: 16.0, top: 60.0,/* bottom: 16.0*/),
             child: Text(
               "Categorias",
               style: TextStyle(
@@ -234,6 +236,7 @@ class _HomeAlunoState extends State<HomeAluno> {
               ),
             ),
           ),
+          SizedBox(height: 20),
           Expanded(
             child: Container(
               child: ListView(
@@ -300,38 +303,45 @@ class _HomeAlunoState extends State<HomeAluno> {
           ),
         ],
       ),
-      bottomNavigationBar: BottomAppBar(
-        color: Color.fromARGB(255, 246, 141, 45),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              icon: Icon(Icons.home, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => HomeAlunoMain(),
-                  ),
-                );
-              },
-            ),
-            IconButton(
-              icon: Icon(Icons.notifications, color: Colors.white),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: Icon(Icons.shopping_cart, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ShoppingCartPage(),
-                  ),
-                );
-              },
-            ),
-          ],
+      bottomNavigationBar: Container(
+        height:
+            60, // Define o tamanho desejado para a barra de navegação inferior
+        child: BottomAppBar(
+          color: Color.fromARGB(255, 246, 141, 45),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                icon: Icon(Icons.home, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HomeAlunoMain(),
+                    ),
+                  );
+                },
+                iconSize: 25,
+              ),
+              IconButton(
+                icon: Icon(Icons.notifications, color: Colors.white),
+                onPressed: () {},
+                iconSize: 25,
+              ),
+              IconButton(
+                icon: Icon(Icons.shopping_cart, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ShoppingCartPage(),
+                    ),
+                  );
+                },
+                iconSize: 25,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -782,7 +792,79 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  @override
+ Future<double> checkQuantidade(String productName) async {
+  // Remove double quotes from the product name
+  String productNamee = productName.replaceAll('"', '');
+
+  var response = await http.get(Uri.parse(
+      'http://api.gfserver.pt/appBarAPI_GET.php?query_param=8&nome=$productNamee'));
+
+  if (response.statusCode == 200) {
+    // Decode the response body into a list of maps
+    List<Map<String, dynamic>> data = json.decode(response.body).cast<Map<String, dynamic>>();
+
+    if (data.isNotEmpty) {
+      // Retrieve the quantity of the product
+      double quantidade = data[0]['Qtd'];
+      return quantidade;
+    } else {
+      // Return a default value or throw an exception if data is empty
+      throw Exception('Data is empty');
+    }
+  } else {
+    // Throw an exception if the request fails
+    throw Exception('Failed to fetch data. Status code: ${response.statusCode}');
+  }
+}
+
+  void checkAvailabilityBeforeOrder(double total) {
+  bool allAvailable = true;
+  List<String> unavailableItems = [];
+
+  for (var item in cartItems) {
+    var itemName = item['Nome'];
+     var quantity = checkQuantidade(itemName);// Adicione um campo 'Quantidade' aos itens do carrinho
+
+    if (quantity == 0) {
+      allAvailable = false;
+      unavailableItems.add(itemName);
+      print(quantity);
+    }
+  }
+
+  if (allAvailable) {
+    // Se todos os itens estiverem disponíveis, faça o pedido
+    sendOrderToApi(cartItems, total.toString());
+    sendRecentOrderToApi(cartItems);
+                                setState(() {
+                                  cartItems.clear();
+                                  updateItemCountMap();
+                                });
+
+  } else {
+    // Se houver itens indisponíveis, informe ao usuário
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Itens Indisponíveis'),
+          content: Text('Os seguintes itens não estão disponíveis: ${unavailableItems.join(", ")}'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+
+@override
   Widget build(BuildContext context) {
     double total = calculateTotal();
     return Scaffold(
@@ -796,15 +878,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               itemCount: itemCountMap.length,
               itemBuilder: (context, index) {
                 final itemName = itemCountMap.keys.toList()[index];
-                final itemCount = itemCountMap[itemName] ??
-                    0; // Garante que itemCount não seja nulo
-                // Encontra o primeiro item no carrinho que corresponde ao nome do produto
+                final itemCount = itemCountMap[itemName] ?? 0;
                 final item = cartItems.firstWhere(
                   (element) => element['Nome'] == itemName,
                 );
-                // Extrai a imagem do produto do item, ou define uma imagem padrão se não houver imagem
-                final image =
-                    item != null ? base64.decode(item['Imagem']) : null;
+                final image = item != null ? base64.decode(item['Imagem']) : null;
                 return Card(
                   child: ListTile(
                     leading: image != null
@@ -814,15 +892,13 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                             height: 50,
                             width: 50,
                           )
-                        : SizedBox
-                            .shrink(), // Se não houver imagem, não exibe nada
+                        : SizedBox.shrink(),
                     title: Text('$itemName'),
                     subtitle: Text('Quantidade: $itemCount'),
                     trailing: IconButton(
                       icon: Icon(Icons.remove_circle),
                       onPressed: () {
                         setState(() {
-                          // Remove apenas um item de mesmo nome
                           for (int i = 0; i < cartItems.length; i++) {
                             if (cartItems[i]['Nome'] == itemName) {
                               cartItems.removeAt(i);
@@ -842,8 +918,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             ),
           ),
           Container(
-            margin: EdgeInsets.only(
-                bottom: 16.0), // Define a margem na parte inferior
+            margin: EdgeInsets.only(bottom: 16.0),
             child: Column(
               children: [
                 Text(
@@ -855,7 +930,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                     showDialog(
                       context: context,
                       builder: (BuildContext context) {
-                        // Calculate itemCount here
                         int itemCount = itemCountMap.length;
 
                         return AlertDialog(
@@ -867,17 +941,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                 Navigator.of(context).pop();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text(
-                                        'Confirmação de Pedido com Sucesso'),
+                                    content: Text('Confirmação de Pedido com Sucesso'),
                                   ),
                                 );
-                                sendOrderToApi(cartItems, total.toString());
-                                sendRecentOrderToApi(cartItems);
-                                setState(() {
-                                  cartItems
-                                      .clear(); // Limpar o carrinho após confirmar o pedido
-                                  updateItemCountMap(); // Atualizar itemCountMap
-                                });
+                                checkAvailabilityBeforeOrder(total);
+                                
                               },
                               child: Text('Confirmar'),
                             ),
@@ -892,45 +960,51 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                       },
                     );
                   },
-                  child: Text('Fazer Pedido'),
+                  child: Text('Confirmar Pedido'),
                 ),
               ],
             ),
           ),
         ],
       ),
-      bottomNavigationBar: BottomAppBar(
-        color: Color.fromARGB(255, 246, 141, 45),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              icon: Icon(Icons.home, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => HomeAlunoMain(),
-                  ),
-                );
-              },
-            ),
-            IconButton(
-              icon: Icon(Icons.notifications, color: Colors.white),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: Icon(Icons.shopping_cart, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ShoppingCartPage(),
-                  ),
-                );
-              },
-            ),
-          ],
+      bottomNavigationBar: Container(
+        height: 60,
+        child: BottomAppBar(
+          color: Color.fromARGB(255, 246, 141, 45),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                icon: Icon(Icons.home, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HomeAlunoMain(),
+                    ),
+                  );
+                },
+                iconSize: 25,
+              ),
+              IconButton(
+                icon: Icon(Icons.notifications, color: Colors.white),
+                onPressed: () {},
+                iconSize: 25,
+              ),
+              IconButton(
+                icon: Icon(Icons.shopping_cart, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ShoppingCartPage(),
+                    ),
+                  );
+                },
+                iconSize: 25,
+              ),
+            ],
+          ),
         ),
       ),
     );

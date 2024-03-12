@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:my_flutter_project/Admin/produtoPage.dart';
 
+
 class AddProdutoPage extends StatefulWidget {
   @override
   _AddProdutoPageState createState() => _AddProdutoPageState();
