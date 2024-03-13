@@ -231,12 +231,12 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
               exportToPdf(orders);
             },
           ),
-          SpeedDialChild(
+          /*SpeedDialChild(
             child: Icon(Icons.recycling),
             onTap: () {
               removeAll(context);
             },
-          ),
+          ),*/
         ],
       ),
     );
