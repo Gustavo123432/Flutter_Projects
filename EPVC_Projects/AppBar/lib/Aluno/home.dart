@@ -111,7 +111,7 @@ class _HomeAlunoState extends State<HomeAluno> {
       setState(() {
         // Cast the decoded JSON objects to List<Map<String, dynamic>>
         data = json.decode(response.body).cast<Map<String, dynamic>>();
-        //print(data);
+        print(data);
         //print(json.decode(response.body));
         if (data.isNotEmpty) {
           //print(quantidadeDisponivel);
@@ -161,7 +161,7 @@ class _HomeAlunoState extends State<HomeAluno> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      /*appBar: AppBar(
+      appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 255, 255, 255),
         title: Text(
           '',
@@ -175,7 +175,7 @@ class _HomeAlunoState extends State<HomeAluno> {
             icon: Icon(Icons.logout),
           ),
         ],
-      ),*/
+      ),
 
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -353,7 +353,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     required String price,
   }) {
     if (contador == 1) {
-      CheckQuantidade(title.replaceAll('"', ''));
+      //CheckQuantidade(title.replaceAll('"', ''));
       contador = 0;
     }
     Timer.periodic(Duration(seconds: 30), (timer) {
