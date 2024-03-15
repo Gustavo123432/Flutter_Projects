@@ -16,12 +16,16 @@ List<Map<String, dynamic>> cartItems =
     []; // Lista global para armazenar os itens no carrinho
 List<Map<String, dynamic>> recentBuysMapped = [];
 List<Map<String, dynamic>> data = [];
+TextEditingController _searchController = TextEditingController();
+List<Map<String, dynamic>> allProducts =
+    []; // Lista para armazenar todos os produtos
+List<Map<String, dynamic>> filteredProducts = [];
 
 class HomeAlunoMain extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Comprado Recentemente',
+      title: 'App Bar EPVC',
       theme: ThemeData(
         primarySwatch: Colors.blueGrey,
       ),
@@ -40,11 +44,14 @@ class _HomeAlunoState extends State<HomeAluno> {
   List<dynamic> recentBuys = [];
   dynamic checkquantidade;
   var contador = 1;
+    bool _isSearching = false;
+
 
   @override
   void initState() {
     super.initState();
     UserInfo();
+    _getAllProducts();
   }
 
   void UserInfo() async {
@@ -139,29 +146,60 @@ class _HomeAlunoState extends State<HomeAluno> {
 
           if (response.statusCode == 200) {
             setState(() {
-              // Adiciona diretamente o mapa à lista recentBuys
               recentBuys = json.decode(response.body);
               recentBuysMapped = recentBuys.map((productString) {
-                Map<String, dynamic> productMap = productString;
-                return productMap;
+                return productString as Map<String, dynamic>;
               }).toList();
             });
           } else {
-            print('Erro ao enviar pedido para a API');
+            throw Exception(
+                'Erro ao enviar pedido para a API: ${response.statusCode}');
           }
         }
       } else {
         print('Usuários não carregados ainda');
       }
     } catch (e) {
-      print('Erro ao enviar pedidos para a API: $e');
+      print('Erro ao enviar pedidos para a API');
     }
   }
+
+  void _getAllProducts() async {
+    final response = await http.post(
+      Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
+      body: {
+        'query_param': '4',
+      },
+    );
+    if (response.statusCode == 200) {
+        allProducts = json.decode(response.body);
+       print(response.body);
+    } else {
+      throw Exception('Failed to load products');
+    }
+  }
+
+void _filterProducts(String query) {
+  setState(() {
+    if (query.isNotEmpty) {
+      _isSearching = true;
+      // Filtra a lista de produtos com base na pesquisa
+      filteredProducts = allProducts.where((product) =>
+        product['Nome']
+            .toString()
+            .toLowerCase()
+            .contains(query.toLowerCase())).toList();
+    } else {
+      _isSearching = false;
+      filteredProducts = List.from(allProducts);
+    }
+  });
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      /*appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 255, 255, 255),
         title: Text(
           '',
@@ -174,25 +212,57 @@ class _HomeAlunoState extends State<HomeAluno> {
             },
             icon: Icon(Icons.logout),
           ),
-        ],
-      ),
-
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: 20),
-          Container(
-            margin: EdgeInsets.only(
-                left: 16.0, right: 16.0, top: 25.0, bottom: 32.0),
-            child: TextField(
-              decoration: InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50.0),
-                ),
-              ),
-            ),
+        ],*/
+       appBar: AppBar(
+      title: _isSearching ? TextField(
+        controller: _searchController,
+        autofocus: true,
+        onChanged: _filterProducts, // Chama _filterProducts quando o texto muda
+        decoration: InputDecoration(
+          hintText: 'Pesquisar produtos...',
+          border: InputBorder.none,
+          hintStyle: TextStyle(color: Colors.white),
+        ),
+      ) : Text('Produtos'), // Texto padrão quando não estiver pesquisando
+      actions: [
+        _isSearching ? IconButton(
+          icon: Icon(Icons.cancel),
+          onPressed: () {
+            setState(() {
+              _isSearching = false;
+              _searchController.clear();
+              filteredProducts = List.from(allProducts);
+            });
+          },
+        ) : IconButton(
+          icon: Icon(Icons.search),
+          onPressed: () {
+            setState(() {
+              _isSearching = true;
+            });
+          },
+        ),
+      ],
+    ),
+    body: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(height: 20),
+        Expanded(
+          child: ListView.builder(
+            itemCount: filteredProducts.length, // Usa filteredProducts para exibir os resultados da pesquisa
+            itemBuilder: (context, index) {
+              var product = filteredProducts[index];
+              var title = product['Descricao']; // Use o campo correto para o título do produto
+              var price = product['Preco'].toString();
+              // Você pode exibir os detalhes do produto aqui
+              return ListTile(
+                title: Text(title),
+                subtitle: Text(price),
+              );
+            },
           ),
+        ),
           Container(
             margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
             child: Text(
@@ -205,8 +275,8 @@ class _HomeAlunoState extends State<HomeAluno> {
             ),
           ),
           Container(
-            margin: EdgeInsets.symmetric(vertical: 8.0),
-            height: 180.0,
+            margin: EdgeInsets.symmetric(vertical: 5.0),
+            height: 100.0,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: recentBuysMapped.length,
@@ -226,7 +296,10 @@ class _HomeAlunoState extends State<HomeAluno> {
           ),
           Container(
             margin: EdgeInsets.only(
-                left: 16.0, right: 16.0, top: 60.0,/* bottom: 16.0*/),
+              left: 16.0,
+              right: 16.0,
+              top: 16.0, /* bottom: 16.0*/
+            ),
             child: Text(
               "Categorias",
               style: TextStyle(
@@ -236,7 +309,7 @@ class _HomeAlunoState extends State<HomeAluno> {
               ),
             ),
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 15),
           Expanded(
             child: Container(
               child: ListView(
@@ -353,7 +426,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     required String price,
   }) {
     if (contador == 1) {
-      //CheckQuantidade(title.replaceAll('"', ''));
+      CheckQuantidade(title.replaceAll('"', ''));
       contador = 0;
     }
     Timer.periodic(Duration(seconds: 30), (timer) {
@@ -389,15 +462,15 @@ class _HomeAlunoState extends State<HomeAluno> {
       },
       child: Container(
         width: MediaQuery.of(context).size.width / 2,
-        margin: EdgeInsets.symmetric(horizontal: 4.0),
+        margin: EdgeInsets.symmetric(horizontal: 2.0),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(10.0),
+          borderRadius: BorderRadius.circular(3.0),
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 2.0,
-              blurRadius: 4.0,
+              spreadRadius: 1.0,
+              blurRadius: 2.0,
             ),
           ],
         ),
@@ -408,12 +481,12 @@ class _HomeAlunoState extends State<HomeAluno> {
             children: [
               Image.memory(
                 base64.decode(imagePath),
-                height: 80.0,
+                height: 40.0,
               ),
               Text(
                 title.replaceAll('"', ''),
                 style: TextStyle(
-                  fontSize: 18.0,
+                  fontSize: 12.0,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -422,11 +495,11 @@ class _HomeAlunoState extends State<HomeAluno> {
                 children: [
                   Text(
                     'Preço:',
-                    style: TextStyle(fontSize: 14.0),
+                    style: TextStyle(fontSize: 8.0),
                   ),
                   Text(
                     "${double.parse(price).toStringAsFixed(2).replaceAll('.', ',')}€",
-                    style: TextStyle(fontSize: 16.0),
+                    style: TextStyle(fontSize: 10.0),
                   ),
                 ],
               ),
@@ -792,79 +865,82 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
- Future<double> checkQuantidade(String productName) async {
-  // Remove double quotes from the product name
-  String productNamee = productName.replaceAll('"', '');
+  Future<double> checkQuantidade(String productName) async {
+    // Remove double quotes from the product name
+    String productNamee = productName.replaceAll('"', '');
 
-  var response = await http.get(Uri.parse(
-      'http://api.gfserver.pt/appBarAPI_GET.php?query_param=8&nome=$productNamee'));
+    var response = await http.get(Uri.parse(
+        'http://api.gfserver.pt/appBarAPI_GET.php?query_param=8&nome=$productNamee'));
 
-  if (response.statusCode == 200) {
-    // Decode the response body into a list of maps
-    List<Map<String, dynamic>> data = json.decode(response.body).cast<Map<String, dynamic>>();
+    if (response.statusCode == 200) {
+      // Decode the response body into a list of maps
+      List<Map<String, dynamic>> data =
+          json.decode(response.body).cast<Map<String, dynamic>>();
 
-    if (data.isNotEmpty) {
-      // Retrieve the quantity of the product
-      double quantidade = data[0]['Qtd'];
-      return quantidade;
+      if (data.isNotEmpty) {
+        // Retrieve the quantity of the product
+        double quantidade = data[0]['Qtd'];
+        return quantidade;
+      } else {
+        // Return a default value or throw an exception if data is empty
+        throw Exception('Data is empty');
+      }
     } else {
-      // Return a default value or throw an exception if data is empty
-      throw Exception('Data is empty');
+      // Throw an exception if the request fails
+      throw Exception(
+          'Failed to fetch data. Status code: ${response.statusCode}');
     }
-  } else {
-    // Throw an exception if the request fails
-    throw Exception('Failed to fetch data. Status code: ${response.statusCode}');
   }
-}
 
   void checkAvailabilityBeforeOrder(double total) {
-  bool allAvailable = true;
-  List<String> unavailableItems = [];
+    bool allAvailable = true;
+    List<String> unavailableItems = [];
 
-  for (var item in cartItems) {
-    var itemName = item['Nome'];
-     var quantity = checkQuantidade(itemName);// Adicione um campo 'Quantidade' aos itens do carrinho
+    for (var item in cartItems) {
+      var itemName = item['Nome'];
+      var quantity = checkQuantidade(
+          itemName); // Adicione um campo 'Quantidade' aos itens do carrinho
 
-    if (quantity == 0) {
-      allAvailable = false;
-      unavailableItems.add(itemName);
-      print(quantity);
+      if (quantity == 0) {
+        allAvailable = false;
+        unavailableItems.add(itemName);
+        print(quantity);
+      }
     }
-  }
-
-  if (allAvailable) {
-    // Se todos os itens estiverem disponíveis, faça o pedido
-    sendOrderToApi(cartItems, total.toString());
-    sendRecentOrderToApi(cartItems);
-                                setState(() {
-                                  cartItems.clear();
-                                  updateItemCountMap();
-                                });
-
-  } else {
-    // Se houver itens indisponíveis, informe ao usuário
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Itens Indisponíveis'),
-          content: Text('Os seguintes itens não estão disponíveis: ${unavailableItems.join(", ")}'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('OK'),
-            ),
-          ],
+    if (cartItems != null) {
+      if (allAvailable) {
+        // Se todos os itens estiverem disponíveis, faça o pedido
+        sendOrderToApi(cartItems, total.toString());
+        sendRecentOrderToApi(cartItems);
+        setState(() {
+          cartItems.clear();
+          updateItemCountMap();
+        });
+      } else {
+        // Se houver itens indisponíveis, informe ao usuário
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Itens Indisponíveis'),
+              content: Text(
+                  'Os seguintes itens não estão disponíveis: ${unavailableItems.join(", ")}'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('OK'),
+                ),
+              ],
+            );
+          },
         );
-      },
-    );
+      }
+    } else {}
   }
-}
 
-
-@override
+  @override
   Widget build(BuildContext context) {
     double total = calculateTotal();
     return Scaffold(
@@ -882,7 +958,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                 final item = cartItems.firstWhere(
                   (element) => element['Nome'] == itemName,
                 );
-                final image = item != null ? base64.decode(item['Imagem']) : null;
+                final image =
+                    item != null ? base64.decode(item['Imagem']) : null;
                 return Card(
                   child: ListTile(
                     leading: image != null
@@ -927,38 +1004,57 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        int itemCount = itemCountMap.length;
-
-                        return AlertDialog(
-                          title: Text('Confirmação do Pedido'),
-                          content: Text('Deseja confirmar o pedido?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Confirmação de Pedido com Sucesso'),
-                                  ),
-                                );
-                                checkAvailabilityBeforeOrder(total);
-                                
-                              },
-                              child: Text('Confirmar'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                              child: Text('Cancelar'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
+                    if (cartItems.isEmpty) {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Carrinho Vazio'),
+                            content: Text(
+                                'Carrinho Vazio.\nPara continuar adicione produtos.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('OK'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    } else {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Confirmação do Pedido'),
+                            content: Text('Deseja confirmar o pedido?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'Confirmação de Pedido com Sucesso'),
+                                    ),
+                                  );
+                                  checkAvailabilityBeforeOrder(total);
+                                },
+                                child: Text('Confirmar'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('Cancelar'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    }
                   },
                   child: Text('Confirmar Pedido'),
                 ),
