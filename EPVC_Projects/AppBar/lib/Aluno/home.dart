@@ -45,8 +45,7 @@ class _HomeAlunoState extends State<HomeAluno> {
   List<dynamic> recentBuys = [];
   dynamic checkquantidade;
   var contador = 1;
-    bool _isSearching = false;
-
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -173,230 +172,229 @@ class _HomeAlunoState extends State<HomeAluno> {
       },
     );
     if (response.statusCode == 200) {
-        allProducts = json.decode(response.body);
-       print(response.body);
+      allProducts = json.decode(response.body);
+      print(response.body);
     } else {
       throw Exception('Failed to load products');
     }
   }
 
-void _filterProducts(String query) {
-  setState(() {
-    if (query.isNotEmpty) {
-      _isSearching = true;
-      // Filtra a lista de produtos com base na pesquisa
-      filteredProducts = allProducts.where((product) =>
-        product['Nome']
-            .toString()
-            .toLowerCase()
-            .contains(query.toLowerCase())).toList();
-    } else {
-      _isSearching = false;
-      filteredProducts = List.from(allProducts);
-    }
-  });
-}
+  void _filterProducts(String query) {
+    setState(() {
+      if (query.isNotEmpty) {
+        _isSearching = true;
+        // Filtra a lista de produtos com base na pesquisa
+        filteredProducts = allProducts
+            .where((product) => product['Nome']
+                .toString()
+                .toLowerCase()
+                .contains(query.toLowerCase()))
+            .toList();
+      } else {
+        _isSearching = false;
+        filteredProducts = List.from(allProducts);
+      }
+    });
+  }
 
- @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      backgroundColor: Color.fromARGB(255, 255, 255, 255),
-      title: Text(
-        '',
-        style: TextStyle(color: Colors.white),
-      ),
-      actions: [
-        IconButton(
-          onPressed: () {
-            logout(context);
-          },
-          icon: Icon(Icons.logout),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Color.fromARGB(255, 255, 255, 255),
+        title: Text(
+          '',
+          style: TextStyle(color: Colors.white),
         ),
-      ],
-    ),
-    body: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(height: 20),
-        Container(
-          margin: EdgeInsets.only(
-              left: 16.0, right: 16.0, top: 25.0, bottom: 32.0),
-          child: TextField(
-            decoration: InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(50.0),
-              ),
-            ),
-          ),
-        ),
-        SizedBox(height: 20),
-        Container(
-          margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
-          child: Text(
-            "Comprados Recentemente",
-            style: TextStyle(
-              fontSize: 18.0,
-              fontWeight: FontWeight.bold,
-              color: Colors.blueGrey[900],
-            ),
-          ),
-        ),
-        Container(
-          margin: EdgeInsets.symmetric(vertical: 5.0),
-          height: 100.0,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: recentBuysMapped.length,
-            itemBuilder: (context, index) {
-              var product = recentBuysMapped[index];
-              var title = product['Descricao'];
-              var price = product['Preco'].toString();
-              var imageBase64 = product['Imagem'];
-
-              return buildProductSection(
-                imagePath: imageBase64,
-                title: title,
-                price: price,
-              );
+        actions: [
+          IconButton(
+            onPressed: () {
+              logout(context);
             },
+            icon: Icon(Icons.logout),
           ),
-        ),
-        Container(
-          margin: EdgeInsets.only(
-            left: 16.0,
-            right: 16.0,
-            top: 16.0,
-          ),
-          child: Text(
-            "Categorias",
-            style: TextStyle(
-              fontSize: 18.0,
-              fontWeight: FontWeight.bold,
-              color: Colors.blueGrey[900],
+        ],
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(height: 20),
+          Container(
+            margin: EdgeInsets.only(
+                left: 16.0, right: 16.0, top: 25.0, bottom: 32.0),
+            child: TextField(
+              decoration: InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(50.0),
+                ),
+              ),
             ),
           ),
-        ),
-        SizedBox(height: 15),
-        Expanded(
-          child: Container(
-            child: ListView(
-              children: [
-                buildCategoryCard(
-                  title: 'Bebidas',
-                  backgroundImagePath: 'lib/assets/bebida.png',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CategoryPage(
-                          title: 'Bebidas',
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                buildCategoryCard(
-                  title: 'Café',
-                  backgroundImagePath: 'lib/assets/cafe.JPG',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CategoryPage(
-                          title: 'Café',
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                buildCategoryCard(
-                  title: 'Comidas',
-                  backgroundImagePath: 'lib/assets/comida.jpg',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CategoryPage(
-                          title: 'Comidas',
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                buildCategoryCard(
-                  title: 'Snacks',
-                  backgroundImagePath: 'lib/assets/snacks.jpg',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CategoryPage(
-                          title: 'Snacks',
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
+          SizedBox(height: 20),
+          Container(
+            margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+            child: Text(
+              "Comprados Recentemente",
+              style: TextStyle(
+                fontSize: 18.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueGrey[900],
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-   bottomNavigationBar: Container(
-  height: 60,
-  child: BottomAppBar(
-    color: Color.fromARGB(255, 246, 141, 45),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        IconButton(
-          icon: Icon(Icons.home, color: Colors.white),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => HomeAlunoMain(),
-              ),
-            );
-          },
-          iconSize: 25,
-        ),
-        IconButton(
-          icon: Icon(Icons.shopping_cart, color: Colors.white),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ShoppingCartPage(),
-              ),
-            );
-          },
-          iconSize: 25,
-        ),
-        IconButton(
-          icon: Icon(Icons.menu, color: Colors.white),
-          onPressed: () {
-            // Replace `DrawerHome()` with proper navigation to your drawer widget
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => DrawerHome(),
-              ),
-            );
-          },
-          iconSize: 25,
-        ),
-      ],
-    ),
-  ),
-),
+          Container(
+            margin: EdgeInsets.symmetric(vertical: 5.0),
+            height: 100.0,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: recentBuysMapped.length,
+              itemBuilder: (context, index) {
+                var product = recentBuysMapped[index];
+                var title = product['Descricao'];
+                var price = product['Preco'].toString();
+                var imageBase64 = product['Imagem'];
 
-  );
-}
-
+                return buildProductSection(
+                  imagePath: imageBase64,
+                  title: title,
+                  price: price,
+                );
+              },
+            ),
+          ),
+          Container(
+            margin: EdgeInsets.only(
+              left: 16.0,
+              right: 16.0,
+              top: 16.0,
+            ),
+            child: Text(
+              "Categorias",
+              style: TextStyle(
+                fontSize: 18.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueGrey[900],
+              ),
+            ),
+          ),
+          SizedBox(height: 15),
+          Expanded(
+            child: Container(
+              child: ListView(
+                children: [
+                  buildCategoryCard(
+                    title: 'Bebidas',
+                    backgroundImagePath: 'lib/assets/bebida.png',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CategoryPage(
+                            title: 'Bebidas',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  buildCategoryCard(
+                    title: 'Café',
+                    backgroundImagePath: 'lib/assets/cafe.JPG',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CategoryPage(
+                            title: 'Café',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  buildCategoryCard(
+                    title: 'Comidas',
+                    backgroundImagePath: 'lib/assets/comida.jpg',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CategoryPage(
+                            title: 'Comidas',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  buildCategoryCard(
+                    title: 'Snacks',
+                    backgroundImagePath: 'lib/assets/snacks.jpg',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CategoryPage(
+                            title: 'Snacks',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        height: 60,
+        child: BottomAppBar(
+          color: Color.fromARGB(255, 246, 141, 45),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                icon: Icon(Icons.home, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HomeAlunoMain(),
+                    ),
+                  );
+                },
+                iconSize: 25,
+              ),
+              IconButton(
+                icon: Icon(Icons.shopping_cart, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ShoppingCartPage(),
+                    ),
+                  );
+                },
+                iconSize: 25,
+              ),
+              IconButton(
+                icon: Icon(Icons.menu, color: Colors.white),
+                onPressed: () {
+                  // Replace `DrawerHome()` with proper navigation to your drawer widget
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DrawerHome(),
+                    ),
+                  );
+                },
+                iconSize: 25,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget buildProductSection({
     required String imagePath,
@@ -1061,17 +1059,25 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                 iconSize: 25,
               ),
               IconButton(
-                icon: Icon(Icons.notifications, color: Colors.white),
-                onPressed: () {},
-                iconSize: 25,
-              ),
-              IconButton(
                 icon: Icon(Icons.shopping_cart, color: Colors.white),
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => ShoppingCartPage(),
+                    ),
+                  );
+                },
+                iconSize: 25,
+              ),
+              IconButton(
+                icon: Icon(Icons.menu, color: Colors.white),
+                onPressed: () {
+                  // Replace `DrawerHome()` with proper navigation to your drawer widget
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DrawerHome(),
                     ),
                   );
                 },

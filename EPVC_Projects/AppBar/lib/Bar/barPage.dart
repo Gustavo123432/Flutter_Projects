@@ -2,151 +2,82 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:my_flutter_project/Admin/drawerAdmin.dart';
+import 'package:my_flutter_project/Bar/drawerBar.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
-class UserTable extends StatefulWidget {
-  @override
-  _UserTableState createState() => _UserTableState();
+class PurchaseOrder {
+  final String number;
+  final String requester;
+  final String group;
+  final String description;
+  final String total;
+  final String status;
+
+  PurchaseOrder({
+    required this.number,
+    required this.requester,
+    required this.group,
+    required this.description,
+    required this.total,
+    required this.status,
+  });
+
+  factory PurchaseOrder.fromJson(Map<String, dynamic> json) {
+    return PurchaseOrder(
+      number: json['NPedido'],
+      requester: json['QPediu'],
+      group: json['Turma'],
+      description: json['Descricao'],
+      total: json['Total'],
+      status: json['Estado'],
+    );
+  }
 }
 
-class _UserTableState extends State<UserTable> {
-  bool isEditing = false;
-  dynamic users;
-  List<dynamic> tableUsers = [];
+class BarPagePedidos extends StatefulWidget {
+  @override
+  _BarPagePedidosState createState() => _BarPagePedidosState();
+}
 
-  // Mapa para armazenar os controladores de texto para cada linha da tabela
-  Map<int, TextEditingController> nomeControllers = {};
-  Map<int, TextEditingController> apelidoControllers = {};
-  Map<int, TextEditingController> usercontrollers = {};
-
-  void _toggleEditMode() {
-    setState(() {
-      isEditing = true;
-    });
-  }
+class _BarPagePedidosState extends State<BarPagePedidos> {
+  late Stream<List<PurchaseOrder>> purchaseOrderStream;
+  String formattedTotal = "";
 
   @override
   void initState() {
-    UserInfo();
-    _getTableData();
-
     super.initState();
+    // Initialize the purchaseOrderStream to emit data every second
+    purchaseOrderStream = Stream.periodic(Duration(seconds: 1), (_) {
+      return fetchPurchaseOrders();
+    }).asyncMap((_) => fetchPurchaseOrders());
   }
 
-  // Função para buscar informações do usuário
-  void UserInfo() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    var user = prefs.getString("username");
-
-    final response = await http.post(
-      Uri.parse('https://services.interagit.com/registarCallAPI_Post.php'),
-      body: {
-        'query_param': '1',
-        'user': user,
-      },
-    );
+  Future<List<PurchaseOrder>> fetchPurchaseOrders() async {
+    final response = await http.get(
+        Uri.parse('http://api.gfserver.pt/appBarAPI_GET.php?query_param=10'));
     if (response.statusCode == 200) {
-      setState(() {
-        users = json.decode(response.body);
-      });
+      List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => PurchaseOrder.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load purchase orders');
     }
   }
 
-  // Função para buscar dados da tabela de usuários
-  Future<void> _getTableData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    var user = prefs.getString("username");
-
-    var response = await http.get(Uri.parse(
-        'https://services.interagit.com/registarCallAPI_GET.php?query_param=2'));
-
+  void checkPedido(String orderNumber, String orderRequester) async {
+    final response = await http.get(Uri.parse(
+        'http://api.gfserver.pt/appBarAPI_GET.php?query_param=17&nome=$orderRequester&npedido=$orderNumber'));
     if (response.statusCode == 200) {
-      setState(() {
-        tableUsers = json.decode(response.body);
-      });
-    }
-  }
-
-  // Função para criar e retornar um controlador de texto para o nome do usuário
-  TextEditingController? getNomeController(int index, String nome) {
-    nomeControllers[index] ??= TextEditingController(text: nome);
-    return nomeControllers[index];
-  }
-
-  TextEditingController? getUserController(int index, String user) {
-    usercontrollers[index] ??= TextEditingController(text: user);
-    return usercontrollers[index];
-  }
-
-  // Função para criar e retornar um controlador de texto para o apelido do usuário
-  TextEditingController? getApelidoController(int index, String apelido) {
-    apelidoControllers[index] ??= TextEditingController(text: apelido);
-    return apelidoControllers[index];
-  }
-
-  // Função para atualizar um usuário
-  Future<void> updateUser(String userId, String user, String nome,
-      String apelido, String permissao) async {
-    try {
-      var response = await http.get(Uri.parse(
-          'https://services.interagit.com/registarCallAPI_GET.php?query_param=3&userId=$userId&user=$user&nome=$nome&apelido=$apelido&permissao=$permissao'));
-      if (response.statusCode == 200) {
-        // Se a atualização foi bem-sucedida, exiba uma mensagem ou faça qualquer outra ação necessária
+      setState(() async {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Valor atualizado com sucesso no banco de dados!'),
           ),
         );
-        UserInfo();
-        _getTableData();
-      } else {
-        // Se houve um erro na atualização, exiba uma mensagem de erro
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao atualizar valor no banco de dados'),
-          ),
-        );
-      }
-    } catch (e) {
-      print('Erro ao fazer a requisição GET: $e');
-      // Exibir mensagem de erro se a requisição falhar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao atualizar valor no banco de dados'),
-        ),
-      );
-    }
-  }
-
-  void removeUser(user) async {
-    String idUser = user;
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String idUserShare = prefs.getString("idUser").toString();
-    if (idUserShare.trim() == idUser.trim()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Não é possível eliminar o seu Utilizador'),
-        ),
-      );
+        // No need to navigate here, as the data updates automatically
+      });
     } else {
-      var response = await http.get(Uri.parse(
-          'https://services.interagit.com/registarCallAPI_GET.php?query_param=5&idUser=$idUser'));
-
-      if (response.statusCode == 200) {
-        setState(() {
-          print(response);
-          //print(json.decode(response.body));
-          _getTableData();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Utilizador eliminado com Sucesso'),
-            ),
-          );
-        });
-      }
+      throw Exception('Failed to load purchase orders');
     }
   }
 
@@ -161,7 +92,7 @@ class _UserTableState extends State<UserTable> {
             TextButton(
               child: const Text('Cancelar'),
               onPressed: () {
-                Navigator.of(context).pop(); // Fecha o AlertDialog
+                Navigator.of(context).pop(); // Close the AlertDialog
               },
             ),
             TextButton(
@@ -170,11 +101,12 @@ class _UserTableState extends State<UserTable> {
                 SharedPreferences prefs = await SharedPreferences.getInstance();
                 await prefs.clear();
 
-                // ignore: use_build_context_synchronously
                 Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (BuildContext ctx) => const LoginForm()));
+                  context,
+                  MaterialPageRoute(
+                    builder: (BuildContext ctx) => const LoginForm(),
+                  ),
+                );
                 ModalRoute.withName('/');
               },
             ),
@@ -188,42 +120,8 @@ class _UserTableState extends State<UserTable> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.red,
-        title: Row(
-          children: [
-            ClipOval(
-              child: users != null && users.toString() != "null"
-                  ? users[0]['Imagem'] != null &&
-                          users[0]['Imagem'].toString() != "null"
-                      ? Image.memory(
-                          base64.decode(users[0]['Imagem']),
-                          fit: BoxFit.cover,
-                          height: 50,
-                          width: 50,
-                        )
-                      : Icon(
-                          Icons.person,
-                          size: 47,
-                        )
-                  : Icon(
-                      Icons.person,
-                      size: 47,
-                    ),
-            ),
-            SizedBox(
-              width: 8,
-            ),
-            users != null && users.toString() != "null"
-                ? Text(
-                    'Bem Vindo(a): ' +
-                        users[0]['Nome'] +
-                        " " +
-                        users[0]['Apelido'],
-                    style: TextStyle(color: Colors.white), // Texto será branco
-                  )
-                : Text(""),
-          ],
-        ),
+        backgroundColor: Color.fromARGB(255, 246, 141, 45),
+        title: Text('Pedidos'),
         actions: [
           IconButton(
             onPressed: () {
@@ -233,150 +131,107 @@ class _UserTableState extends State<UserTable> {
           ),
         ],
       ),
-      drawer: DrawerAdmin(),
-      body: Container(
-        width: double.infinity, // Usar toda a largura disponível
-        height: double.infinity, // Usar toda a altura disponível
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(
-                'lib/assets/epvc.png'), // Caminho para a sua imagem de fundo
-            // fit: BoxFit.cover,
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Imagem de fundo
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Color.fromARGB(255, 255, 255, 255)
-                      .withOpacity(0.90), // Cor preta com opacidade de 40%
-                ),
-              ),
-            ),
-            // Sua tabela aqui
-            Center(
-              child: DataTable(
-                columns: [
-                  DataColumn(label: Text('ID')),
-                  DataColumn(label: Text('Email')),
-                  DataColumn(label: Text('Nome')),
-                  DataColumn(label: Text('Apelido')),
-                  DataColumn(label: Text('Permissão')),
-                  DataColumn(label: Text('')),
-                  DataColumn(label: Text('')),
-                ],
-                rows: tableUsers.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final user = entry.value;
-
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(user['IdUser'])),
-                      DataCell(Text(user['User'])),
-                      DataCell(isEditing
-                          ? TextField(
-                              controller:
-                                  getNomeController(index, user['Nome']),
-                              onChanged: (newValue) {
-                                setState(() {
-                                  user['Nome'] = newValue;
-                                });
-                              },
-                            )
-                          : Text(user['Nome'])),
-                      DataCell(isEditing
-                          ? TextField(
-                              controller:
-                                  getApelidoController(index, user['Apelido']),
-                              onChanged: (newValue) {
-                                setState(() {
-                                  user['Apelido'] = newValue;
-                                });
-                              },
-                            )
-                          : Text(user['Apelido'])),
-                      DataCell(
-                        isEditing
-                            ? DropdownButtonFormField<String>(
-                                value: user['Permissao'],
-                                onChanged: (newValue) {
-                                  setState(() {
-                                    user['Permissao'] = newValue;
-                                  });
-                                },
-                                items: ['Administrador', 'Utilizador']
-                                    .map((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
-                              )
-                            : Text(user['Permissao']),
+      drawer: DrawerBar(),
+      body: Center(
+        child: StreamBuilder<List<PurchaseOrder>>(
+          stream: purchaseOrderStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return CircularProgressIndicator();
+            } else if (snapshot.hasError) {
+              return Text('Sem Pedidos');
+            } else {
+              List<PurchaseOrder>? data = snapshot.data;
+              if (data == null || data.isEmpty) {
+                return Text('Sem Pedidos');
+              }
+              return ListView.builder(
+                itemCount: data.length,
+                itemBuilder: (context, index) {
+                  PurchaseOrder order = data[index];
+                  try {
+                    formattedTotal = double.parse(order.total)
+                        .toStringAsFixed(2)
+                        .replaceAll('.', ',');
+                  } catch (e) {
+                    formattedTotal = 'Invalid Total';
+                  }
+                  return Dismissible(
+                    key: Key(order.number), // Unique key for each item
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      color: Color.fromARGB(255, 130, 201, 189),
+                      alignment: Alignment.centerRight,
+                      padding: EdgeInsets.symmetric(horizontal: 20.0),
+                      child: Icon(
+                        Icons.check,
+                        color: Colors.white,
                       ),
-                      DataCell(
-                        isEditing
-                            ? ElevatedButton(
-                                onPressed: () {
-                                  updateUser(
-                                    user['IdUser'],
-                                    user['Email'],
-                                    user['Nome'],
-                                    user['Apelido'],
-                                    user['Permissao'],
-                                  );
-                                  isEditing = false;
+                    ),
+                    onDismissed: (direction) {
+                      // Handle swipe-to-dismiss here if needed
+                    },
+                    confirmDismiss: (direction) async {
+                      return await showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Confirmar Conclusão'),
+                            content: Text(
+                                'Deseja marcar este pedido como concluído?'),
+                            actions: <Widget>[
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
+                                child: Text('Cancelar'),
+                              ),
+                              TextButton(
+                                onPressed: () async {
+                                  checkPedido(order.number, order.requester);
+                                  Navigator.of(context).pop(false);
                                 },
-                                child: Text('Guardar'),
-                              )
-                            : Text(""),
+                                child: Text('Confirmar'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    child: Card(
+                      elevation: 3,
+                      margin:
+                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      child: ListTile(
+                        title:
+                            Text('Nº Pedido: ${order.number.toString()}'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Quem pediu: ${order.requester}'),
+                            Text('Turma: ${order.group}'),
+                            Text(
+                                'Descrição: ${order.description.replaceAll('[', '').replaceAll(']', '')}'),
+                            Text('Total: $formattedTotal€'),
+                            Text(
+                              'Estado: ${order.status == '0' ? 'Por Fazer' : 'Concluído'}',
+                            ),
+                          ],
+                        ),
                       ),
-                      DataCell(
-                        isEditing
-                            ? ElevatedButton(
-                                onPressed: () {
-                                  removeUser(
-                                    user['IdUser'],
-                                  );
-                                  isEditing = false;
-                                },
-                                child: Text('Eliminar'),
-                              )
-                            : Text(""),
-                      ),
-                    ],
+                    ),
                   );
-                }).toList(),
-              ),
-            ),
-          ],
+                },
+              );
+            }
+          },
         ),
-      ),
-      floatingActionButton: SpeedDial(
-        icon: Icons.more_horiz,
-        iconTheme:
-            IconThemeData(color: Colors.white), // Set icon color to white
-        backgroundColor: Colors.red,
-        children: [
-          SpeedDialChild(
-            child: Icon(Icons.edit),
-            onTap: () {
-              _toggleEditMode();
-            },
-          ),
-          SpeedDialChild(
-            child: Icon(Icons.add),
-            onTap: () {
-              /*Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AddUserPage()),
-              );*/
-            },
-          ),
-        ],
       ),
     );
   }
+}
+
+void main() {
+  runApp(MaterialApp(
+    home: BarPagePedidos(),
+  ));
 }

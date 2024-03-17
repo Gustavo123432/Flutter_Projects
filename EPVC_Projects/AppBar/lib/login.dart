@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Admin/users.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
+import 'package:my_flutter_project/Bar/barPage.dart';
 import 'package:my_flutter_project/PasswordRecovery/esqueciPWD.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -396,7 +397,7 @@ void verifylogin(context) async {
       //é user
       print("Bar");
       Navigator.push(
-          context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+          context, MaterialPageRoute(builder: (context) => BarPagePedidos()));
     } else if (type == "Aluno") {
       //é user
       print("Aluno");

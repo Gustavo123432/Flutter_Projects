@@ -159,38 +159,42 @@ class _PurchaseOrdersPageAlunoState extends State<PedidosPageAlunos> {
           },
         ),
       ),
-      bottomNavigationBar: BottomAppBar(
-        color: Color.fromARGB(255, 246, 141, 45),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              icon: Icon(Icons.home, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => HomeAlunoMain(),
-                  ),
-                );
-              },
-              iconSize: 25,
-            ),
-            IconButton(
-              icon: Icon(Icons.menu, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DrawerHome(),
-                  ),
-                );
-              },
-              iconSize: 25,
-            ),
-          ],
+      bottomNavigationBar: Container(
+  height: 60,
+  child: BottomAppBar(
+    color: Color.fromARGB(255, 246, 141, 45),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        IconButton(
+          icon: Icon(Icons.home, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => HomeAlunoMain(),
+              ),
+            );
+          },
+          iconSize: 25,
         ),
-      ),
+        IconButton(
+          icon: Icon(Icons.menu, color: Colors.white),
+          onPressed: () {
+            // Replace `DrawerHome()` with proper navigation to your drawer widget
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DrawerHome(),
+              ),
+            );
+          },
+          iconSize: 25,
+        ),
+      ],
+    ),
+  ),
+),
     );
   }
 }

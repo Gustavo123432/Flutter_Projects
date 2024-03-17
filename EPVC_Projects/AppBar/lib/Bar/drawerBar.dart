@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Admin/produtoPage.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
 import 'package:my_flutter_project/Aluno/pedidosPageAluno.dart';
+import 'package:my_flutter_project/Bar/barPage.dart';
+import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 
-class DrawerHome extends StatefulWidget {
-  const DrawerHome({super.key});
+class DrawerBar extends StatefulWidget {
+  const DrawerBar({super.key});
   @override
-  _DrawerHomeState createState() => _DrawerHomeState();
+  _DrawerBarState createState() => _DrawerBarState();
 }
 
-class _DrawerHomeState extends State<DrawerHome> {
+class _DrawerBarState extends State<DrawerBar> {
   //final _advancedDrawerController = AdvancedDrawerController();
 
   @override
@@ -38,7 +40,17 @@ class _DrawerHomeState extends State<DrawerHome> {
               ),
               
             ),
-            ListTile(
+            /*ListTile(
+              onTap: () {
+                /*Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Dashboard()),
+                );*/
+              },
+              leading: Icon(Icons.home),
+              title: Text('Dashboard'),
+            ),*/
+            /*ListTile(
               onTap: () {
                 Navigator.push(
                   context,
@@ -47,37 +59,27 @@ class _DrawerHomeState extends State<DrawerHome> {
               },
               leading: Icon(Icons.home),
               title: Text('Home'),
-            ),
+            ),*/
             ListTile(
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ShoppingCartPage()),
-                );
-              },
-              leading: Icon(Icons.shopping_cart),
-              title: Text('Carrinho'),
-            ),
-            ListTile(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => PedidosPageAlunos()),
+                  MaterialPageRoute(builder: (context) => BarPagePedidos()),
                 );
               },
               leading: Icon(Icons.archive),
               title: Text('Pedidos'),
             ),
-            /*ListTile(
+            ListTile(
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ProdutoPage()),
+                  MaterialPageRoute(builder: (context) => ProdutoPageBar()),
                 );
               },
               leading: Icon(Icons.local_pizza),
               title: Text('Produtos'),
-            ),*/
+            ),
             Spacer(),
             DefaultTextStyle(
               style: TextStyle(

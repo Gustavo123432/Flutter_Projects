@@ -49,12 +49,12 @@ class _ReenserirPasswordState extends State<ReenserirPassword> {
 
     if (response.statusCode == 200) {
       setState(() {
-        Navigator.push(
+       Navigator.push(
             context, MaterialPageRoute(builder: (context) => LoginForm()));
         passwordController.clear();
         confirmPasswordController.clear();
       });
-    }
+    } 
   }
 
   @override
