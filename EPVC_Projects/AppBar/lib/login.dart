@@ -213,7 +213,7 @@ class _LoginFormState extends State<LoginForm> {
                 TextSpan(
                   text: 'Esqueceu-se da Password? ',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: Colors.white,
                     fontSize: 16,
                   ),
                   children: <TextSpan>[
