@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, use_build_context_synchronously, annotate_overrides
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Admin/users.dart';
 import 'package:my_flutter_project/Aluno/barList.dart';
@@ -160,8 +161,8 @@ class _LoginFormState extends State<LoginForm> {
                 ),
               ),
               const SizedBox(
-            height: 20,
-          ),
+                height: 20,
+              ),
               SizedBox(
                 width: 350,
                 child: Container(
@@ -171,10 +172,10 @@ class _LoginFormState extends State<LoginForm> {
                     decoration: const InputDecoration(
                       labelText: 'Email',
                       border: OutlineInputBorder(
-                  borderSide: BorderSide(
-                      color: Color.fromARGB(
-                          255, 130, 201, 189)), // Change border color here
-                ),
+                        borderSide: BorderSide(
+                            color: Color.fromARGB(255, 130, 201,
+                                189)), // Change border color here
+                      ),
                       prefixIcon: Icon(Icons.email), // User icon
                     ),
                   ),
@@ -187,28 +188,57 @@ class _LoginFormState extends State<LoginForm> {
                 width: 350,
                 child: Container(
                   color: Colors.white,
-                child: TextField(
-                  controller: PwdController,
-                  obscureText: _obscureText,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: Color.fromARGB(
-                            255, 130, 201, 189), // Change border color here
+                  child: TextField(
+                    controller: PwdController,
+                    obscureText: _obscureText,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: Color.fromARGB(
+                              255, 130, 201, 189), // Change border color here
+                        ),
                       ),
-                    ),
-                    prefixIcon: Icon(Icons.lock), // User icon
-                    suffixIcon: IconButton(
-                      icon: _obscureText
-                          ? Icon(Icons.visibility)
-                          : Icon(Icons.visibility_off),
-                      onPressed: _togglePasswordVisibility,
+                      prefixIcon: Icon(Icons.lock), // User icon
+                      suffixIcon: IconButton(
+                        icon: _obscureText
+                            ? Icon(Icons.visibility)
+                            : Icon(Icons.visibility_off),
+                        onPressed: _togglePasswordVisibility,
+                      ),
                     ),
                   ),
                 ),
-              ),),
+              ),
               const SizedBox(height: 20),
+              Text.rich(
+                TextSpan(
+                  text: 'Esqueceu-se da Password? ',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                  ),
+                  children: <TextSpan>[
+                    TextSpan(
+                      text: 'Clique Aqui',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () {
+                          // Lógica para lidar com o clique no texto
+                          print('Esqueceu-se da Password? Clique Aqui');
+                          // Adicione aqui a lógica para lidar com a recuperação da senha
+                        },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+
               ElevatedButton(
                 onPressed: () {
                   login();
@@ -295,6 +325,32 @@ class _LoginFormState extends State<LoginForm> {
             ),
           ),
           const SizedBox(height: 20),
+          Text.rich(
+                TextSpan(
+                  text: 'Esqueceu-se da Password? ',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 12,
+                  ),
+                  children: <TextSpan>[
+                    TextSpan(
+                      text: 'Clique Aqui',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () {
+                          // Lógica para lidar com o clique no texto
+                          print('Esqueceu-se da Password? Clique Aqui');
+                          // Adicione aqui a lógica para lidar com a recuperação da senha
+                        },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
           ElevatedButton(
             style: ButtonStyle(
               backgroundColor: MaterialStateProperty.all<Color>(
@@ -326,26 +382,22 @@ void verifylogin(context) async {
       print("Administrador");
       Navigator.push(
           context, MaterialPageRoute(builder: (context) => UserTable()));
-    } 
-    else if (type == "Professor") {
+    } else if (type == "Professor") {
       //é user
       print("Professor");
       Navigator.push(
           context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-    }
-     else if (type == "Funcionária") {
+    } else if (type == "Funcionária") {
       //é user
       print("Funcionária");
       Navigator.push(
           context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-    }
-    else if (type == "Bar") {
+    } else if (type == "Bar") {
       //é user
       print("Bar");
       Navigator.push(
           context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-    }
-    else if (type == "Aluno") {
+    } else if (type == "Aluno") {
       //é user
       print("Aluno");
       Navigator.push(
