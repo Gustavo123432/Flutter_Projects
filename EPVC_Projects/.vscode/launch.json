@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "Flutter (lib\\main.dart)",
+            "name": "AppBar EPVC",
             "type": "dart",
             "request": "launch",
             "cwd": "AppBar",

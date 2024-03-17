@@ -4,13 +4,10 @@ import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Admin/users.dart';
-import 'package:my_flutter_project/Aluno/barList.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
+import 'package:my_flutter_project/PasswordRecovery/esqueciPWD.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/material.dart';
 
 String errorMessage = '';
 
@@ -344,6 +341,10 @@ class _LoginFormState extends State<LoginForm> {
                         ..onTap = () {
                           // Lógica para lidar com o clique no texto
                           print('Esqueceu-se da Password? Clique Aqui');
+
+                          Navigator.push(
+          context, MaterialPageRoute(builder: (context) => EmailRequestPage()));
+
                           // Adicione aqui a lógica para lidar com a recuperação da senha
                         },
                     ),
@@ -371,7 +372,6 @@ class _LoginFormState extends State<LoginForm> {
 void verifylogin(context) async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
   var id = prefs.getString("username");
-  var idUser = prefs.getString("idUser");
   var type = prefs.getString("permissao");
   //print(id);
   //print(type);
