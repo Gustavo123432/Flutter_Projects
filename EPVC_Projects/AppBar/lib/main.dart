@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'login.dart';
 
 void main() {
@@ -7,9 +6,8 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -17,18 +15,35 @@ class MyApp extends StatelessWidget {
         useMaterial3: false,
       ),
       home: Scaffold(
-        body: LoginForm(),
+        body: PermissionRequestWidget(),
       ),
     );
   }
 }
 
-/*class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-
-  final String title;
+class PermissionRequestWidget extends StatefulWidget {
+  const PermissionRequestWidget({Key? key}) : super(key: key);
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}*/
+  _PermissionRequestWidgetState createState() => _PermissionRequestWidgetState();
+}
+
+class _PermissionRequestWidgetState extends State<PermissionRequestWidget> {
+  @override
+  void initState() {
+    super.initState();
+    // No need to request storage permission on web
+    // Simply proceed to the login screen
+    Future.delayed(Duration.zero, () {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => LoginForm()));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // You may optionally display a loading indicator or message here
+    return Center(
+      child: CircularProgressIndicator(),
+    );
+  }
+}

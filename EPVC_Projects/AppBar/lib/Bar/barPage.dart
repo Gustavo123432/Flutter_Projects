@@ -13,6 +13,7 @@ class PurchaseOrder {
   final String description;
   final String total;
   final String status;
+  final String userPermission;
 
   PurchaseOrder({
     required this.number,
@@ -21,6 +22,7 @@ class PurchaseOrder {
     required this.description,
     required this.total,
     required this.status,
+    required this.userPermission,
   });
 
   factory PurchaseOrder.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,7 @@ class PurchaseOrder {
       description: json['Descricao'],
       total: json['Total'],
       status: json['Estado'],
+      userPermission: json['Permissao'],
     );
   }
 }
@@ -47,7 +50,6 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   @override
   void initState() {
     super.initState();
-    // Initialize the purchaseOrderStream to emit data every second
     purchaseOrderStream = Stream.periodic(Duration(seconds: 1), (_) {
       return fetchPurchaseOrders();
     }).asyncMap((_) => fetchPurchaseOrders());
@@ -74,7 +76,6 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
             content: Text('Valor atualizado com sucesso no banco de dados!'),
           ),
         );
-        // No need to navigate here, as the data updates automatically
       });
     } else {
       throw Exception('Failed to load purchase orders');
@@ -92,7 +93,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
             TextButton(
               child: const Text('Cancelar'),
               onPressed: () {
-                Navigator.of(context).pop(); // Close the AlertDialog
+                Navigator.of(context).pop();
               },
             ),
             TextButton(
@@ -145,6 +146,17 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
               if (data == null || data.isEmpty) {
                 return Text('Sem Pedidos');
               }
+              
+              // Ordenar a lista de pedidos, colocando os pedidos de professor no topo
+              data.sort((a, b) {
+                if (a.userPermission == 'Professor' && b.userPermission != 'Professor') {
+                  return -1;
+                } else if (a.userPermission != 'Professor' && b.userPermission == 'Professor') {
+                  return 1;
+                }
+                return 0;
+              });
+              
               return ListView.builder(
                 itemCount: data.length,
                 itemBuilder: (context, index) {
@@ -156,8 +168,9 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                   } catch (e) {
                     formattedTotal = 'Invalid Total';
                   }
+                  
                   return Dismissible(
-                    key: Key(order.number), // Unique key for each item
+                    key: Key(order.number),
                     direction: DismissDirection.endToStart,
                     background: Container(
                       color: Color.fromARGB(255, 130, 201, 189),
@@ -168,9 +181,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                         color: Colors.white,
                       ),
                     ),
-                    onDismissed: (direction) {
-                      // Handle swipe-to-dismiss here if needed
-                    },
+                    onDismissed: (direction) {},
                     confirmDismiss: (direction) async {
                       return await showDialog(
                         context: context,
@@ -201,6 +212,9 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                       elevation: 3,
                       margin:
                           EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      color: order.userPermission == 'Professor'
+                          ? Colors.red
+                          : null,
                       child: ListTile(
                         title:
                             Text('Nº Pedido: ${order.number.toString()}'),

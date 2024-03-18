@@ -3,6 +3,7 @@ import 'package:my_flutter_project/Admin/produtoPage.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
 import 'package:my_flutter_project/Aluno/pedidosPageAluno.dart';
 import 'package:my_flutter_project/Bar/barPage.dart';
+import 'package:my_flutter_project/Bar/pedidosRegistados.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 
 class DrawerBar extends StatefulWidget {
@@ -50,16 +51,6 @@ class _DrawerBarState extends State<DrawerBar> {
               leading: Icon(Icons.home),
               title: Text('Dashboard'),
             ),*/
-            /*ListTile(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => HomeAlunoMain()),
-                );
-              },
-              leading: Icon(Icons.home),
-              title: Text('Home'),
-            ),*/
             ListTile(
               onTap: () {
                 Navigator.push(
@@ -67,8 +58,18 @@ class _DrawerBarState extends State<DrawerBar> {
                   MaterialPageRoute(builder: (context) => BarPagePedidos()),
                 );
               },
-              leading: Icon(Icons.archive),
+              leading: Icon(Icons.search),
               title: Text('Pedidos'),
+            ),
+            ListTile(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => PedidosRegistados()),
+                );
+              },
+              leading: Icon(Icons.archive_outlined),
+              title: Text('Pedidos Registados'),
             ),
             ListTile(
               onTap: () {

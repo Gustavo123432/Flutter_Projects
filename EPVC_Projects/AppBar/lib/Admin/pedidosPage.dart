@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:html' as html; 
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Admin/drawerAdmin.dart';
@@ -9,6 +11,7 @@ import 'dart:io';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
+
 
 class PurchaseOrder {
   final String number;
@@ -98,12 +101,14 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     );
   }
 
-  Future<void> exportToPdf(List<PurchaseOrder> orders) async {
+ Future<void> exportToPdf(List<PurchaseOrder> orders, BuildContext context) async {
   final pdf = pw.Document();
 
+  // Add a page to the PDF document
   pdf.addPage(
     pw.MultiPage(
       build: (pw.Context context) => [
+        // Create a table with order details
         pw.Table.fromTextArray(
           data: <List<String>>[
             [
@@ -129,11 +134,13 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     ),
   );
 
+  // Calculate total
   double total = 0;
   for (var order in orders) {
     total += double.tryParse(order.total) ?? 0;
   }
 
+  // Add a page to the PDF document with the total
   pdf.addPage(pw.Page(
     build: (pw.Context context) {
       return pw.Center(
@@ -142,18 +149,37 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     },
   ));
 
-  final output = await getTemporaryDirectory();
-  final file = File("${output.path}/purchase_orders.pdf");
-  await file.writeAsBytes(await pdf.save());
+  // Convert PDF to bytes
+  final bytes = await pdf.save();
 
-  // Após salvar o arquivo PDF, você pode exibir uma mensagem ou realizar outra ação.
-  // Por exemplo, mostrar um SnackBar informando que o PDF foi exportado com sucesso.
+  // Create a blob with PDF bytes
+  final blob = html.Blob([Uint8List.fromList(bytes)], 'application/pdf');
+
+  // Create object URL for the blob
+  final url = html.Url.createObjectUrlFromBlob(blob);
+
+  // Create anchor element for download
+  final anchor = html.AnchorElement(href: url)
+    ..setAttribute('download', 'purchase_orders.pdf')
+    ..append(html.Text('Click here to download'));
+
+  // Append anchor to the body and click it programmatically to trigger download
+  html.document.body!.append(anchor);
+  anchor.click();
+
+  // Clean up
+  html.Url.revokeObjectUrl(url);
+  anchor.remove();
+
+  // Show a SnackBar to indicate successful export
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text('PDF exportado com sucesso'),
     ),
   );
 }
+
+
 
 
   @override
@@ -228,7 +254,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
             child: Icon(Icons.backup),
             onTap: () async {
               final orders = await futurePurchaseOrders;
-              exportToPdf(orders);
+              exportToPdf(orders, context);
             },
           ),
           /*SpeedDialChild(
