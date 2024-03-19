@@ -21,6 +21,40 @@ class _AddUserPageState extends State<AddUserPage> {
   String _role = 'Administrador'; // Default to 'utilizador'
   File? _image;
   dynamic _selectedImage;
+  List<String> _turmas = []; // List to store fetched turmas
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTurmas();
+  }
+
+  Future<void> _loadTurmas() async {
+    try {
+      List<String> turmas = await _fetchTurmasFromAPI();
+      setState(() {
+        _turmas = turmas;
+      });
+    } catch (e) {
+      print('Error loading turmas: $e');
+      // Here you can display an error message to the user or take other appropriate action.
+    }
+  }
+
+  Future<List<String>> _fetchTurmasFromAPI() async {
+    try {
+      final response = await http.get(Uri.parse('http://api.gfserver.pt/appBarAPI_GET.php?query_param=20'));
+      if (response.statusCode == 200) {
+        final List<dynamic> responseData = json.decode(response.body);
+        List<String> turmas = responseData.map((data) => data['Turma'] as String).toList();
+        return turmas;
+      } else {
+        throw Exception('Failed to load turmas from API');
+      }
+    } catch (e) {
+      throw Exception('Error fetching turmas: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,165 +69,148 @@ class _AddUserPageState extends State<AddUserPage> {
           },
         ),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              SizedBox(height: 20),
-              Text("\nImagem de Perfil\n"),
-              GestureDetector(
-                  onTap: _getImage,
-                  child: CircleAvatar(
-                    radius: 50.0,
-                    backgroundColor: Color.fromARGB(255, 246, 141, 45),
-                    child: ClipOval(
-                      child: (_selectedImage != null)
-                          ? Image.memory(
-                              _selectedImage,
-                              fit: BoxFit.cover,
-                              height: 100,
-                              width: 100,
-                            )
-                          : Icon(
-                              // If users list is null or empty, display a default icon
-                              Icons.person,
-                              size: 47,
-                              color: Colors.white,
-                            ),
-                    ),
-                  )),
-              SizedBox(height: 20),
-              TextFormField(
-                controller: _nomeController,
-                decoration: InputDecoration(labelText: 'Nome'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Insira o nome.';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 20),
-              TextFormField(
-                controller: _apelidoController,
-                decoration: InputDecoration(labelText: 'Apelido'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Insira o Apelido.';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 20),
-              TextFormField(
-                controller: _usernameController,
-                decoration: InputDecoration(labelText: 'Email'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Insira o Email.';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 20),
-              TextFormField(
-                controller: _passwordController,
-                decoration: InputDecoration(labelText: 'Password'),
-                obscureText: true,
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Insira a sua Password.';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 20),
-              TextFormField(
-                controller: _passwordConfirmController,
-                decoration: InputDecoration(labelText: 'Confirmar Password'),
-                obscureText: true,
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Confirme a Password';
-                  }
-                  /*if (value != null && value != _passwordController) {
-                    return 'Password não coicide';
-                  }*/
-                  return null;
-                },
-              ),
-              SizedBox(height: 20),
-              Text("\nTurma\n"),
-              DropdownButton<String>(
-                value: _turma,
-                items: [
-                  '_______',
-                  'ANIM23_26',
-                  'ANIM22_25',
-                  'ANIM21_24',
-                  'ELE23_26',
-                  'ELE22_25',
-                  'ELE21_24',
-                  'OPT21_24',
-                  'TUR23_26',
-                  'TUR22_25',
-                  'INF23_26',
-                  'INF22_25',
-                  'INF21_24',
-                  'COM.DIG23_26',
-                  'COM.DIG22_25',
-                  'COM.DIG21_24',
-                  'DESP23_26'
-                ].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (String? value) {
-                  setState(() {
-                    _turma = value!;
-                  });
-                },
-              ),
-
-              SizedBox(height: 20),
-              Text("\nPermissão\n"),
-              DropdownButton<String>(
-                value: _role,
-                items: [
-                  'Administrador',
-                  'Professor',
-                  'Funcionária',
-                  'Bar',
-                  'Aluno'
-                ].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (String? value) {
-                  setState(() {
-                    _role = value!;
-                  });
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      _submitForm();
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                SizedBox(height: 20),
+                Text("\nImagem de Perfil\n"),
+                GestureDetector(
+                    onTap: _getImage,
+                    child: CircleAvatar(
+                      radius: 50.0,
+                      backgroundColor: Color.fromARGB(255, 246, 141, 45),
+                      child: ClipOval(
+                        child: (_selectedImage != null)
+                            ? Image.memory(
+                                _selectedImage,
+                                fit: BoxFit.cover,
+                                height: 100,
+                                width: 100,
+                              )
+                            : Icon(
+                                // If users list is null or empty, display a default icon
+                                Icons.person,
+                                size: 47,
+                                color: Colors.white,
+                              ),
+                      ),
+                    )),
+                SizedBox(height: 20),
+                TextFormField(
+                  controller: _nomeController,
+                  decoration: InputDecoration(labelText: 'Nome'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Insira o nome.';
                     }
+                    return null;
                   },
-                  child: Text('Submit'),
                 ),
-              ),
-            ],
+                SizedBox(height: 20),
+                TextFormField(
+                  controller: _apelidoController,
+                  decoration: InputDecoration(labelText: 'Apelido'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Insira o Apelido.';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: InputDecoration(labelText: 'Email'),
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Insira o Email.';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Insira a sua Password.';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                TextFormField(
+                  controller: _passwordConfirmController,
+                  decoration: InputDecoration(labelText: 'Confirmar Password'),
+                  obscureText: true,
+                  validator: (value) {
+                    if (value!.isEmpty) {
+                      return 'Confirme a Password';
+                    }
+                    /*if (value != null && value != _passwordController) {
+                      return 'Password não coicide';
+                    }*/
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                Text("\nTurma\n"),
+                DropdownButton<String>(
+                  value: _turma,
+                  items: _turmas.map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (String? value) {
+                    setState(() {
+                      _turma = value!;
+                    });
+                  },
+                ),
+                SizedBox(height: 20),
+                Text("\nPermissão\n"),
+                DropdownButton<String>(
+                  value: _role,
+                  items: [
+                    'Administrador',
+                    'Professor',
+                    'Funcionária',
+                    'Bar',
+                    'Aluno'
+                  ].map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (String? value) {
+                    setState(() {
+                      _role = value!;
+                    });
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        _submitForm();
+                      }
+                    },
+                    child: Text('Submit'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

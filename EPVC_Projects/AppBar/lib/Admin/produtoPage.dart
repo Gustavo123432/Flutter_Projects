@@ -135,66 +135,89 @@ class _ProductPageState extends State<ProdutoPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 246, 141, 45),
-        title: Text(
-          'Produtos',
-          style: TextStyle(color: Colors.white),
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      backgroundColor: Color.fromARGB(255, 246, 141, 45),
+      title: Text(
+        'Produtos',
+        style: TextStyle(color: Colors.white),
+      ),
+      actions: [
+        IconButton(
+          onPressed: () {
+            logout(context);
+          },
+          icon: Icon(
+            Icons.logout,
+            color: Colors.white, // Definindo a cor como branco
+          ),
         ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              logout(context);
-            },
-            icon: Icon(
-              Icons.logout,
-              color: Colors.white, // Definindo a cor como branco
-            ),
+      ],
+    ),
+    drawer: DrawerAdmin(),
+    body: Stack(
+      children: [
+       Container(
+        width: double.infinity, // Usar toda a largura disponível
+        height: double.infinity, // Usar toda a altura disponível
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(
+                'lib/assets/epvc.png'), // Caminho para a sua imagem de fundo
+            // fit: BoxFit.cover,
           ),
-        ],
-      ),
-      drawer: DrawerAdmin(),
-      body: isLoading
-          ? Center(
-              child: CircularProgressIndicator(),
-            )
-          : ListView.builder(
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                return ProductCard(
-                  product: products[index],
-                  onUpdate: (updatedId, updatedProduct) {
-                    updateProduct(updatedId, updatedProduct);
-                  },
-                );
-              },
+        ),
+        child: Stack(
+          children: [
+            // Imagem de fundo
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Color.fromARGB(255, 255, 255, 255)
+                      .withOpacity(0.80), // Cor preta com opacidade de 40%
+                ),
+              ),
             ),
-      floatingActionButton: SpeedDial(
-        icon: Icons.more_horiz,
-        iconTheme: IconThemeData(color: Colors.white),
-        backgroundColor: Color.fromARGB(255, 130, 201, 189),
-        children: [
-          SpeedDialChild(
-            child: Icon(Icons.add),
-            onTap: () async {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AddProdutoPage()),
-              );
-            },
-          ),
-          /*SpeedDialChild(
-            child: Icon(Icons.recycling),
-            onTap: () {},
-          ),*/
-        ],
-      ),
-    );
-  }
-}
+        isLoading
+            ? Center(
+                child: CircularProgressIndicator(),
+              )
+            : ListView.builder(
+                itemCount: products.length,
+                itemBuilder: (context, index) {
+                  return ProductCard(
+                    product: products[index],
+                    onUpdate: (updatedId, updatedProduct) {
+                      updateProduct(updatedId, updatedProduct);
+                    },
+                  );
+                },
+              ),
+      ],
+  ))]),
+    floatingActionButton: SpeedDial(
+      icon: Icons.more_horiz,
+      iconTheme: IconThemeData(color: Colors.white),
+      backgroundColor: Color.fromARGB(255, 130, 201, 189),
+      children: [
+        SpeedDialChild(
+          child: Icon(Icons.add),
+          onTap: () async {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AddProdutoPage()),
+            );
+          },
+        ),
+        /*SpeedDialChild(
+          child: Icon(Icons.recycling),
+          onTap: () {},
+        ),*/
+      ],
+    ),
+  );}}
 
 class ProductCard extends StatefulWidget {
   final Product product;

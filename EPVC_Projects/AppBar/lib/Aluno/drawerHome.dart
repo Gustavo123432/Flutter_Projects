@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Admin/produtoPage.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
 import 'package:my_flutter_project/Aluno/pedidosPageAluno.dart';
+import 'package:my_flutter_project/login.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DrawerHome extends StatefulWidget {
   const DrawerHome({super.key});
@@ -11,6 +13,40 @@ class DrawerHome extends StatefulWidget {
 
 class _DrawerHomeState extends State<DrawerHome> {
   //final _advancedDrawerController = AdvancedDrawerController();
+
+   void logout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Sair'),
+          content: const Text('Pretende Sair?'),
+          actions: [
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Fecha o AlertDialog
+              },
+            ),
+            TextButton(
+              child: const Text('Confirmar'),
+              onPressed: () async {
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                await prefs.clear();
+
+                // ignore: use_build_context_synchronously
+                Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (BuildContext ctx) => const LoginForm()));
+                ModalRoute.withName('/');
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +103,13 @@ class _DrawerHomeState extends State<DrawerHome> {
               },
               leading: Icon(Icons.archive),
               title: Text('Pedidos'),
+            ),
+             ListTile(
+              onTap: () {
+                logout(context);
+              },
+              leading: Icon(Icons.logout),
+              title: Text('Sair'),
             ),
             /*ListTile(
               onTap: () {

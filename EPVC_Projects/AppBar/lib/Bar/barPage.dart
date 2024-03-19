@@ -146,17 +146,19 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
               if (data == null || data.isEmpty) {
                 return Text('Sem Pedidos');
               }
-              
+
               // Ordenar a lista de pedidos, colocando os pedidos de professor no topo
               data.sort((a, b) {
-                if (a.userPermission == 'Professor' && b.userPermission != 'Professor') {
+                if (a.userPermission == 'Professor' &&
+                    b.userPermission != 'Professor') {
                   return -1;
-                } else if (a.userPermission != 'Professor' && b.userPermission == 'Professor') {
+                } else if (a.userPermission != 'Professor' &&
+                    b.userPermission == 'Professor') {
                   return 1;
                 }
                 return 0;
               });
-              
+
               return ListView.builder(
                 itemCount: data.length,
                 itemBuilder: (context, index) {
@@ -168,7 +170,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                   } catch (e) {
                     formattedTotal = 'Invalid Total';
                   }
-                  
+
                   return Dismissible(
                     key: Key(order.number),
                     direction: DismissDirection.endToStart,
@@ -210,14 +212,14 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                     },
                     child: Card(
                       elevation: 3,
-                      margin:
-                          EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                       color: order.userPermission == 'Professor'
                           ? Colors.red
-                          : null,
+                          : (order.userPermission == 'Funcionária'
+                              ? Colors.green
+                              : null),
                       child: ListTile(
-                        title:
-                            Text('Nº Pedido: ${order.number.toString()}'),
+                        title: Text('Nº Pedido: ${order.number.toString()}'),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

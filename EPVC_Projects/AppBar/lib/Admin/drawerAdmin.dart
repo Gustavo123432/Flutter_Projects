@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_advanced_drawer/flutter_advanced_drawer.dart';
+import 'package:my_flutter_project/Admin/TurmasPage.dart';
 import 'package:my_flutter_project/Admin/pedidosPage.dart';
 import 'package:my_flutter_project/Admin/produtoPage.dart';
 import 'package:my_flutter_project/Admin/users.dart';
@@ -63,6 +64,16 @@ class _DrawerAdminState extends State<DrawerAdmin> {
               onTap: () {
                 Navigator.push(
                   context,
+                  MaterialPageRoute(builder: (context) => TurmasPage()),
+                );
+              },
+              leading: Icon(Icons.group),
+              title: Text('Turmas'),
+            ),
+            ListTile(
+              onTap: () {
+                Navigator.push(
+                  context,
                   MaterialPageRoute(builder: (context) => PedidosPage()),
                 );
               },
@@ -79,6 +90,7 @@ class _DrawerAdminState extends State<DrawerAdmin> {
               leading: Icon(Icons.local_pizza),
               title: Text('Produtos'),
             ),
+            
             Spacer(),
             DefaultTextStyle(
               style: TextStyle(
