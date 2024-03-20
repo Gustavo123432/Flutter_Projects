@@ -158,7 +158,7 @@ body: Padding(
 
     try {
       var response = await http.post(
-          Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
+          Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
           body: {
             'query_param': '8',
             'nome': nome,

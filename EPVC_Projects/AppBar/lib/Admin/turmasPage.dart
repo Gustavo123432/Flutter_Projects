@@ -35,7 +35,7 @@ class _TurmasPageState extends State<TurmasPage> {
   }
 
   Future<void> _fetchTurmas() async {
-    final response = await http.get(Uri.parse('http://api.gfserver.pt/appBarAPI_GET.php?query_param=20'));
+    final response = await http.get(Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=20'));
     if (response.statusCode == 200) {
       final List<dynamic> responseData = json.decode(response.body);
       List<Turma> fetchedTurmas = responseData.map((data) => Turma.fromJson(data)).toList();
@@ -50,7 +50,7 @@ class _TurmasPageState extends State<TurmasPage> {
 
   void _addTurma(String turmaName) async {
     final response = await http.get(
-        Uri.parse('http://api.gfserver.pt/appBarAPI_GET.php?query_param=21&nome=$turmaName'));
+        Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=21&nome=$turmaName'));
     if (response.statusCode == 200) {
       setState(() {
         turmas.add(Turma(turma: turmaName));
@@ -78,7 +78,7 @@ class _TurmasPageState extends State<TurmasPage> {
   void _toggleRemoveSelection(int index) async {
     if (removerMode) {
       final response = await http.get(
-        Uri.parse('http://api.gfserver.pt/appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}')
+        Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}')
       );
       if (response.statusCode == 200) {
         _removeTurma(index);
@@ -93,7 +93,7 @@ class _TurmasPageState extends State<TurmasPage> {
     for (int i = indexesToRemove.length - 1; i >= 0; i--) {
       final int index = indexesToRemove[i];
       final response = await http.get(
-          Uri.parse('http://api.gfserver.pt/appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}'));
+          Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}'));
 
       if (response.statusCode == 200) {
         _removeTurma(index);

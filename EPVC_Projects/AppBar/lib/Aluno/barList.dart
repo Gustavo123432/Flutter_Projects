@@ -17,7 +17,7 @@ class _ListaProdutosState extends State<ListaProdutos> {
   Future<void> fetchData() async {
     try {
       final response = await http.post(
-        Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
+        Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
         body: {
           'query_param': '4',
         },

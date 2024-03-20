@@ -57,7 +57,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
 
   Future<List<PurchaseOrder>> fetchPurchaseOrders() async {
     final response = await http.get(
-        Uri.parse('http://api.gfserver.pt/appBarAPI_GET.php?query_param=10'));
+        Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=10'));
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => PurchaseOrder.fromJson(json)).toList();
@@ -68,7 +68,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
 
   void checkPedido(String orderNumber, String orderRequester) async {
     final response = await http.get(Uri.parse(
-        'http://api.gfserver.pt/appBarAPI_GET.php?query_param=17&nome=$orderRequester&npedido=$orderNumber'));
+        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=17&nome=$orderRequester&npedido=$orderNumber'));
     if (response.statusCode == 200) {
       setState(() async {
         ScaffoldMessenger.of(context).showSnackBar(

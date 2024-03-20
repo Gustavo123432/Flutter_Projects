@@ -44,7 +44,7 @@ class _UserTableState extends State<UserTable> {
     var user = prefs.getString("username");
 
     final response = await http.post(
-      Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
+      Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
       body: {
         'query_param': '1',
         'user': user,
@@ -63,7 +63,7 @@ class _UserTableState extends State<UserTable> {
     var user = prefs.getString("username");
 
     var response = await http.get(Uri.parse(
-        'http://api.gfserver.pt/appBarAPI_GET.php?query_param=2'));
+        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=2'));
 
     if (response.statusCode == 200) {
       setState(() {
@@ -100,7 +100,7 @@ class _UserTableState extends State<UserTable> {
       String apelido,String turma, String permissao) async {
     try {
       var response = await http.get(Uri.parse(
-          'http://api.gfserver.pt/appBarAPI_GET.php?query_param=3&userId=$userId&user=$user&nome=$nome&apelido=$apelido&turma=$turma&permissao=$permissao'));
+          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=3&userId=$userId&user=$user&nome=$nome&apelido=$apelido&turma=$turma&permissao=$permissao'));
       if (response.statusCode == 200) {
         // Se a atualização foi bem-sucedida, exiba uma mensagem ou faça qualquer outra ação necessária
         ScaffoldMessenger.of(context).showSnackBar(
@@ -141,7 +141,7 @@ class _UserTableState extends State<UserTable> {
       );
     } else {
       var response = await http.get(Uri.parse(
-          'http://api.gfserver.pt/appBarAPI_GET.php?query_param=11&idUser=$idUser'));
+          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=11&idUser=$idUser'));
 
       if (response.statusCode == 200) {
         setState(() {

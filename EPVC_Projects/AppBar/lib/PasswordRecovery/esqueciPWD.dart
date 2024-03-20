@@ -20,7 +20,7 @@ class _EmailRequestPageState extends State<EmailRequestPage> {
       await prefs.setString('email', email);
 
       var response = await http.get(Uri.parse(
-          'http://api.gfserver.pt/appBarAPI_GET.php?query_param=14&email=$email&tentativa=0'));
+          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=14&email=$email&tentativa=0'));
       if (response.statusCode == 200) {
         var responseData = json.decode(response.body);
 

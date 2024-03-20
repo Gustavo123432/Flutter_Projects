@@ -40,7 +40,7 @@ class _InserirCodePWDState extends State<InserirCodePWD> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       var email = prefs.getString("email");
     var response = await http.get(Uri.parse(
-        'http://api.gfserver.pt/appBarAPI_GET.php?query_param=14&email=$email&tentativa=1'));
+        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=14&email=$email&tentativa=1'));
     if (response.statusCode == 200) {
       var responseData = json.decode(response.body);
       print(responseData);
@@ -86,7 +86,7 @@ class _InserirCodePWDState extends State<InserirCodePWD> {
   if (!code.isEmpty && email != null) {
     try {
       var response = await http.get(Uri.parse(
-          'http://api.gfserver.pt/appBarAPI_GET.php?query_param=15&code=$code&email=$email'));
+          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=15&code=$code&email=$email'));
 
       if (response.statusCode == 200) {
         var responseData = json.decode(response.body);

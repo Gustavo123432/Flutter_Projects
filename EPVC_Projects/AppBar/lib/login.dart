@@ -50,7 +50,7 @@ class _LoginFormState extends State<LoginForm> {
 
     dynamic tar;
     dynamic response = await http.get(Uri.parse(
-        'http://api.gfserver.pt/appBarAPI_GET.php?query_param=1&name=$name&pwd=$pwd'));
+        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=1&name=$name&pwd=$pwd'));
     if (response.statusCode == 200) {
       setState(() {
         //print(response.body);

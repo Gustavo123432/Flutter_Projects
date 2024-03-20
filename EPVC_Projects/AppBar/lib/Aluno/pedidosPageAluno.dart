@@ -57,7 +57,7 @@ class _PurchaseOrdersPageAlunoState extends State<PedidosPageAlunos> {
     var user = prefs.getString("username");
 
     final response = await http.post(
-      Uri.parse('http://api.gfserver.pt/appBarAPI_Post.php'),
+      Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
       body: {
         'query_param': '1',
         'user': user!,
@@ -83,7 +83,7 @@ class _PurchaseOrdersPageAlunoState extends State<PedidosPageAlunos> {
   var user = nome + " " + apelido;
 
   final response = await http.get(
-    Uri.parse('http://api.gfserver.pt/appBarAPI_GET.php?query_param=13&nome=$user'),
+    Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=13&nome=$user'),
   );
 
   if (response.statusCode == 200) {
