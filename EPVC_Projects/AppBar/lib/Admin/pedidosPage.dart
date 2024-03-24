@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_flutter_project/Admin/drawerAdmin.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io' as io;
@@ -180,87 +181,6 @@ Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildC
 }
 
 
-
-  /*Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate,
-      BuildContext context) async {
-    final regularFont =
-        await http.get(Uri.parse("lib/assets/fonts/Roboto-Regular.ttf"));
-    final Uint8List fontData = regularFont.bodyBytes;
-
-    final pdf = pw.Document();
-
-    pdf.addPage(
-      pw.MultiPage(
-        build: (pw.Context context) => [
-          pw.Table.fromTextArray(
-            data: <List<String>>[
-              [
-                'Nº Pedido',
-                'Quem pediu',
-                'Turma',
-                'Descrição',
-                'Total    ',
-                'Estado      '
-              ],
-              for (var order in orders)
-                [
-                  if (order.data == selectedDate.toSt)
-                    {
-                      order.number,
-                      order.requester,
-                      order.group,
-                      order.description.replaceAll('[', '').replaceAll(']', ''),
-                      order.total,
-                      order.status == '0' ? 'Por Fazer' : 'Concluído',
-                    }
-                ],
-            ],
-            cellStyle:
-                pw.TextStyle(font: pw.Font.ttf(fontData.buffer.asByteData())),
-          ),
-        ],
-      ),
-    );
-
-    double total = 0;
-    for (var order in orders) {
-      total += double.tryParse(order.total) ?? 0;
-    }
-
-    pdf.addPage(pw.Page(
-      build: (pw.Context context) {
-        return pw.Center(
-          child: pw.Text('Total: ${total.toStringAsFixed(2)}',
-              style: pw.TextStyle(
-                  font: pw.Font.ttf(fontData.buffer.asByteData()))),
-        );
-      },
-    ));
-
-    final pdfBytes = await pdf.save();
-    final pdfData = Uint8List.fromList(pdfBytes);
-
-    if (kIsWeb) {
-      // Use kIsWeb to check if running on web
-      final blob = html.Blob([pdfData]);
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      html.AnchorElement(href: url)
-        ..setAttribute('download', 'purchase_orders.pdf')
-        ..click();
-      html.Url.revokeObjectUrl(url);
-    } else {
-      final directory = await getExternalStorageDirectory();
-      final filePath = '${directory?.path}/purchase_orders_$selectedDate.pdf';
-      final file = io.File(filePath);
-      await file.writeAsBytes(pdfData);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('PDF exportado com sucesso'),
-        ),
-      );
-    }
-  }*/
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -275,7 +195,9 @@ Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildC
             icon: Icon(Icons.logout),
           ),
         ],
+    
       ),
+      drawer: DrawerAdmin(),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -371,7 +293,7 @@ Future<void> _showDatePicker(List<PurchaseOrder> orders) async {
       return Theme(
         data: ThemeData.light().copyWith(
           // Define a cor de fundo do seletor de data aqui
-          colorScheme: ColorScheme.light(primary: Colors.green),
+          colorScheme: ColorScheme.light(primary: Color.fromARGB(255, 130, 201, 189)),
         ),
         child: child!,
       );

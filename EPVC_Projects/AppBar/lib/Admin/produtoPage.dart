@@ -365,6 +365,8 @@ class _ProductCardState extends State<ProductCard> {
               icon: Icon(Icons.delete),
               onPressed: () {
                 removeProduct(widget.product.id);
+
+
               },
             ),
           ],
@@ -382,9 +384,9 @@ void removeProduct(String id) async {
   print(response);
   if (response.statusCode == 200) {
     // Product updated successfully
-    print('Product updated successfully');
+    print('Product Remove Successfully');
   } else {
     // Failed to update product
-    print('Failed to update product');
+    print('Failed to Remove product');
   }
 }

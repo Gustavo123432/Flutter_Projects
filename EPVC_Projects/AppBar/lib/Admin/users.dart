@@ -17,6 +17,7 @@ class _UserTableState extends State<UserTable> {
   bool isEditing = false;
   dynamic users;
   List<dynamic> tableUsers = [];
+  List<dynamic> filteredUsers = [];
 
   // Mapa para armazenar os controladores de texto para cada linha da tabela
   Map<int, TextEditingController> nomeControllers = {};
@@ -68,7 +69,7 @@ class _UserTableState extends State<UserTable> {
     if (response.statusCode == 200) {
       setState(() {
         tableUsers = json.decode(response.body);
-        print (tableUsers);
+        filteredUsers = tableUsers; // Inicialmente, os usuários filtrados são iguais a todos os usuários
       });
     }
   }
@@ -90,14 +91,14 @@ class _UserTableState extends State<UserTable> {
     return apelidoControllers[index];
   }
 
-   TextEditingController? getTurmaController(int index, String turma) {
+  TextEditingController? getTurmaController(int index, String turma) {
     turmaController[index] ??= TextEditingController(text: turma);
     return turmaController[index];
   }
 
   // Função para atualizar um usuário
   Future<void> updateUser(String userId, String user, String nome,
-      String apelido,String turma, String permissao) async {
+      String apelido, String turma, String permissao) async {
     try {
       var response = await http.get(Uri.parse(
           'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=3&userId=$userId&user=$user&nome=$nome&apelido=$apelido&turma=$turma&permissao=$permissao'));
@@ -105,7 +106,8 @@ class _UserTableState extends State<UserTable> {
         // Se a atualização foi bem-sucedida, exiba uma mensagem ou faça qualquer outra ação necessária
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Valor atualizado com sucesso no banco de dados!'),
+            content: Text(
+                'Valor atualizado com sucesso no banco de dados!'),
           ),
         );
         UserInfo();
@@ -191,6 +193,74 @@ class _UserTableState extends State<UserTable> {
       },
     );
   }
+  void _showFilterDialog() {
+  String? selectedTurma;
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Filtrar por Turma'),
+        content: StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return DropdownButtonFormField<String>(
+              value: selectedTurma,
+              onChanged: (newValue) {
+                setState(() {
+                  selectedTurma = newValue;
+                });
+              },
+              items: tableUsers
+                  .map((user) => user['Turma'].toString())
+                  .toSet()
+                  .toList()
+                  .map((turma) {
+                return DropdownMenuItem<String>(
+                  value: turma,
+                  child: Text(turma),
+                );
+              }).toList(),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            child: Text('Cancelar'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child: Text('Filtrar'),
+          onPressed: () {
+  setState(() {
+    // Atualize o estado para refletir a filtragem
+    filteredUsers = [];
+    tableUsers.forEach((user) {
+      if (user['Turma'] == selectedTurma) {
+        filteredUsers.add(user);
+      }
+    });
+  });
+  Navigator.of(context).pop();
+},
+          ),
+          TextButton(
+            child: Text('Mostrar Todos'),
+            onPressed: () {
+              setState(() {
+                // Se "Mostrar Todos" for pressionado, exibimos todos os usuários novamente
+                filteredUsers = tableUsers;
+              });
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -276,7 +346,7 @@ class _UserTableState extends State<UserTable> {
                   DataColumn(label: Text('')),
                   DataColumn(label: Text('')),
                 ],
-                rows: tableUsers.asMap().entries.map((entry) {
+                rows: filteredUsers.asMap().entries.map((entry) {
                   final index = entry.key;
                   final user = entry.value;
 
@@ -306,7 +376,7 @@ class _UserTableState extends State<UserTable> {
                               },
                             )
                           : Text(user['Apelido'])),
-                          DataCell(isEditing
+                      DataCell(isEditing
                           ? TextField(
                               controller:
                                   getTurmaController(index, user['Turma']),
@@ -326,13 +396,20 @@ class _UserTableState extends State<UserTable> {
                                     user['Permissao'] = newValue;
                                   });
                                 },
-                                items: ['Administrador','Professor','Funcionária' ,'Bar' ,'Aluno']
-                                    .map((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
+                                items: [
+                                    'Administrador',
+                                    'Professor',
+                                    'Funcionária',
+                                    'Bar',
+                                    'Aluno'
+                                  ]
+                                  .map((String value) {
+                                    return DropdownMenuItem<String>(
+                                      value: value,
+                                      child: Text(value),
+                                    );
+                                  })
+                                  .toList(),
                               )
                             : Text(user['Permissao']),
                       ),
@@ -382,6 +459,13 @@ class _UserTableState extends State<UserTable> {
         backgroundColor: Color.fromARGB(
                         255, 130, 201, 189),
         children: [
+          SpeedDialChild(
+            child: Icon(Icons.filter_list),
+            onTap: () {
+              _showFilterDialog();
+              
+            }
+          ),
           SpeedDialChild(
             child: Icon(Icons.edit),
             onTap: () {
