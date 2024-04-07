@@ -142,7 +142,7 @@ class _AddProdutoPageState extends State<AddProdutoPage> {
                 TextFormField(
                   controller: _ingredientesController,
                   decoration:
-                      InputDecoration(labelText: 'Farinha, Açucar, Ovos ...'),
+                      InputDecoration(labelText: 'Insira os Ingredientes (Ex: Farinha, Ovos, Leite)'),
                   validator: (value) {
                     if (value!.isEmpty) {
                       return 'Insira os Ingredientes ';
@@ -252,7 +252,7 @@ class _AddProdutoPageState extends State<AddProdutoPage> {
                         _submitForm();
                       }
                     },
-                    child: Text('Submit'),
+                    child: Text('Adicionar Produto'),
                   ),
                 ),
               ],

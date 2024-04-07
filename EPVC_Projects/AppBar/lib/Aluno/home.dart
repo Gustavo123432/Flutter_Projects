@@ -201,36 +201,48 @@ class _HomeAlunoState extends State<HomeAluno> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 255, 255, 255),
-        title: Text(
-          '',
-          style: TextStyle(color: Colors.white),
-        ),
         actions: [
           IconButton(
             onPressed: () {
-              logout(context);
+              Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ShoppingCartPage(),
+                    ),
+                  );
             },
-            icon: Icon(Icons.logout),
+            icon: Icon(Icons.shopping_cart),
           ),
         ],
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: 20),
-          Container(
-            margin: EdgeInsets.only(
-                left: 16.0, right: 16.0, top: 25.0, bottom: 32.0),
-            child: TextField(
-              decoration: InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50.0),
+          /*title: Text('Search App'),
+          actions: [
+            Padding(
+              padding: EdgeInsets.only(right: 20.0),
+              child: GestureDetector(
+                onTap: () {
+                  // Ação ao clicar no ícone de pesquisa
+                },
+                child: Icon(
+                  Icons.search,
+                  size: 26.0,
                 ),
               ),
             ),
-          ),
+          ],
+          flexibleSpace: Padding(
+            padding: EdgeInsets.only(right: 50.0, left: 10.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                border: InputBorder.none,
+              ),
+            ),
+          ),*/
+        ),
+      drawer: DrawerHome(),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           SizedBox(height: 20),
           Container(
             margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
@@ -345,7 +357,7 @@ class _HomeAlunoState extends State<HomeAluno> {
           ),
         ],
       ),
-      bottomNavigationBar: Container(
+     /* bottomNavigationBar: Container(
         height: 60,
         child: BottomAppBar(
           color: Color.fromARGB(255, 246, 141, 45),
@@ -392,7 +404,7 @@ class _HomeAlunoState extends State<HomeAluno> {
             ],
           ),
         ),
-      ),
+      ),*/
     );
   }
 
@@ -600,7 +612,7 @@ class _CategoryPageState extends State<CategoryPage> {
     }
   }
 
-  @override
+   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -611,36 +623,60 @@ class _CategoryPageState extends State<CategoryPage> {
         itemBuilder: (context, index) {
           final item = items[index];
           final double preco = double.parse(item['Preco']);
+          bool isExpanded = false; // Estado para controlar se o card está expandido
 
-          return Card(
-            child: ListTile(
-              leading: Image.memory(
-                base64.decode(item['Imagem']),
-                fit: BoxFit.cover,
-                height: 50,
-                width: 50,
-              ),
-              title: Text(item['Nome']),
-              subtitle: Text(
-                items[index]['Qtd'] == "1"
-                    ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
-                    : "Indisponível",
-              ),
-              trailing: Visibility(
-                visible: items[index]['Qtd'] == "1",
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      cartItems.add(item);
-                    });
-                  },
-                  child: Text('Comprar'),
-                ),
+          return GestureDetector( // Use GestureDetector para capturar os cliques no card
+            onTap: () {
+              setState(() {
+                isExpanded = !isExpanded; // Alterne entre expandido e não expandido
+              });
+            },
+            child: Card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ListTile(
+                    leading: Image.memory(
+                      base64.decode(item['Imagem']),
+                      fit: BoxFit.cover,
+                      height: 50,
+                      width: 50,
+                    ),
+                    title: Text(item['Nome']),
+                    subtitle: Text(
+                      items[index]['Qtd'] == "1"
+                          ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
+                          : "Indisponível",
+                    ),
+                    trailing: Visibility(
+                      visible: items[index]['Qtd'] == "1",
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            cartItems.add(item);
+                          });
+                        },
+                        child: Text('Comprar'),
+                      ),
+                    ),
+                  ),
+                  Visibility(
+                    visible: isExpanded,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        'Informações nutricionais: ${item['Nutricao']}',
+                        // Substitua 'Nutricao' pelo nome do campo que contém as informações nutricionais
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           );
-        },
-      ),
+        }
+      )
       /*bottomNavigationBar: BottomAppBar(
         color: Color.fromARGB(255, 246, 141, 45),
         child: Row(
@@ -922,7 +958,46 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Carrinho de Compras'),
-      ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HomeAlunoMain(),
+                    ),
+                  );
+            },
+            icon: Icon(Icons.home),
+          ),
+        ],
+          /*title: Text('Search App'),
+          actions: [
+            Padding(
+              padding: EdgeInsets.only(right: 20.0),
+              child: GestureDetector(
+                onTap: () {
+                  // Ação ao clicar no ícone de pesquisa
+                },
+                child: Icon(
+                  Icons.search,
+                  size: 26.0,
+                ),
+              ),
+            ),
+          ],
+          flexibleSpace: Padding(
+            padding: EdgeInsets.only(right: 50.0, left: 10.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                border: InputBorder.none,
+              ),
+            ),
+          ),*/
+        ),
+      
+      drawer: DrawerHome(),
       body: Column(
         children: [
           Expanded(
@@ -1039,7 +1114,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           ),
         ],
       ),
-      bottomNavigationBar: Container(
+      /*bottomNavigationBar: Container(
         height: 60,
         child: BottomAppBar(
           color: Color.fromARGB(255, 246, 141, 45),
@@ -1086,7 +1161,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             ],
           ),
         ),
-      ),
+      ),*/
     );
   }
 }

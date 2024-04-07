@@ -67,7 +67,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
       List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => PurchaseOrder.fromJson(json)).toList();
     } else {
-      throw Exception('Failed to load purchase orders');
+      throw Exception('Atualize a Página');
     }
   }
 

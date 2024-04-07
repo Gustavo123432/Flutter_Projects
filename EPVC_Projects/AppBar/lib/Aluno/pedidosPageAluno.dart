@@ -68,7 +68,7 @@ class _PurchaseOrdersPageAlunoState extends State<PedidosPageAlunos> {
         users = json.decode(response.body);
       });
     } else {
-      print("Failed to fetch user information");
+      print("Atualize a Página");
     }
   }
 
@@ -103,8 +103,8 @@ class _PurchaseOrdersPageAlunoState extends State<PedidosPageAlunos> {
 
     return orders;
   } else {
-    print("Failed to fetch purchase orders");
-    throw Exception('Failed to load purchase orders');
+    print("Atualize a Página");
+    throw Exception('Atualize a Página');
   }
 }
 
@@ -113,7 +113,47 @@ class _PurchaseOrdersPageAlunoState extends State<PedidosPageAlunos> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Pedidos Registados'),
-      ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HomeAlunoMain(),
+                    ),
+                  );
+            },
+            icon: Icon(Icons.home),
+          ),
+        ],
+          /*title: Text('Search App'),
+          actions: [
+            Padding(
+              padding: EdgeInsets.only(right: 20.0),
+              child: GestureDetector(
+                onTap: () {
+                  // Ação ao clicar no ícone de pesquisa
+                },
+                child: Icon(
+                  Icons.search,
+                  size: 26.0,
+                ),
+              ),
+            ),
+          ],
+          flexibleSpace: Padding(
+            padding: EdgeInsets.only(right: 50.0, left: 10.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                border: InputBorder.none,
+              ),
+            ),
+          ),*/
+        ),
+      
+      drawer: DrawerHome(),
+      
       body: Center(
         child: FutureBuilder<List<PurchaseOrder>>(
           future: futurePurchaseOrders,
@@ -121,9 +161,9 @@ class _PurchaseOrdersPageAlunoState extends State<PedidosPageAlunos> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return CircularProgressIndicator();
             } else if (snapshot.hasError) {
-              return Text('Failed to load purchase orders');
+              return Text('Atualize a Página');
             } else if (snapshot.data!.isEmpty) {
-              return Text('No purchase orders found');
+              return Text('Atualize a Página');
             } else {
               return ListView.builder(
                 itemCount: snapshot.data!.length,
@@ -159,7 +199,7 @@ class _PurchaseOrdersPageAlunoState extends State<PedidosPageAlunos> {
           },
         ),
       ),
-      bottomNavigationBar: Container(
+     /* bottomNavigationBar: Container(
   height: 60,
   child: BottomAppBar(
     color: Color.fromARGB(255, 246, 141, 45),
@@ -193,8 +233,8 @@ class _PurchaseOrdersPageAlunoState extends State<PedidosPageAlunos> {
         ),
       ],
     ),
-  ),
-),
+  ),*/
+//)
     );
   }
 }
