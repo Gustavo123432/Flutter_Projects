@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:appBar/Admin/produtoPage.dart';
-import 'package:appBar/Aluno/home.dart';
-import 'package:appBar/Aluno/pedidosPageAluno.dart';
-import 'package:appBar/login.dart';
+import 'package:my_flutter_project/Admin/produtoPage.dart';
+import 'package:my_flutter_project/Aluno/home.dart';
+import 'package:my_flutter_project/Aluno/pedidosPageAluno.dart';
+import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DrawerHome extends StatefulWidget {

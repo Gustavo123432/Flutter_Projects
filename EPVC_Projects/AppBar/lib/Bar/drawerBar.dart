@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:appBar/Admin/produtoPage.dart';
-import 'package:appBar/Aluno/home.dart';
-import 'package:appBar/Aluno/pedidosPageAluno.dart';
-import 'package:appBar/Bar/barPage.dart';
-import 'package:appBar/Bar/pedidosRegistados.dart';
-import 'package:appBar/Bar/produtoPageBar.dart';
+import 'package:my_flutter_project/Admin/produtoPage.dart';
+import 'package:my_flutter_project/Aluno/home.dart';
+import 'package:my_flutter_project/Aluno/pedidosPageAluno.dart';
+import 'package:my_flutter_project/Bar/barPage.dart';
+import 'package:my_flutter_project/Bar/pedidosRegistados.dart';
+import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 
 class DrawerBar extends StatefulWidget {
   const DrawerBar({super.key});
