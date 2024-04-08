@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
-import 'package:my_flutter_project/Bar/produtoPageBar.dart';
+import 'package:appBar/Bar/produtoPageBar.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:my_flutter_project/Bar/drawerBar.dart';
+import 'package:appBar/Bar/drawerBar.dart';
 import 'package:open_file/open_file.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
@@ -24,6 +24,8 @@ class PurchaseOrder {
   final String description;
   final String total;
   final String status;
+  final String data;
+  final String hora;
 
   PurchaseOrder({
     required this.number,
@@ -32,6 +34,8 @@ class PurchaseOrder {
     required this.description,
     required this.total,
     required this.status,
+    required this.data,
+    required this.hora,
   });
 
   factory PurchaseOrder.fromJson(Map<String, dynamic> json) {
@@ -40,6 +44,8 @@ class PurchaseOrder {
       requester: json['QPediu'],
       group: json['Turma'],
       description: json['Descricao'],
+      data: json['Data'],
+      hora: json['Hora'],
       total: json['Total'],
       status: json['Estado'],
     );
@@ -55,6 +61,11 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
   late Stream<List<PurchaseOrder>> purchaseOrderStream;
   late TextEditingController horaPretendidaController;
   late List<PurchaseOrder> pedidos;
+  late DateTime selectedDate;
+  late String formattedDate;
+  late String formattedTime;
+  late TimeOfDay selectedTime;
+
 
   @override
   void initState() {
@@ -63,51 +74,62 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
     horaPretendidaController = TextEditingController();
     pedidos = [];
     WidgetsBinding.instance!.addPostFrameCallback((_) {
-      askForTime();
+      _showDateTimePicker();
+      
     });
   }
 
-  Future<void> askForTime() async {
-    horaPretendidaController.text = '';
-    showDialog<String>(
+
+
+ Future<void> _showDateTimePicker() async {
+    final DateTime? date = await showDatePicker(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Informe a Hora Pretendida'),
-          content: TextField(
-            controller: horaPretendidaController,
-            decoration: InputDecoration(hintText: 'HH:MM'),
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            // Define the background color of the date picker here
+            colorScheme: ColorScheme.light(primary: Color.fromARGB(255, 130, 201, 189)),
           ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                fetchPurchaseOrders(horaPretendidaController.text);
-                Navigator.of(context).pop();
-              },
-              child: Text('Confirmar'),
-            ),
-          ],
+          child: child!,
         );
       },
     );
+
+    if (date != null) {
+      final TimeOfDay? time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (time != null) {
+        setState(() {
+          selectedDate = date;
+          selectedTime = time;
+        });
+        // Extract YYYY-MM-DD portion from the selected date
+         formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+          formattedTime = '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
+        print('Selected Date: $formattedDate');
+        print('Selected Time: $formattedTime');
+        fetchPurchaseOrders();
+      }
+    }
   }
 
-  Future<void> fetchPurchaseOrders(String horaPretendida) async {
+  Future<void> fetchPurchaseOrders() async {
     final response = await http.get(
       Uri.parse(
-          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=19&horaPretendida=$horaPretendida'),
+          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=19&horaPretendida=$formattedTime&dataPretendida=$formattedDate'),
     );
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
       setState(() {
         pedidos = data.map((json) => PurchaseOrder.fromJson(json)).toList();
         purchaseOrderStream = Stream.value(pedidos);
+        
       });
     } else {
       throw Exception('Failed to load purchase orders');
@@ -212,6 +234,8 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
                       pw.Text('Quem pediu: ${pedido.requester}', style: pw.TextStyle(font: ttf)),
                       pw.Text('Turma: ${pedido.group}', style: pw.TextStyle(font: ttf)),
                       pw.Text('Descrição: ${pedido.description}', style: pw.TextStyle(font: ttf)),
+                      pw.Text('Data: ${pedido.data}', style: pw.TextStyle(font: ttf)),
+                      pw.Text('Hora: ${pedido.hora}', style: pw.TextStyle(font: ttf)),
                       pw.Text('Total: ${pedido.total}', style: pw.TextStyle(font: ttf)),
                       pw.Text(
                         'Estado: ${pedido.status == '0' ? 'Por Fazer' : 'Concluído'}',
@@ -272,7 +296,7 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
             child: Icon(Icons.av_timer),
             onTap: () {
               setState(() {
-                askForTime();
+                _showDateTimePicker();
               });
             },
           ),
@@ -303,8 +327,10 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
                       children: [
                         Text('Quem pediu: ${order.requester}'),
                         Text('Turma: ${order.group}'),
-                        Text('Descrição: ${order.description}'),
-                        Text('Total: ${order.total}'),
+                        Text('Descrição: ${order.description.toString().replaceAll("[", "").replaceAll("]", "")}'),
+                        Text('Data: ${order.data}'),
+                        Text('Hora: ${order.hora}'),
+                        Text('Total: ${order.total.toString().replaceAll(".", ",")}€'),
                         Text(
                           'Estado: ${order.status == '0' ? 'Por Fazer' : 'Concluído'}',
                         ),

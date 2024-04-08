@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
-import 'package:my_flutter_project/Bar/drawerBar.dart';
+import 'package:appBar/Bar/drawerBar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Product {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_advanced_drawer/flutter_advanced_drawer.dart';
-import 'package:my_flutter_project/Admin/TurmasPage.dart';
-import 'package:my_flutter_project/Admin/pedidosPage.dart';
-import 'package:my_flutter_project/Admin/produtoPage.dart';
-import 'package:my_flutter_project/Admin/users.dart';
+import 'package:appBar/Admin/TurmasPage.dart';
+import 'package:appBar/Admin/pedidosPage.dart';
+import 'package:appBar/Admin/produtoPage.dart';
+import 'package:appBar/Admin/users.dart';
 
 class DrawerAdmin extends StatefulWidget {
   const DrawerAdmin({super.key});

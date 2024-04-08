@@ -3,10 +3,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:my_flutter_project/Admin/users.dart';
-import 'package:my_flutter_project/Aluno/home.dart';
-import 'package:my_flutter_project/Bar/barPage.dart';
-import 'package:my_flutter_project/PasswordRecovery/esqueciPWD.dart';
+import 'package:appBar/Admin/users.dart';
+import 'package:appBar/Aluno/home.dart';
+import 'package:appBar/Bar/barPage.dart';
+import 'package:appBar/PasswordRecovery/esqueciPWD.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
