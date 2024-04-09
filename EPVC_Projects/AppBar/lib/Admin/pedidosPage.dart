@@ -7,11 +7,11 @@ import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Admin/drawerAdmin.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io' as io;
+/*import 'dart:io' as io;
 import 'dart:html' as html;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
+import 'package:path_provider/path_provider.dart';*/
 
 class PurchaseOrder {
   final String number;
@@ -104,7 +104,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     );
   }
 
-Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildContext context) async {
+/*Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildContext context) async {
   final regularFont = await http.get(Uri.parse("lib/assets/fonts/Roboto-Regular.ttf"));
   final Uint8List fontData = regularFont.bodyBytes;
   final pdf = pw.Document();
@@ -179,7 +179,7 @@ Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildC
     );
   }
 }
-
+*/
 
   @override
   Widget build(BuildContext context) {
@@ -300,11 +300,11 @@ Future<void> _showDatePicker(List<PurchaseOrder> orders) async {
     },
   );
 
-  if (selectedDate != null) {
+  /*if (selectedDate != null) {
     // Formate a data selecionada para o formato yyyy-mm-dd
     final formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
     exportToPdf(orders, formattedDate, context);
-  }
+  }*/
 }
 
   Future<void> removeAll(context) async {
