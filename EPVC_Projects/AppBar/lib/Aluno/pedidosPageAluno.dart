@@ -12,6 +12,8 @@ class PurchaseOrder {
   final String description;
   final String total;
   final String status;
+  final String hora;
+  final String data;
 
   PurchaseOrder({
     required this.number,
@@ -20,6 +22,8 @@ class PurchaseOrder {
     required this.description,
     required this.total,
     required this.status,
+    required this.hora,
+    required this.data,
   });
 
   factory PurchaseOrder.fromJson(Map<String, dynamic> json) {
@@ -30,6 +34,8 @@ class PurchaseOrder {
       description: json['Descricao'],
       total: json['Total'],
       status: json['Estado'],
+      hora: json['Hora'],
+      data: json['Data'],
     );
   }
 }
@@ -185,6 +191,8 @@ class _PurchaseOrdersPageAlunoState extends State<PedidosPageAlunos> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Descrição: ${order.description.replaceAll('[', '').replaceAll(']', '')}'),
+                          Text('Data: ${order.data}'),
+                          Text('Hora: ${order.hora}'),
                           Text('Total: $formattedTotal€'),
                           Text(
                             'Estado: ${order.status == '0' ? 'Por Fazer' : 'Concluído'}',

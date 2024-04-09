@@ -576,14 +576,19 @@ class CategoryPage extends StatefulWidget {
 
 class _CategoryPageState extends State<CategoryPage> {
   List<dynamic> items = [];
+  late StreamController<List<dynamic>> _streamController;
 
   @override
   void initState() {
     super.initState();
+    _streamController = StreamController<List<dynamic>>();
     fetchData(widget.title);
-    Timer.periodic(Duration(seconds: 1), (timer) {
-      fetchData(widget.title);
-    });
+  }
+
+  @override
+  void dispose() {
+    _streamController.close();
+    super.dispose();
   }
 
   Future<void> fetchData(String categoria) async {
@@ -598,9 +603,7 @@ class _CategoryPageState extends State<CategoryPage> {
       if (response.statusCode == 200) {
         final dynamic responseData = json.decode(response.body);
         if (responseData is List<dynamic>) {
-          setState(() {
-            items = responseData.cast<Map<String, dynamic>>();
-          });
+          _streamController.add(responseData.cast<Map<String, dynamic>>());
         } else {
           throw Exception('Response data is not a List<dynamic>');
         }
@@ -610,110 +613,97 @@ class _CategoryPageState extends State<CategoryPage> {
     } catch (e) {
       print('Error fetching data: $e');
     }
+
+    // Chamar novamente a função fetchData após um pequeno atraso para verificar atualizações
+    Future.delayed(Duration(seconds: 5), () {
+      fetchData(categoria);
+    });
   }
 
-   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: ListView.builder(
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          final double preco = double.parse(item['Preco']);
-          bool isExpanded = false; // Estado para controlar se o card está expandido
+      body: StreamBuilder<List<dynamic>>(
+        stream: _streamController.stream,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            List<dynamic> items = snapshot.data!;
+            return ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                final double preco = double.parse(item['Preco']);
+                bool isExpanded = false; // Estado para controlar se o card está expandido
 
-          return GestureDetector( // Use GestureDetector para capturar os cliques no card
-            onTap: () {
-              setState(() {
-                isExpanded = !isExpanded; // Alterne entre expandido e não expandido
-              });
-            },
-            child: Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ListTile(
-                    leading: Image.memory(
-                      base64.decode(item['Imagem']),
-                      fit: BoxFit.cover,
-                      height: 50,
-                      width: 50,
-                    ),
-                    title: Text(item['Nome']),
-                    subtitle: Text(
-                      items[index]['Qtd'] == "1"
-                          ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
-                          : "Indisponível",
-                    ),
-                    trailing: Visibility(
-                      visible: items[index]['Qtd'] == "1",
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            cartItems.add(item);
-                          });
-                        },
-                        child: Text('Comprar'),
-                      ),
+                return GestureDetector( // Use GestureDetector para capturar os cliques no card
+                  onTap: () {
+                    setState(() {
+                      isExpanded = !isExpanded; // Alterne entre expandido e não expandido
+                    });
+                  },
+                  child: Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ListTile(
+                          leading: Image.memory(
+                            base64.decode(item['Imagem']),
+                            fit: BoxFit.cover,
+                            height: 50,
+                            width: 50,
+                          ),
+                          title: Text(item['Nome']),
+                          subtitle: Text(
+                            items[index]['Qtd'] == "1"
+                                ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
+                                : "Indisponível",
+                          ),
+                          trailing: Visibility(
+                            visible: items[index]['Qtd'] == "1",
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  cartItems.add(item);
+                                });
+                              },
+                              child: Text('Comprar'),
+                            ),
+                          ),
+                        ),
+                        Visibility(
+                          visible: isExpanded,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              'Informações nutricionais: ${item['Nutricao']}',
+                              // Substitua 'Nutricao' pelo nome do campo que contém as informações nutricionais
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Visibility(
-                    visible: isExpanded,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        'Informações nutricionais: ${item['Nutricao']}',
-                        // Substitua 'Nutricao' pelo nome do campo que contém as informações nutricionais
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                );
+              },
+            );
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text('Error: ${snapshot.error}'),
+            );
+          }
+          return Center(
+            child: CircularProgressIndicator(),
           );
-        }
-      )
-      /*bottomNavigationBar: BottomAppBar(
-        color: Color.fromARGB(255, 246, 141, 45),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              icon: Icon(Icons.home, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => HomeAlunoMain(),
-                  ),
-                );
-              },
-            ),
-            IconButton(
-              icon: Icon(Icons.notifications, color: Colors.white),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: Icon(Icons.shopping_cart, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ShoppingCartPage(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),*/
+        },
+      ),
     );
   }
 }
+
 
 class ShoppingCartPage extends StatefulWidget {
   @override
