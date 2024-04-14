@@ -193,74 +193,74 @@ class _UserTableState extends State<UserTable> {
       },
     );
   }
+
   void _showFilterDialog() {
-  String? selectedTurma;
+    String? selectedTurma;
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text('Filtrar por Turma'),
-        content: StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            return DropdownButtonFormField<String>(
-              value: selectedTurma,
-              onChanged: (newValue) {
-                setState(() {
-                  selectedTurma = newValue;
-                });
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Filtrar por Turma'),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return DropdownButtonFormField<String>(
+                value: selectedTurma,
+                onChanged: (newValue) {
+                  setState(() {
+                    selectedTurma = newValue;
+                  });
+                },
+                items: tableUsers
+                    .map((user) => user['Turma'].toString())
+                    .toSet()
+                    .toList()
+                    .map((turma) {
+                  return DropdownMenuItem<String>(
+                    value: turma,
+                    child: Text(turma),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop();
               },
-              items: tableUsers
-                  .map((user) => user['Turma'].toString())
-                  .toSet()
-                  .toList()
-                  .map((turma) {
-                return DropdownMenuItem<String>(
-                  value: turma,
-                  child: Text(turma),
-                );
-              }).toList(),
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            child: Text('Cancelar'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-          TextButton(
-            child: Text('Filtrar'),
-          onPressed: () {
-  setState(() {
-    // Atualize o estado para refletir a filtragem
-    filteredUsers = [];
-    tableUsers.forEach((user) {
-      if (user['Turma'] == selectedTurma) {
-        filteredUsers.add(user);
-      }
-    });
-  });
-  Navigator.of(context).pop();
-},
-          ),
-          TextButton(
-            child: Text('Mostrar Todos'),
-            onPressed: () {
-              setState(() {
-                // Se "Mostrar Todos" for pressionado, exibimos todos os usuários novamente
-                filteredUsers = tableUsers;
-              });
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
-
+            ),
+            TextButton(
+              child: Text('Filtrar'),
+              onPressed: () {
+                setState(() {
+                  // Atualize o estado para refletir a filtragem
+                  filteredUsers = [];
+                  tableUsers.forEach((user) {
+                    if (user['Turma'] == selectedTurma) {
+                      filteredUsers.add(user);
+                    }
+                  });
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Mostrar Todos'),
+              onPressed: () {
+                setState(() {
+                  // Se "Mostrar Todos" for pressionado, exibimos todos os usuários novamente
+                  filteredUsers = tableUsers;
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +291,7 @@ class _UserTableState extends State<UserTable> {
             SizedBox(
               width: 8,
             ),
-           users != null && users.toString() != "null"
+            users != null && users.toString() != "null"
                 ? Text(
                     'Bem Vindo(a): ' +
                         users[0]['Nome'] +
@@ -312,158 +312,157 @@ class _UserTableState extends State<UserTable> {
         ],
       ),
       drawer: DrawerAdmin(),
-      body: Container(
-        width: double.infinity, // Usar toda a largura disponível
-        height: double.infinity, // Usar toda a altura disponível
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(
-                'lib/assets/epvc.png'), // Caminho para a sua imagem de fundo
-            // fit: BoxFit.cover,
+      body: SingleChildScrollView(
+        child: Container(
+          width: double.infinity, // Usar toda a largura disponível
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage(
+                  'lib/assets/epvc.png'), // Caminho para a sua imagem de fundo
+              // fit: BoxFit.cover,
+            ),
           ),
-        ),
-        child: Stack(
-          children: [
-            // Imagem de fundo
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Color.fromARGB(255, 255, 255, 255)
-                      .withOpacity(0.80), // Cor preta com opacidade de 40%
+          child: Stack(
+            children: [
+              // Imagem de fundo
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Color.fromARGB(255, 255, 255, 255)
+                        .withOpacity(0.80), // Cor preta com opacidade de 40%
+                  ),
                 ),
               ),
-            ),
-            // Sua tabela aqui
-            Center(
-              child: DataTable(
-                columns: [
-                  DataColumn(label: Text('ID')),
-                  DataColumn(label: Text('Email')),
-                  DataColumn(label: Text('Nome')),
-                  DataColumn(label: Text('Apelido')),
-                  DataColumn(label: Text('Turma')),
-                  DataColumn(label: Text('Permissão')),
-                  DataColumn(label: Text('')),
-                  DataColumn(label: Text('')),
-                ],
-                rows: filteredUsers.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final user = entry.value;
-
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(user['IdUser'])),
-                      DataCell(Text(user['Email'])),
-                      DataCell(isEditing
-                          ? TextField(
-                              controller:
-                                  getNomeController(index, user['Nome']),
-                              onChanged: (newValue) {
-                                setState(() {
-                                  user['Nome'] = newValue;
-                                });
-                              },
-                            )
-                          : Text(user['Nome'])),
-                      DataCell(isEditing
-                          ? TextField(
-                              controller:
-                                  getApelidoController(index, user['Apelido']),
-                              onChanged: (newValue) {
-                                setState(() {
-                                  user['Apelido'] = newValue;
-                                });
-                              },
-                            )
-                          : Text(user['Apelido'])),
-                      DataCell(isEditing
-                          ? TextField(
-                              controller:
-                                  getTurmaController(index, user['Turma']),
-                              onChanged: (newValue) {
-                                setState(() {
-                                  user['Turma'] = newValue;
-                                });
-                              },
-                            )
-                          : Text(user['Turma'])),
-                      DataCell(
-                        isEditing
-                            ? DropdownButtonFormField<String>(
-                                value: user['Permissao'],
-                                onChanged: (newValue) {
-                                  setState(() {
-                                    user['Permissao'] = newValue;
-                                  });
-                                },
-                                items: [
-                                    'Administrador',
-                                    'Professor',
-                                    'Funcionária',
-                                    'Bar',
-                                    'Aluno'
-                                  ]
-                                  .map((String value) {
-                                    return DropdownMenuItem<String>(
-                                      value: value,
-                                      child: Text(value),
-                                    );
-                                  })
-                                  .toList(),
-                              )
-                            : Text(user['Permissao']),
-                      ),
-                      DataCell(
-                        isEditing
-                            ? ElevatedButton(
-                                onPressed: () {
-                                  updateUser(
-                                    user['IdUser'],
-                                    user['Email'],
-                                    user['Nome'],
-                                    user['Apelido'],
-                                    user['Turma'],
-                                    user['Permissao'],
-                                  );
-                                  isEditing = false;
-                                },
-                                child: Text('Guardar'),
-                              )
-                            : Text(""),
-                      ),
-                      DataCell(
-                        isEditing
-                            ? ElevatedButton(
-                                onPressed: () {
-                                  removeUser(
-                                    user['IdUser'],
-                                  );
-                                  isEditing = false;
-                                },
-                                child: Text('Eliminar'),
-                              )
-                            : Text(""),
-                      ),
+              // Sua tabela aqui
+              Center(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: [
+                      DataColumn(label: Text('ID')),
+                      DataColumn(label: Text('Email')),
+                      DataColumn(label: Text('Nome')),
+                      DataColumn(label: Text('Apelido')),
+                      DataColumn(label: Text('Turma')),
+                      DataColumn(label: Text('Permissão')),
+                      DataColumn(label: Text('')),
+                      DataColumn(label: Text('')),
                     ],
-                  );
-                }).toList(),
+                    rows: filteredUsers.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final user = entry.value;
+
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(user['IdUser'])),
+                          DataCell(Text(user['Email'])),
+                          DataCell(isEditing
+                              ? TextField(
+                                  controller: getNomeController(index, user['Nome']),
+                                  onChanged: (newValue) {
+                                    setState(() {
+                                      user['Nome'] = newValue;
+                                    });
+                                  },
+                                )
+                              : Text(user['Nome'])),
+                          DataCell(isEditing
+                              ? TextField(
+                                  controller: getApelidoController(index, user['Apelido']),
+                                  onChanged: (newValue) {
+                                    setState(() {
+                                      user['Apelido'] = newValue;
+                                    });
+                                  },
+                                )
+                              : Text(user['Apelido'])),
+                          DataCell(isEditing
+                              ? TextField(
+                                  controller: getTurmaController(index, user['Turma']),
+                                  onChanged: (newValue) {
+                                    setState(() {
+                                      user['Turma'] = newValue;
+                                    });
+                                  },
+                                )
+                              : Text(user['Turma'])),
+                          DataCell(
+                            isEditing
+                                ? DropdownButtonFormField<String>(
+                                    value: user['Permissao'],
+                                    onChanged: (newValue) {
+                                      setState(() {
+                                        user['Permissao'] = newValue;
+                                      });
+                                    },
+                                    items: [
+                                        'Administrador',
+                                        'Professor',
+                                        'Funcionária',
+                                        'Bar',
+                                        'Aluno'
+                                      ]
+                                      .map((String value) {
+                                        return DropdownMenuItem<String>(
+                                          value: value,
+                                          child: Text(value),
+                                        );
+                                      })
+                                      .toList(),
+                                  )
+                                : Text(user['Permissao']),
+                          ),
+                          DataCell(
+                            isEditing
+                                ? ElevatedButton(
+                                    onPressed: () {
+                                      updateUser(
+                                        user['IdUser'],
+                                        user['Email'],
+                                        user['Nome'],
+                                        user['Apelido'],
+                                        user['Turma'],
+                                        user['Permissao'],
+                                      );
+                                      isEditing = false;
+                                    },
+                                    child: Text('Guardar'),
+                                  )
+                                : Text(""),
+                          ),
+                          DataCell(
+                            isEditing
+                                ? ElevatedButton(
+                                    onPressed: () {
+                                      removeUser(
+                                        user['IdUser'],
+                                      );
+                                      isEditing = false;
+                                    },
+                                    child: Text('Eliminar'),
+                                  )
+                                : Text(""),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       floatingActionButton: SpeedDial(
         icon: Icons.more_horiz,
-        iconTheme:
-            IconThemeData(color: Colors.white), // Set icon color to white
+        iconTheme: IconThemeData(color: Colors.white), // Set icon color to white
         backgroundColor: Color.fromARGB(
-                        255, 130, 201, 189),
+            255, 130, 201, 189),
         children: [
           SpeedDialChild(
             child: Icon(Icons.filter_list),
             onTap: () {
               _showFilterDialog();
-              
             }
           ),
           SpeedDialChild(

@@ -7,6 +7,7 @@ import 'package:my_flutter_project/Admin/users.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
 import 'package:my_flutter_project/Bar/barPage.dart';
 import 'package:my_flutter_project/PasswordRecovery/esqueciPWD.dart';
+import 'package:my_flutter_project/PasswordRecovery/reenserirPWD.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -76,7 +77,9 @@ class _LoginFormState extends State<LoginForm> {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('permissao', tar[0]['Permissao'].toString());
       await prefs.setString('username', tar[0]['Email'].toString());
+      await prefs.setString('email', tar[0]['Email'].toString());
       await prefs.setString('idUser', tar[0]['IdUser'].toString());
+      await prefs.setString('pwd', pwd);
     } else if (tar == 'false') {
       final snackBar = SnackBar(
         behavior: SnackBarBehavior.floating,
@@ -235,8 +238,6 @@ class _LoginFormState extends State<LoginForm> {
                 ),
               ),
               const SizedBox(height: 20),
-
-
               ElevatedButton(
                 onPressed: () {
                   login();
@@ -324,35 +325,37 @@ class _LoginFormState extends State<LoginForm> {
           ),
           const SizedBox(height: 20),
           Text.rich(
-                TextSpan(
-                  text: 'Esqueceu-se da Password? ',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 12,
-                  ),
-                  children: <TextSpan>[
-                    TextSpan(
-                      text: 'Clique Aqui',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
-                      ),
-                      recognizer: TapGestureRecognizer()
-                        ..onTap = () {
-                          // Lógica para lidar com o clique no texto
-                          print('Esqueceu-se da Password? Clique Aqui');
-
-                          Navigator.push(
-          context, MaterialPageRoute(builder: (context) => EmailRequestPage()));
-
-                          // Adicione aqui a lógica para lidar com a recuperação da senha
-                        },
-                    ),
-                  ],
-                ),
+            TextSpan(
+              text: 'Esqueceu-se da Password? ',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 12,
               ),
-              const SizedBox(height: 20),
+              children: <TextSpan>[
+                TextSpan(
+                  text: 'Clique Aqui',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.underline,
+                  ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () {
+                      // Lógica para lidar com o clique no texto
+                      print('Esqueceu-se da Password? Clique Aqui');
+
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => EmailRequestPage()));
+
+                      // Adicione aqui a lógica para lidar com a recuperação da senha
+                    },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           ElevatedButton(
             style: ButtonStyle(
               backgroundColor: MaterialStateProperty.all<Color>(
@@ -373,37 +376,47 @@ class _LoginFormState extends State<LoginForm> {
 void verifylogin(context) async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
   var id = prefs.getString("username");
+  var email = prefs.getString("email");
   var type = prefs.getString("permissao");
+  var pwd = prefs.getString("pwd").toString();
+
   //print(id);
   //print(type);
   if (id != null) //já arrancou a app
   {
-    if (type == "Administrador") //é adm
-    {
-      print("Administrador");
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) => UserTable()));
-    } else if (type == "Professor") {
-      //é user
-      print("Professor");
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-    } else if (type == "Funcionária") {
-      //é user
-      print("Funcionária");
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-    } else if (type == "Bar") {
-      //é user
-      print("Bar");
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) => BarPagePedidos()));
-    } else if (type == "Aluno") {
-      //é user
-      print("Aluno");
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+    if (pwd == "2024") {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('lala', "1");
+      Navigator.push(context,
+          MaterialPageRoute(builder: (context) => ReenserirPassword()));
+      
+    } else {
+      if (type == "Administrador") //é adm
+      {
+        print("Administrador");
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => UserTable()));
+      } else if (type == "Professor") {
+        //é user
+        print("Professor");
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+      } else if (type == "Funcionária") {
+        //é user
+        print("Funcionária");
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+      } else if (type == "Bar") {
+        //é user
+        print("Bar");
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => BarPagePedidos()));
+      } else if (type == "Aluno") {
+        //é user
+        print("Aluno");
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+      }
     }
-  } else //é a primeira vez
-  {}
+  }
 }

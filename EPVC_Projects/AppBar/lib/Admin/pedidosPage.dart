@@ -129,7 +129,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
                   order.requester,
                   order.group,
                   order.description.replaceAll('[', '').replaceAll(']', ''),
-                  order.total,
+                  order.total.toStringAsFixed(2),
                   order.status == '0' ? 'Por Fazer' : 'Concluído',
                 ],
           ],
