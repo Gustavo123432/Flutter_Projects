@@ -118,7 +118,6 @@ class _HomeAlunoState extends State<HomeAluno> {
       setState(() {
         // Cast the decoded JSON objects to List<Map<String, dynamic>>
         data = json.decode(response.body).cast<Map<String, dynamic>>();
-        print(data);
         //print(json.decode(response.body));
         if (data.isNotEmpty) {
           //print(quantidadeDisponivel);
@@ -173,7 +172,6 @@ class _HomeAlunoState extends State<HomeAluno> {
     );
     if (response.statusCode == 200) {
       allProducts = json.decode(response.body);
-      print(response.body);
     } else {
       throw Exception('Failed to load products');
     }
@@ -351,6 +349,20 @@ class _HomeAlunoState extends State<HomeAluno> {
                       );
                     },
                   ),
+                   buildCategoryCard(
+                    title: 'Doces',
+                    backgroundImagePath: 'lib/assets/doces.jpg',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CategoryPage(
+                            title: 'Doces',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -426,7 +438,6 @@ class _HomeAlunoState extends State<HomeAluno> {
         CheckQuantidade(title.replaceAll(
             '"', '')); // Adiciona essa chamada para inicializar checkquantidade
         var quantidadeDisponivel = data[0]['Qtd'];
-        print(quantidadeDisponivel);
 
         if (quantidadeDisponivel == 1) {
           addToCart(imagePath, title, price);
@@ -615,9 +626,9 @@ class _CategoryPageState extends State<CategoryPage> {
     }
 
     // Chamar novamente a função fetchData após um pequeno atraso para verificar atualizações
-    Future.delayed(Duration(seconds: 5), () {
+    /*Future.delayed(Duration(seconds: 5), () {
       fetchData(categoria);
-    });
+    });*/
   }
 
   @override
@@ -625,6 +636,19 @@ class _CategoryPageState extends State<CategoryPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ShoppingCartPage(),
+                    ),
+                  );
+            },
+            icon: Icon(Icons.shopping_cart),
+          ),
+        ],
       ),
       body: StreamBuilder<List<dynamic>>(
         stream: _streamController.stream,
@@ -673,7 +697,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             ),
                           ),
                         ),
-                        Visibility(
+                        /*Visibility(
                           visible: isExpanded,
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
@@ -683,7 +707,7 @@ class _CategoryPageState extends State<CategoryPage> {
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
-                        ),
+                        ),*/
                       ],
                     ),
                   ),
@@ -830,7 +854,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       // Obter informações do usuário do primeiro usuário na lista de usuários
       var nome = users[0]['Nome'];
       var apelido = users[0]['Apelido'];
-      print(recentOrders);
 
       for (var order in recentOrders) {
         // Concatenar informações do usuário para formar o identificador do usuário
@@ -867,7 +890,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  Future<double> checkQuantidade(String productName) async {
+  Future<int> checkQuantidade(String productName) async {
     // Remove double quotes from the product name
     String productNamee = productName.replaceAll('"', '');
 
@@ -881,7 +904,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
       if (data.isNotEmpty) {
         // Retrieve the quantity of the product
-        double quantidade = data[0]['Qtd'];
+        int quantidade = data[0]['Qtd'];
         return quantidade;
       } else {
         // Return a default value or throw an exception if data is empty
@@ -894,24 +917,22 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  void checkAvailabilityBeforeOrder(double total) {
+ Future<void> checkAvailabilityBeforeOrder(double total) async {
     bool allAvailable = true;
     List<String> unavailableItems = [];
 
     for (var item in cartItems) {
       var itemName = item['Nome'];
-      var quantity = checkQuantidade(
-          itemName); // Adicione um campo 'Quantidade' aos itens do carrinho
+      var quantity = await checkQuantidade(itemName); // Await here
 
       if (quantity == 0) {
         allAvailable = false;
         unavailableItems.add(itemName);
-        print(quantity);
       }
     }
-    if (cartItems != null) {
+
+    if (cartItems.isNotEmpty) {
       if (allAvailable) {
-        // Se todos os itens estiverem disponíveis, faça o pedido
         sendOrderToApi(cartItems, total.toString());
         sendRecentOrderToApi(cartItems);
         setState(() {
@@ -919,7 +940,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           updateItemCountMap();
         });
       } else {
-        // Se houver itens indisponíveis, informe ao usuário
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -939,7 +959,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           },
         );
       }
-    } else {}
+    }
   }
 
   @override
@@ -952,41 +972,16 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           IconButton(
             onPressed: () {
               Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => HomeAlunoMain(),
-                    ),
-                  );
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HomeAlunoMain(),
+                ),
+              );
             },
             icon: Icon(Icons.home),
           ),
         ],
-          /*title: Text('Search App'),
-          actions: [
-            Padding(
-              padding: EdgeInsets.only(right: 20.0),
-              child: GestureDetector(
-                onTap: () {
-                  // Ação ao clicar no ícone de pesquisa
-                },
-                child: Icon(
-                  Icons.search,
-                  size: 26.0,
-                ),
-              ),
-            ),
-          ],
-          flexibleSpace: Padding(
-            padding: EdgeInsets.only(right: 50.0, left: 10.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                border: InputBorder.none,
-              ),
-            ),
-          ),*/
-        ),
-      
+      ),
       drawer: DrawerHome(),
       body: Column(
         children: [
@@ -1041,7 +1036,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               children: [
                 Text(
                   'Total: ${total.toStringAsFixed(2).replaceAll('.', ',')}€',
-                  style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      fontSize: 18.0, fontWeight: FontWeight.bold),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -1104,54 +1100,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           ),
         ],
       ),
-      /*bottomNavigationBar: Container(
-        height: 60,
-        child: BottomAppBar(
-          color: Color.fromARGB(255, 246, 141, 45),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButton(
-                icon: Icon(Icons.home, color: Colors.white),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => HomeAlunoMain(),
-                    ),
-                  );
-                },
-                iconSize: 25,
-              ),
-              IconButton(
-                icon: Icon(Icons.shopping_cart, color: Colors.white),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ShoppingCartPage(),
-                    ),
-                  );
-                },
-                iconSize: 25,
-              ),
-              IconButton(
-                icon: Icon(Icons.menu, color: Colors.white),
-                onPressed: () {
-                  // Replace `DrawerHome()` with proper navigation to your drawer widget
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DrawerHome(),
-                    ),
-                  );
-                },
-                iconSize: 25,
-              ),
-            ],
-          ),
-        ),
-      ),*/
     );
   }
 }

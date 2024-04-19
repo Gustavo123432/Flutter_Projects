@@ -304,7 +304,7 @@ class _ProductCardState extends State<ProductCard> {
                   ),
                   DropdownButtonFormField<String>(
                     value: _categoryValue,
-                    items: ['Bebidas', 'Café', 'Comidas', 'Snacks']
+                    items: ['Bebidas', 'Café', 'Comidas', 'Snacks', 'Doces']
                         .map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
                         value: value,

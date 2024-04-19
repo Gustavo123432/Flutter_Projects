@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Admin/drawerAdmin.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+//coment
 /*import 'dart:io' as io;
 import 'dart:html' as html;
 import 'package:pdf/pdf.dart';
@@ -129,7 +130,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
                   order.requester,
                   order.group,
                   order.description.replaceAll('[', '').replaceAll(']', ''),
-                  order.total.toStringAsFixed(2),
+                  order.total,
                   order.status == '0' ? 'Por Fazer' : 'Concluído',
                 ],
           ],
@@ -178,8 +179,8 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
       ),
     );
   }
-}
-*/
+}*/
+
 
   @override
   Widget build(BuildContext context) {

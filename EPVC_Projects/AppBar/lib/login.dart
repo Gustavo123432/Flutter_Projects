@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Admin/users.dart';
+import 'package:my_flutter_project/Aluno/formatPWDFirst.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
 import 'package:my_flutter_project/Bar/barPage.dart';
 import 'package:my_flutter_project/PasswordRecovery/esqueciPWD.dart';
@@ -59,27 +60,15 @@ class _LoginFormState extends State<LoginForm> {
       });
       //print(tar[0]['iduser']);
     }
-    /*final response = await http.post(
-          Uri.parse('https://services.interagit.com/API/api_Calendar_Post.php'),
-          body: {
-            'query_param': '1',
-          },
-        );
-    if (response.statusCode == 200) {
-      setState(() {
-        tar = json.decode(response.body);
-      });
-      //print(tar[0]['iduser']);
-    }*/
     if (tar != 'false') {
       // Authentication successful, navigate to the next screen or perform actions
       //print("Resposta da API: $responseData");
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('permissao', tar[0]['Permissao'].toString());
       await prefs.setString('username', tar[0]['Email'].toString());
-      await prefs.setString('email', tar[0]['Email'].toString());
       await prefs.setString('idUser', tar[0]['IdUser'].toString());
       await prefs.setString('pwd', pwd);
+      PwdController.clear();
     } else if (tar == 'false') {
       final snackBar = SnackBar(
         behavior: SnackBarBehavior.floating,
@@ -386,10 +375,9 @@ void verifylogin(context) async {
   {
     if (pwd == "2024") {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('lala', "1");
-      Navigator.push(context,
-          MaterialPageRoute(builder: (context) => ReenserirPassword()));
-      
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => EmailRequestPage()));
+      prefs.remove("pwd");
     } else {
       if (type == "Administrador") //é adm
       {

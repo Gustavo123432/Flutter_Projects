@@ -92,7 +92,7 @@ class _AddProdutoPageState extends State<AddProdutoPage> {
                 ),
                 DropdownButton<String>(
                   value: _categoryValue,
-                  items: ['Bebidas', 'Café', 'Comidas', 'Snacks']
+                  items: ['Bebidas', 'Café', 'Comidas', 'Snacks', 'Doces']
                       .map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
