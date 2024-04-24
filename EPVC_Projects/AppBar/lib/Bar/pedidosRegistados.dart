@@ -233,10 +233,10 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
                       pw.Text('Nº Pedido: ${pedido.number}', style: pw.TextStyle(font: ttf)),
                       pw.Text('Quem pediu: ${pedido.requester}', style: pw.TextStyle(font: ttf)),
                       pw.Text('Turma: ${pedido.group}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Descrição: ${pedido.description}', style: pw.TextStyle(font: ttf)),
+                      pw.Text('Descrição: ${pedido.description.replaceAll("[", "").replaceAll("]", "")}', style: pw.TextStyle(font: ttf)),
                       pw.Text('Data: ${pedido.data}', style: pw.TextStyle(font: ttf)),
                       pw.Text('Hora: ${pedido.hora}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Total: ${pedido.total}', style: pw.TextStyle(font: ttf)),
+                      pw.Text('Total: ${pedido.total.replaceAll(".", ",")}€', style: pw.TextStyle(font: ttf)),
                       pw.Text(
                         'Estado: ${pedido.status == '0' ? 'Por Fazer' : 'Concluído'}',
                         style: pw.TextStyle(font: ttf),
@@ -246,7 +246,7 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
                   );
                 }).toList(),
               ),
-              pw.Text('Total Geral: $totalGeral', style: pw.TextStyle(font: ttf)), // Exibe o total geral no PDF
+              pw.Text('Total Geral: ${totalGeral.toString().replaceAll(".", ",")}€', style: pw.TextStyle(font: ttf)), // Exibe o total geral no PDF
             ],
           );
         },
@@ -327,7 +327,7 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
                       children: [
                         Text('Quem pediu: ${order.requester}'),
                         Text('Turma: ${order.group}'),
-                        Text('Descrição: ${order.description.toString().replaceAll("[", "").replaceAll("]", "")}'),
+                        Text('Descrição: ${order.description.toString().replaceAll("[", " ").replaceAll("]", " ")}'),
                         Text('Data: ${order.data}'),
                         Text('Hora: ${order.hora}'),
                         Text('Total: ${order.total.toString().replaceAll(".", ",")}€'),

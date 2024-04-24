@@ -474,18 +474,18 @@ class _HomeAlunoState extends State<HomeAluno> {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Image.memory(
                 base64.decode(imagePath),
-                height: 40.0,
+                height: 35.0,
               ),
               Text(
                 title.replaceAll('"', ''),
                 style: TextStyle(
-                  fontSize: 12.0,
+                  fontSize: 11.0,
                   fontWeight: FontWeight.bold,
                 ),
               ),

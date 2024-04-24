@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Bar/drawerBar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+List<Product> filteredProducts = []; // Assuming this is where filtered products will be stored
+
 class Product {
   String id;
   String name;
@@ -42,7 +44,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
     fetchData();
   }
 
-   Future<void> fetchData() async {
+  Future<void> fetchData() async {
     final response = await http.post(
       Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
       body: {
@@ -69,11 +71,77 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
         isLoading = false;
       });
     } else {
-      throw Exception('Failed to fetch data from API');
+      throw Exception('Erro ao Obter Produtos');
     }
   }
 
+  void _showFilterDialog() {
+    String? selectedCategory;
 
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Filtrar por Categoria'),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return DropdownButtonFormField<String>(
+                value: selectedCategory,
+                onChanged: (newValue) {
+                  setState(() {
+                    selectedCategory = newValue;
+                  });
+                },
+                items: products
+                    .map((product) => product.category)
+                    .toSet()
+                    .toList()
+                    .map((category) {
+                  return DropdownMenuItem<String>(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Filtrar'),
+              onPressed: () {
+                setState(() {
+                  // Update state to reflect the filtering
+                  filteredProducts.clear();
+                  products.forEach((product) {
+                    if (product.category == selectedCategory) {
+                      filteredProducts.add(product);
+                    }
+                  });
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Mostrar Todos'),
+              onPressed: () {
+                setState(() {
+                  // If "Mostrar Todos" is pressed, we display all products again
+                  filteredProducts = List.from(products);
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void updateProduct(String id, bool newAvailability) async {
     var availableValue = newAvailability ? "1" : "0";
@@ -81,7 +149,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
       Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=18&id=$id&qtd=$availableValue'),
     );
     if (response.statusCode == 200) {
-      print('Product updated successfully');
+      //print('Product updated successfully');
       // Atualize a lista de produtos após a atualização bem-sucedida, se necessário
       setState(() {
         var index = products.indexWhere((product) => product.id == id);
@@ -155,13 +223,12 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
               child: CircularProgressIndicator(),
             )
           : ListView.builder(
-              itemCount: products.length,
+              itemCount: filteredProducts.length,
               itemBuilder: (context, index) {
                 return ProductCard(
-                  product: products[index],
+                  product: filteredProducts[index],
                   onUpdate: (newAvailability) {
-                    print(products[index].id);
-                    updateProduct(products[index].id, newAvailability);
+                    updateProduct(filteredProducts[index].id, newAvailability);
                   },
                 );
               },
@@ -172,12 +239,9 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
         backgroundColor: Color.fromARGB(255, 130, 201, 189),
         children: [
           SpeedDialChild(
-            child: Icon(Icons.add),
+            child: Icon(Icons.filter_list),
             onTap: () async {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AddProdutoPageBar()),
-              );
+              _showFilterDialog();
             },
           ),
         ],
@@ -250,7 +314,6 @@ class ProductCard extends StatelessWidget {
             children: [
               Text(
                   'Preço: ${product.price.toStringAsFixed(2).replaceAll('.', ',')}€'),
-
               Text('Estado: ${product.available ? 'Disponível' : 'Indisponível'}'),
               Text('Categoria: ${product.category}'),
             ],

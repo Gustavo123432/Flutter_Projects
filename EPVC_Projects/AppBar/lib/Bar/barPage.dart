@@ -62,7 +62,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => PurchaseOrder.fromJson(json)).toList();
     } else {
-      throw Exception('Failed to load purchase orders');
+      throw Exception('Erro 1, Verifique a Internet');
     }
   }
 
@@ -73,12 +73,12 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       setState(() async {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Valor atualizado com sucesso no banco de dados!'),
+            content: Text('Pedido Concluído'),
           ),
         );
       });
     } else {
-      throw Exception('Failed to load purchase orders');
+      throw Exception('Erro 1, Verifique a Internet');
     }
   }
 
