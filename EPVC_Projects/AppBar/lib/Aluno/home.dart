@@ -429,9 +429,10 @@ class _HomeAlunoState extends State<HomeAluno> {
       CheckQuantidade(title.replaceAll('"', ''));
       contador = 0;
     }
+    /*
     Timer.periodic(Duration(seconds: 30), (timer) {
       CheckQuantidade(title.replaceAll('"', ''));
-    });
+    });*/
     return GestureDetector(
       onTap: () async {
         contador = 1;
@@ -631,7 +632,20 @@ class _CategoryPageState extends State<CategoryPage> {
     });*/
   }
 
-  @override
+
+   void addToCart(Map<String, dynamic> item) {
+    setState(() {
+      cartItems.add(item);
+    });
+  }
+
+  void removeFromCart(Map<String, dynamic> item) {
+    setState(() {
+      cartItems.remove(item);
+    });
+  }
+
+     @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -640,11 +654,11 @@ class _CategoryPageState extends State<CategoryPage> {
           IconButton(
             onPressed: () {
               Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ShoppingCartPage(),
-                    ),
-                  );
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ShoppingCartPage(),
+                ),
+              );
             },
             icon: Icon(Icons.shopping_cart),
           ),
@@ -660,56 +674,55 @@ class _CategoryPageState extends State<CategoryPage> {
               itemBuilder: (context, index) {
                 final item = items[index];
                 final double preco = double.parse(item['Preco']);
-                bool isExpanded = false; // Estado para controlar se o card está expandido
-
-                return GestureDetector( // Use GestureDetector para capturar os cliques no card
-                  onTap: () {
-                    setState(() {
-                      isExpanded = !isExpanded; // Alterne entre expandido e não expandido
-                    });
-                  },
-                  child: Card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ListTile(
-                          leading: Image.memory(
-                            base64.decode(item['Imagem']),
-                            fit: BoxFit.cover,
-                            height: 50,
-                            width: 50,
-                          ),
-                          title: Text(item['Nome']),
-                          subtitle: Text(
-                            items[index]['Qtd'] == "1"
-                                ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
-                                : "Indisponível",
-                          ),
-                          trailing: Visibility(
-                            visible: items[index]['Qtd'] == "1",
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  cartItems.add(item);
-                                });
-                              },
-                              child: Text('Comprar'),
-                            ),
-                          ),
+                return Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ListTile(
+                        leading: Image.memory(
+                          base64.decode(item['Imagem']),
+                          fit: BoxFit.cover,
+                          height: 50,
+                          width: 50,
                         ),
-                        /*Visibility(
-                          visible: isExpanded,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              'Informações nutricionais: ${item['Nutricao']}',
-                              // Substitua 'Nutricao' pelo nome do campo que contém as informações nutricionais
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),*/
-                      ],
-                    ),
+                        title: Text(item['Nome']),
+                        subtitle: Text(
+                          item['Qtd'] == "1"
+                              ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
+                              : "Indisponível",
+                        ),
+                        trailing: cartItems.any((cartItem) => cartItem['Nome'] == item['Nome'])
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    onPressed: () {
+                                      removeFromCart(item);
+                                    },
+                                    icon: Icon(Icons.remove),
+                                  ),
+                                  Text(
+                                    cartItems.where((element) => element['Nome'] == item['Nome']).length.toString(),
+                                  ),
+                                  IconButton(
+                                    onPressed: () {
+                                      addToCart(item);
+                                    },
+                                    icon: Icon(Icons.add),
+                                  ),
+                                ],
+                              )
+                            : Visibility(
+                                visible: item['Qtd'] == "1",
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    addToCart(item);
+                                  },
+                                  child: Text('Comprar'),
+                                ),
+                              ),
+                      ),
+                    ],
                   ),
                 );
               },
