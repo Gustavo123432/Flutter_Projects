@@ -266,7 +266,7 @@ class ProductCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: EdgeInsets.only(right: 20.0),
         child: Icon(
-          Icons.delete,
+          Icons.swap_horizontal_circle_outlined,
           color: Colors.white,
         ),
       ),

@@ -468,20 +468,20 @@ class _HomeAlunoState extends State<HomeAluno> {
           borderRadius: BorderRadius.circular(3.0),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withOpacity(0.5),
               spreadRadius: 1.0,
               blurRadius: 2.0,
             ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(5.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Image.memory(
                 base64.decode(imagePath),
-                height: 35.0,
+                height: 45.0,
               ),
               Text(
                 title.replaceAll('"', ''),
@@ -695,14 +695,16 @@ class _CategoryPageState extends State<CategoryPage> {
                             ? Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  IconButton(
+                                  /*IconButton(
                                     onPressed: () {
                                       removeFromCart(item);
                                     },
                                     icon: Icon(Icons.remove),
-                                  ),
+                                  ),*/
                                   Text(
                                     cartItems.where((element) => element['Nome'] == item['Nome']).length.toString(),
+                                    style: TextStyle(fontSize: 15.0),
+                                    
                                   ),
                                   IconButton(
                                     onPressed: () {
