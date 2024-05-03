@@ -15,6 +15,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 
 
 class PurchaseOrder {
@@ -65,6 +66,7 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
   late String formattedDate;
   late String formattedTime;
   late TimeOfDay selectedTime;
+
 
 
   @override
@@ -264,6 +266,123 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
     // Abre o PDF na mesma aplicação
     OpenFile.open(file.path);
   }
+/*
+  Future<void> _generatePdf(String horaPretendida) async {
+  final pdf = pw.Document();
+  double totalGeral = 0.0;
+
+  // Carregar a fonte
+  final fontData =
+      await rootBundle.load('lib/assets/fonts/Roboto-Regular.ttf');
+  final ttf = pw.Font.ttf(fontData);
+
+  // Adiciona uma página ao PDF
+  pdf.addPage(
+    pw.Page(
+      build: (pw.Context context) {
+        return pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text('Lista de Pedidos', style: pw.TextStyle(fontSize: 20)),
+            pw.SizedBox(height: 20),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: pedidos.map((pedido) {
+                double totalPedido =
+                    double.parse(pedido.total.replaceAll(',', '.'));
+                totalGeral += totalPedido;
+                return pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Nº Pedido: ${pedido.number}',
+                        style: pw.TextStyle(font: ttf)),
+                    pw.Text('Quem pediu: ${pedido.requester}',
+                        style: pw.TextStyle(font: ttf)),
+                    pw.Text('Turma: ${pedido.group}',
+                        style: pw.TextStyle(font: ttf)),
+                    pw.Text(
+                        'Descrição: ${pedido.description.replaceAll("[", "").replaceAll("]", "")}',
+                        style: pw.TextStyle(font: ttf)),
+                    pw.Text('Data: ${pedido.data}',
+                        style: pw.TextStyle(font: ttf)),
+                    pw.Text('Hora: ${pedido.hora}',
+                        style: pw.TextStyle(font: ttf)),
+                    pw.Text('Total: ${pedido.total.replaceAll(".", ",")}€',
+                        style: pw.TextStyle(font: ttf)),
+                    pw.Text(
+                      'Estado: ${pedido.status == '0' ? 'Por Fazer' : 'Concluído'}',
+                      style: pw.TextStyle(font: ttf),
+                    ),
+                    pw.Divider(),
+                  ],
+                );
+              }).toList(),
+            ),
+            pw.Text(
+                'Total Geral: ${totalGeral.toString().replaceAll(".", ",")}€',
+                style: pw.TextStyle(font: ttf)), // Exibe o total geral no PDF
+          ],
+        );
+      },
+    ),
+  );
+
+  // Get the PDF bytes
+  final pdfBytes = pdf.save();
+  BlueThermalPrinter bluetooth = BlueThermalPrinter.instance;
+  // Define your printer's MAC address
+  var printerMACAddress = '00:02:0A:02:43:9A';
+  final devices = await bluetooth.getBondedDevices();
+  final printer = devices.firstWhere(
+    (device) => device.address == printerMACAddress,
+    orElse: () => null as BluetoothDevice,
+  );
+
+  if (printer != null) {
+    try {
+      await bluetooth.connect(printer);
+
+      // Convert the PDF bytes to ESC/POS commands
+      List<int> escPosCommands = generateEscPosCommandsFromPdf(pdfBytes as Uint8List);
+
+      // Convert 'escPosCommands' to 'Uint8List'
+      Uint8List commandBytes = Uint8List.fromList(escPosCommands);
+
+      // Write the ESC/POS commands to the Bluetooth device
+      await bluetooth.writeBytes(commandBytes);
+      print('Printer found');
+
+      // Disconnect after printing
+      await bluetooth.disconnect();
+    } catch (e) {
+      print("Failed to print PDF: $e");
+    }
+  } else {
+    print('Printer not found');
+  }
+}
+
+List<int> generateEscPosCommandsFromPdf(Uint8List pdfBytes) {
+  // This is a very basic implementation for illustrative purposes.
+  // You'll need to parse the PDF content and convert it to ESC/POS commands accordingly.
+
+  List<int> escPosCommands = [];
+
+  // Example: Set font size to 10px
+  escPosCommands.addAll([27, 33, 10]);
+
+  // Example: Set alignment to center
+  escPosCommands.addAll([27, 97, 1]);
+
+  // Example: Reset font size and alignment
+  escPosCommands.addAll([27, 33, 0]);
+  escPosCommands.addAll([27, 97, 0]);
+
+  return escPosCommands;
+}
+*/
+
+
 
   @override
   Widget build(BuildContext context) {

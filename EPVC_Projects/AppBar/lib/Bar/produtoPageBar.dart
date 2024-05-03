@@ -275,7 +275,7 @@ class ProductCard extends StatelessWidget {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text("Editar Estado do Produto"),
+              title: Text("Estado do Produto"),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

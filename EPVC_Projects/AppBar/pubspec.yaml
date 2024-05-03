@@ -49,6 +49,7 @@ dependencies:
   #http: ^0.13.6
  # web_socket_channel: ^2.4.4
   permission_handler: ^11.3.0
+  blue_thermal_printer: ^1.2.3
   #url_launcher: ^6.2.5
 
 
