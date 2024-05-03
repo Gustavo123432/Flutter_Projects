@@ -214,7 +214,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                       elevation: 3,
                       margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                       color: order.userPermission == 'Professor'
-                          ? Colors.red
+                          ? Colors.red[300]
                           : (order.userPermission == 'Funcionária'
                               ? Colors.green
                               : null),
@@ -223,11 +223,27 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Quem pediu: ${order.requester}'),
-                            Text('Turma: ${order.group}'),
                             Text(
-                                'Descrição: ${order.description.replaceAll('[', '').replaceAll(']', '')}'),
-                            Text('Total: $formattedTotal€'),
+                              'Quem pediu: ${order.requester}',
+                              style: TextStyle(
+                                fontSize: 18.0,
+                              ),
+                            ),
+                            Text(
+                              'Turma: ${order.group}',
+                            ),
+                            Text(
+                              'Descrição: ${order.description.replaceAll('[', '').replaceAll(']', '')}',
+                              style: TextStyle(
+                                fontSize: 18.0,
+                              ),
+                            ),
+                            Text(
+                              'Total: $formattedTotal€',
+                              style: TextStyle(
+                                fontSize: 18.0,
+                              ),
+                            ),
                             Text(
                               'Estado: ${order.status == '0' ? 'Por Fazer' : 'Concluído'}',
                             ),

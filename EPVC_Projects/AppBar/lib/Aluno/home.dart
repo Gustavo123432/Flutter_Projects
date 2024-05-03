@@ -303,7 +303,7 @@ class _HomeAlunoState extends State<HomeAluno> {
                           builder: (context) => CategoryPage(
                             title: 'Bebidas',
                           ),
-                        ),
+                        ), 
                       );
                     },
                   ),
