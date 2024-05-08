@@ -12,6 +12,7 @@ class PurchaseOrder {
   final String group;
   final String description;
   final String total;
+  final String troco;
   final String status;
   final String userPermission;
 
@@ -21,6 +22,7 @@ class PurchaseOrder {
     required this.group,
     required this.description,
     required this.total,
+    required this.troco,
     required this.status,
     required this.userPermission,
   });
@@ -32,6 +34,7 @@ class PurchaseOrder {
       group: json['Turma'],
       description: json['Descricao'],
       total: json['Total'],
+      troco: json['Troco'],
       status: json['Estado'],
       userPermission: json['Permissao'],
     );
@@ -46,6 +49,9 @@ class BarPagePedidos extends StatefulWidget {
 class _BarPagePedidosState extends State<BarPagePedidos> {
   late Stream<List<PurchaseOrder>> purchaseOrderStream;
   String formattedTotal = "";
+  String formattedTroco = "";
+  String troco = "";
+
 
   @override
   void initState() {
@@ -74,6 +80,22 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Pedido Concluído'),
+          ),
+        );
+      });
+    } else {
+      throw Exception('Erro 1, Verifique a Internet');
+    }
+  }
+
+  void apagarpedido (String orderNumber, String orderRequester) async{
+ final response = await http.get(Uri.parse(
+        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=24&nome=$orderRequester&ids=$orderNumber'));
+    if (response.statusCode == 200) {
+      setState(() async {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pedido Eliminado'),
           ),
         );
       });
@@ -167,6 +189,8 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                     formattedTotal = double.parse(order.total)
                         .toStringAsFixed(2)
                         .replaceAll('.', ',');
+                    formattedTroco = double.parse(order.troco).toStringAsFixed(2)
+                        .replaceAll('.', ',');
                   } catch (e) {
                     formattedTotal = 'Invalid Total';
                   }
@@ -193,6 +217,13 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                             content: Text(
                                 'Deseja marcar este pedido como concluído?'),
                             actions: <Widget>[
+                              TextButton(
+                                onPressed: () async{
+                                    apagarpedido(order.number, order.requester);
+                                    Navigator.of(context).pop(false);
+                                },
+                                child: Text('Apagar Pedido'),
+                              ),
                               TextButton(
                                 onPressed: () =>
                                     Navigator.of(context).pop(false),
@@ -226,26 +257,37 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                             Text(
                               'Quem pediu: ${order.requester}',
                               style: TextStyle(
-                                fontSize: 18.0,
-                              ),
-                            ),
-                            Text(
-                              'Turma: ${order.group}',
+                                fontSize: 20.0,
+                                color: Color.fromARGB(255, 176, 176, 176),
+                              ), 
                             ),
                             Text(
                               'Descrição: ${order.description.replaceAll('[', '').replaceAll(']', '')}',
                               style: TextStyle(
-                                fontSize: 18.0,
+                                fontSize: 20.0,
+                                color: Color.fromARGB(255, 4, 2, 164),
                               ),
                             ),
                             Text(
                               'Total: $formattedTotal€',
                               style: TextStyle(
-                                fontSize: 18.0,
+                                fontSize: 20.0,
+                                                                color: Color.fromARGB(255, 127, 127, 127),
+
+                              ),
+                            ),
+                            Text(
+                              'Troco: $formattedTroco€',
+                              style: TextStyle(
+                                fontSize: 20.0,
+                                color: Color.fromARGB(255, 255, 0, 0),
                               ),
                             ),
                             Text(
                               'Estado: ${order.status == '0' ? 'Por Fazer' : 'Concluído'}',
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 127, 127, 127),
+                              ),
                             ),
                           ],
                         ),

@@ -203,16 +203,16 @@ class _HomeAlunoState extends State<HomeAluno> {
           IconButton(
             onPressed: () {
               Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ShoppingCartPage(),
-                    ),
-                  );
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ShoppingCartPage(),
+                ),
+              );
             },
             icon: Icon(Icons.shopping_cart),
           ),
         ],
-          /*title: Text('Search App'),
+        /*title: Text('Search App'),
           actions: [
             Padding(
               padding: EdgeInsets.only(right: 20.0),
@@ -236,7 +236,7 @@ class _HomeAlunoState extends State<HomeAluno> {
               ),
             ),
           ),*/
-        ),
+      ),
       drawer: DrawerHome(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -303,7 +303,7 @@ class _HomeAlunoState extends State<HomeAluno> {
                           builder: (context) => CategoryPage(
                             title: 'Bebidas',
                           ),
-                        ), 
+                        ),
                       );
                     },
                   ),
@@ -349,7 +349,7 @@ class _HomeAlunoState extends State<HomeAluno> {
                       );
                     },
                   ),
-                   buildCategoryCard(
+                  buildCategoryCard(
                     title: 'Doces',
                     backgroundImagePath: 'lib/assets/doces.jpg',
                     onTap: () {
@@ -369,7 +369,7 @@ class _HomeAlunoState extends State<HomeAluno> {
           ),
         ],
       ),
-     /* bottomNavigationBar: Container(
+      /* bottomNavigationBar: Container(
         height: 60,
         child: BottomAppBar(
           color: Color.fromARGB(255, 246, 141, 45),
@@ -632,8 +632,7 @@ class _CategoryPageState extends State<CategoryPage> {
     });*/
   }
 
-
-   void addToCart(Map<String, dynamic> item) {
+  void addToCart(Map<String, dynamic> item) {
     setState(() {
       cartItems.add(item);
     });
@@ -645,7 +644,7 @@ class _CategoryPageState extends State<CategoryPage> {
     });
   }
 
-     @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -691,7 +690,8 @@ class _CategoryPageState extends State<CategoryPage> {
                               ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
                               : "Indisponível",
                         ),
-                        trailing: cartItems.any((cartItem) => cartItem['Nome'] == item['Nome'])
+                        trailing: cartItems.any(
+                                (cartItem) => cartItem['Nome'] == item['Nome'])
                             ? Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -702,9 +702,12 @@ class _CategoryPageState extends State<CategoryPage> {
                                     icon: Icon(Icons.remove),
                                   ),*/
                                   Text(
-                                    cartItems.where((element) => element['Nome'] == item['Nome']).length.toString(),
+                                    cartItems
+                                        .where((element) =>
+                                            element['Nome'] == item['Nome'])
+                                        .length
+                                        .toString(),
                                     style: TextStyle(fontSize: 15.0),
-                                    
                                   ),
                                   IconButton(
                                     onPressed: () {
@@ -743,7 +746,6 @@ class _CategoryPageState extends State<CategoryPage> {
   }
 }
 
-
 class ShoppingCartPage extends StatefulWidget {
   @override
   _ShoppingCartPageState createState() => _ShoppingCartPageState();
@@ -752,6 +754,7 @@ class ShoppingCartPage extends StatefulWidget {
 class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Map<String, int> itemCountMap = {};
   dynamic users;
+  double dinheiroAtual = 0;
 
   @override
   void initState() {
@@ -807,21 +810,21 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
       // Send GET request to API
       var response = await http.get(Uri.parse(
-        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=5&nome=$nome&apelido=$apelido&orderNumber=$orderNumber&turma=$turma&permissao=$permissao&descricao=$itemNames&total=$total',
+        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=5&nome=$nome&apelido=$apelido&orderNumber=$orderNumber&valor=$dinheiroAtual&turma=$turma&permissao=$permissao&descricao=$itemNames&total=$total',
       ));
 
       if (response.statusCode == 200) {
         // If the request is successful, show a success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pedido enviado com sucesso para a API'),
+            content: Text('Pedido enviado com sucesso! Pedido Nº'+ orderNumber.toString()),
           ),
         );
       } else {
         // If there's an error, show an error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao enviar o pedido para a API'),
+            content: Text('Erro ao enviar o pedido. Contacte o Administrador!'),
           ),
         );
       }
@@ -830,7 +833,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       // Show error message if request fails
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao enviar o pedido para a API'),
+          content: Text('Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
         ),
       );
     }
@@ -932,7 +935,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
- Future<void> checkAvailabilityBeforeOrder(double total) async {
+  Future<void> checkAvailabilityBeforeOrder(double total) async {
     bool allAvailable = true;
     List<String> unavailableItems = [];
 
@@ -1051,8 +1054,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               children: [
                 Text(
                   'Total: ${total.toStringAsFixed(2).replaceAll('.', ',')}€',
-                  style: TextStyle(
-                      fontSize: 18.0, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -1085,14 +1087,85 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                             actions: [
                               TextButton(
                                 onPressed: () {
-                                  Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          'Confirmação de Pedido com Sucesso'),
-                                    ),
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: Text("Confirmação de Pedido"),
+                                        content: Text(
+                                            "Você tem o dinheiro (" + total.toStringAsFixed(2).replaceAll('.', ',') +"€) EXATO ?"),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                      'Confirmação de Pedido com Sucesso'),
+                                                ),
+                                              );
+                                              checkAvailabilityBeforeOrder(
+                                                  total);
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: Text('Sim'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                              showDialog(
+                                                context: context,
+                                                builder:
+                                                    (BuildContext context) {
+                                                  dinheiroAtual =
+                                                      0.0; // Valor padrão
+                                                  return AlertDialog(
+                                                    title: Text(
+                                                        "Insira a quantidade de dinheiro irá entregar:"),
+                                                    content: TextField(
+                                                      keyboardType:
+                                                          TextInputType.number,
+                                                      onChanged: (value) {
+                                                        dinheiroAtual =
+                                                            double.tryParse(
+                                                                    value) ??
+                                                                0.0;
+                                                      },
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () {
+                                                          Navigator.of(context)
+                                                              .pop();
+                                                          ScaffoldMessenger.of(
+                                                                  context)
+                                                              .showSnackBar(
+                                                            SnackBar(
+                                                              content: Text(
+                                                                  'Confirmação de Pedido com Sucesso'),
+                                                            ),
+                                                          );
+                                                          // Aqui você pode chamar a função para verificar a disponibilidade antes do pedido
+                                                          checkAvailabilityBeforeOrder(
+                                                              total);
+                                                              Navigator.of(context)
+                                                              .pop();
+                                                        },
+                                                        child:
+                                                            Text('Confirmar'),
+                                                      ),
+                                                    ],
+                                                  );
+                                                },
+                                              );
+                                            },
+                                            
+                                            child: Text('Não'),
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   );
-                                  checkAvailabilityBeforeOrder(total);
                                 },
                                 child: Text('Confirmar'),
                               ),
