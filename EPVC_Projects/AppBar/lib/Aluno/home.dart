@@ -817,7 +817,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         // If the request is successful, show a success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pedido enviado com sucesso! Pedido Nº'+ orderNumber.toString()),
+            content: Text('Pedido enviado com sucesso! Pedido Nº' +
+                orderNumber.toString()),
           ),
         );
       } else {
@@ -833,7 +834,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       // Show error message if request fails
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+          content: Text(
+              'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
         ),
       );
     }
@@ -1087,13 +1089,17 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                             actions: [
                               TextButton(
                                 onPressed: () {
+                                  Navigator.of(context).pop();
                                   showDialog(
                                     context: context,
                                     builder: (BuildContext context) {
                                       return AlertDialog(
                                         title: Text("Confirmação de Pedido"),
-                                        content: Text(
-                                            "Você tem o dinheiro (" + total.toStringAsFixed(2).replaceAll('.', ',') +"€) EXATO ?"),
+                                        content: Text("Você tem o dinheiro (" +
+                                            total
+                                                .toStringAsFixed(2)
+                                                .replaceAll('.', ',') +
+                                            "€) EXATO ?"),
                                         actions: [
                                           TextButton(
                                             onPressed: () {
@@ -1106,6 +1112,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                               );
                                               checkAvailabilityBeforeOrder(
                                                   total);
+
                                               Navigator.of(context).pop();
                                             },
                                             child: Text('Sim'),
@@ -1148,7 +1155,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                                           // Aqui você pode chamar a função para verificar a disponibilidade antes do pedido
                                                           checkAvailabilityBeforeOrder(
                                                               total);
-                                                              Navigator.of(context)
+                                                          Navigator.of(context)
                                                               .pop();
                                                         },
                                                         child:
@@ -1159,7 +1166,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                                 },
                                               );
                                             },
-                                            
                                             child: Text('Não'),
                                           ),
                                         ],

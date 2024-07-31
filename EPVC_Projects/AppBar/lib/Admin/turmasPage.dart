@@ -35,11 +35,14 @@ class _TurmasPageState extends State<TurmasPage> {
   }
 
   Future<void> _fetchTurmas() async {
-    final response = await http.get(Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=20'));
+    final response = await http.get(
+        Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=20'));
     if (response.statusCode == 200) {
       final List<dynamic> responseData = json.decode(response.body);
-      List<Turma> fetchedTurmas = responseData.map((data) => Turma.fromJson(data)).toList();
-      fetchedTurmas.sort((a, b) => a.turma.compareTo(b.turma)); // Ordenar por ordem alfabética
+      List<Turma> fetchedTurmas =
+          responseData.map((data) => Turma.fromJson(data)).toList();
+      fetchedTurmas.sort(
+          (a, b) => a.turma.compareTo(b.turma)); // Ordenar por ordem alfabética
       setState(() {
         turmas = fetchedTurmas;
       });
@@ -49,8 +52,8 @@ class _TurmasPageState extends State<TurmasPage> {
   }
 
   void _addTurma(String turmaName) async {
-    final response = await http.get(
-        Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=21&nome=$turmaName'));
+    final response = await http.get(Uri.parse(
+        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=21&nome=$turmaName'));
     if (response.statusCode == 200) {
       setState(() {
         turmas.add(Turma(turma: turmaName));
@@ -70,18 +73,19 @@ class _TurmasPageState extends State<TurmasPage> {
     setState(() {
       removerMode = !removerMode;
       if (!removerMode) {
-        indexesToRemove.clear(); // Limpa a lista de índices ao sair do modo de remoção
+        indexesToRemove
+            .clear(); // Limpa a lista de índices ao sair do modo de remoção
       }
     });
   }
 
   void _toggleRemoveSelection(int index) async {
     if (removerMode) {
-      final response = await http.get(
-        Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}')
-      );
+      final response = await http.get(Uri.parse(
+          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}'));
       if (response.statusCode == 200) {
         _removeTurma(index);
+        print('Turma removed successfully');
       } else {
         throw Exception('Failed to remove turma');
       }
@@ -92,11 +96,12 @@ class _TurmasPageState extends State<TurmasPage> {
   void _removeSelectedTurmas() async {
     for (int i = indexesToRemove.length - 1; i >= 0; i--) {
       final int index = indexesToRemove[i];
-      final response = await http.get(
-          Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}'));
+      final response = await http.get(Uri.parse(
+          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}'));
 
       if (response.statusCode == 200) {
         _removeTurma(index);
+        print('Turma removed successfully');
       }
     }
     _toggleEditMode(); // Desativa o modo de remoção após a remoção das turmas selecionadas
@@ -109,7 +114,7 @@ class _TurmasPageState extends State<TurmasPage> {
         backgroundColor: Color.fromARGB(255, 246, 141, 45),
         title: Text('Turmas'),
       ),
-      drawer:DrawerAdmin(),
+      drawer: DrawerAdmin(),
       body: Container(
         width: double.infinity, // Usar toda a largura disponível
         height: double.infinity, // Usar toda a altura disponível
@@ -146,9 +151,11 @@ class _TurmasPageState extends State<TurmasPage> {
                           removerMode
                               ? ElevatedButton(
                                   onPressed: () {
-                                    _toggleRemoveSelection(turmas.indexOf(turma));
+                                    _toggleRemoveSelection(
+                                        turmas.indexOf(turma));
                                   },
-                                  child: indexesToRemove.contains(turmas.indexOf(turma))
+                                  child: indexesToRemove
+                                          .contains(turmas.indexOf(turma))
                                       ? Text('Cancelar')
                                       : Text('Eliminar'),
                                 )

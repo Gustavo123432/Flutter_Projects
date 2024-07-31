@@ -14,7 +14,7 @@ class DrawerHome extends StatefulWidget {
 class _DrawerHomeState extends State<DrawerHome> {
   //final _advancedDrawerController = AdvancedDrawerController();
 
-   void logout(BuildContext context) {
+  void logout(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -72,7 +72,6 @@ class _DrawerHomeState extends State<DrawerHome> {
                 'lib/assets/barapp.png',
                 fit: BoxFit.contain,
               ),
-              
             ),
             ListTile(
               onTap: () {
@@ -96,7 +95,7 @@ class _DrawerHomeState extends State<DrawerHome> {
             ),
             ListTile(
               onTap: () {
-                Navigator.push(
+                Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => PedidosPageAlunos()),
                 );
@@ -104,7 +103,7 @@ class _DrawerHomeState extends State<DrawerHome> {
               leading: Icon(Icons.archive),
               title: Text('Pedidos'),
             ),
-             ListTile(
+            ListTile(
               onTap: () {
                 logout(context);
               },
@@ -139,8 +138,4 @@ class _DrawerHomeState extends State<DrawerHome> {
       ),
     );
   }
-
-  /*void _handleMenuButtonPressed() {
-    _advancedDrawerController.showDrawer();
-  }*/
 }

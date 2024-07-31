@@ -38,7 +38,6 @@ class _DrawerAdminState extends State<DrawerAdmin> {
                 'lib/assets/barapp.png',
                 fit: BoxFit.contain,
               ),
-              
             ),
             ListTile(
               onTap: () {
@@ -90,12 +89,11 @@ class _DrawerAdminState extends State<DrawerAdmin> {
               leading: Icon(Icons.local_pizza),
               title: Text('Produtos'),
             ),
-            
             Spacer(),
             DefaultTextStyle(
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.white54,
+                color: const Color.fromARGB(255, 255, 255, 255),
               ),
               child: Container(
                 margin: const EdgeInsets.symmetric(

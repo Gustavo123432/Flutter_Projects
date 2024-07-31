@@ -7,6 +7,8 @@ import 'package:my_flutter_project/Admin/drawerAdmin.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http_parser/http_parser.dart';
 
 class UserTable extends StatefulWidget {
   @override
@@ -63,13 +65,14 @@ class _UserTableState extends State<UserTable> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     var user = prefs.getString("username");
 
-    var response = await http.get(Uri.parse(
-        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=2'));
+    var response = await http.get(
+        Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=2'));
 
     if (response.statusCode == 200) {
       setState(() {
         tableUsers = json.decode(response.body);
-        filteredUsers = tableUsers; // Inicialmente, os usuários filtrados são iguais a todos os usuários
+        filteredUsers =
+            tableUsers; // Inicialmente, os usuários filtrados são iguais a todos os usuários
       });
     }
   }
@@ -106,8 +109,7 @@ class _UserTableState extends State<UserTable> {
         // Se a atualização foi bem-sucedida, exiba uma mensagem ou faça qualquer outra ação necessária
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                'Valor atualizado com sucesso no banco de dados!'),
+            content: Text('Valor atualizado com sucesso no banco de dados!'),
           ),
         );
         UserInfo();
@@ -157,6 +159,67 @@ class _UserTableState extends State<UserTable> {
           );
         });
       }
+    }
+  }
+
+  Future<void> _pickFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xls', 'xlsx'],
+    );
+
+    if (result != null) {
+      PlatformFile file = result.files.first;
+      await _uploadFile(file);
+    }
+  }
+
+  Future<void> _uploadFile(PlatformFile file) async {
+    final url = 'http://appbar.epvc.pt/appBarAPI_Post.php'; // Correct URL
+
+    // Create a multipart request
+    var request = http.MultipartRequest('POST', Uri.parse(url));
+
+    // Add other fields if needed
+    request.fields['query_param'] = '10'; // Example parameter
+    // Determine MIME type based on file extension
+    String mimeType = 'application/octet-stream'; // Default MIME type
+    if (file.name.endsWith('.xlsx')) {
+      mimeType =
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    } else if (file.name.endsWith('.xls')) {
+      mimeType = 'application/vnd.ms-excel';
+    }
+
+    // Attach the file
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        file.bytes!,
+        filename: file.name,
+        contentType: MediaType.parse(mimeType), // Set the determined MIME type
+      ),
+    );
+
+    // Send the request
+    try {
+      var response = await request.send();
+
+      // Check the status code and handle the response
+      if (response.statusCode == 200) {
+        final responseBody = await response.stream.bytesToString();
+        final responseData = jsonDecode(responseBody);
+
+        if (responseData['message'] == 'Dados carregados com sucesso') {
+          print('Arquivo enviado com sucesso');
+        } else {
+          print('Falha ao enviar arquivo: ${responseData['message']}');
+        }
+      } else {
+        print('Falha ao enviar arquivo. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Ocorreu um erro ao enviar o arquivo: $e');
     }
   }
 
@@ -358,7 +421,8 @@ class _UserTableState extends State<UserTable> {
                           DataCell(Text(user['Email'])),
                           DataCell(isEditing
                               ? TextField(
-                                  controller: getNomeController(index, user['Nome']),
+                                  controller:
+                                      getNomeController(index, user['Nome']),
                                   onChanged: (newValue) {
                                     setState(() {
                                       user['Nome'] = newValue;
@@ -368,7 +432,8 @@ class _UserTableState extends State<UserTable> {
                               : Text(user['Nome'])),
                           DataCell(isEditing
                               ? TextField(
-                                  controller: getApelidoController(index, user['Apelido']),
+                                  controller: getApelidoController(
+                                      index, user['Apelido']),
                                   onChanged: (newValue) {
                                     setState(() {
                                       user['Apelido'] = newValue;
@@ -378,7 +443,8 @@ class _UserTableState extends State<UserTable> {
                               : Text(user['Apelido'])),
                           DataCell(isEditing
                               ? TextField(
-                                  controller: getTurmaController(index, user['Turma']),
+                                  controller:
+                                      getTurmaController(index, user['Turma']),
                                   onChanged: (newValue) {
                                     setState(() {
                                       user['Turma'] = newValue;
@@ -396,19 +462,17 @@ class _UserTableState extends State<UserTable> {
                                       });
                                     },
                                     items: [
-                                        'Administrador',
-                                        'Professor',
-                                        'Funcionária',
-                                        'Bar',
-                                        'Aluno'
-                                      ]
-                                      .map((String value) {
-                                        return DropdownMenuItem<String>(
-                                          value: value,
-                                          child: Text(value),
-                                        );
-                                      })
-                                      .toList(),
+                                      'Administrador',
+                                      'Professor',
+                                      'Funcionária',
+                                      'Bar',
+                                      'Aluno'
+                                    ].map((String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
                                   )
                                 : Text(user['Permissao']),
                           ),
@@ -455,20 +519,25 @@ class _UserTableState extends State<UserTable> {
       ),
       floatingActionButton: SpeedDial(
         icon: Icons.more_horiz,
-        iconTheme: IconThemeData(color: Colors.white), // Set icon color to white
-        backgroundColor: Color.fromARGB(
-            255, 130, 201, 189),
+        iconTheme:
+            IconThemeData(color: Colors.white), // Set icon color to white
+        backgroundColor: Color.fromARGB(255, 130, 201, 189),
         children: [
           SpeedDialChild(
-            child: Icon(Icons.filter_list),
-            onTap: () {
-              _showFilterDialog();
-            }
-          ),
+              child: Icon(Icons.filter_list),
+              onTap: () {
+                _showFilterDialog();
+              }),
           SpeedDialChild(
             child: Icon(Icons.edit),
             onTap: () {
               _toggleEditMode();
+            },
+          ),
+          SpeedDialChild(
+            child: Icon(Icons.file_upload),
+            onTap: () {
+              _pickFile();
             },
           ),
           SpeedDialChild(
