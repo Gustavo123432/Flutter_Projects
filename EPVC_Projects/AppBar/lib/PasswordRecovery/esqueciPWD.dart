@@ -5,22 +5,27 @@ import 'package:my_flutter_project/PasswordRecovery/inserirCodePWD.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EmailRequestPage extends StatefulWidget {
+  final int tentativa;
+
+  const EmailRequestPage({super.key, required this.tentativa});
+
   @override
   _EmailRequestPageState createState() => _EmailRequestPageState();
 }
 
+
 class _EmailRequestPageState extends State<EmailRequestPage> {
   final TextEditingController emailController = TextEditingController();
-
   Future<void> sendCodePWD() async {
     var email = emailController.text.trim();
 
     if (!email.isEmpty) {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('email', email);
+      var tentativa = widget.tentativa;
 
       var response = await http.get(Uri.parse(
-          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=14&email=$email&tentativa=0'));
+                    'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=14&email=$email&tentativa=$tentativa'));
       if (response.statusCode == 200) {
         var responseData = json.decode(response.body);
 

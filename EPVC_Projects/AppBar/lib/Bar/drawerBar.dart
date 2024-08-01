@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:my_flutter_project/Admin/produtoPage.dart';
-import 'package:my_flutter_project/Aluno/home.dart';
-import 'package:my_flutter_project/Aluno/pedidosPageAluno.dart';
 import 'package:my_flutter_project/Bar/barPage.dart';
 import 'package:my_flutter_project/Bar/pedidosRegistados.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
@@ -15,7 +12,7 @@ class DrawerBar extends StatefulWidget {
 class _DrawerBarState extends State<DrawerBar> {
   //final _advancedDrawerController = AdvancedDrawerController();
 
-  @override
+  @override 
   Widget build(BuildContext context) {
     return Drawer(
       child: Container(
@@ -41,16 +38,6 @@ class _DrawerBarState extends State<DrawerBar> {
               ),
               
             ),
-            /*ListTile(
-              onTap: () {
-                /*Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => Dashboard()),
-                );*/
-              },
-              leading: Icon(Icons.home),
-              title: Text('Dashboard'),
-            ),*/
             ListTile(
               onTap: () {
                 Navigator.push(
@@ -99,8 +86,4 @@ class _DrawerBarState extends State<DrawerBar> {
       ),
     );
   }
-
-  /*void _handleMenuButtonPressed() {
-    _advancedDrawerController.showDrawer();
-  }*/
 }

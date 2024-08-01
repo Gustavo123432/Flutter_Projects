@@ -55,14 +55,11 @@ class _LoginFormState extends State<LoginForm> {
         'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=1&name=$name&pwd=$pwd'));
     if (response.statusCode == 200) {
       setState(() {
-        //print(response.body);
         tar = json.decode(response.body);
       });
-      //print(tar[0]['iduser']);
     }
     if (tar != 'false') {
       // Authentication successful, navigate to the next screen or perform actions
-      //print("Resposta da API: $responseData");
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('permissao', tar[0]['Permissao'].toString());
       await prefs.setString('username', tar[0]['Email'].toString());
@@ -336,7 +333,9 @@ class _LoginFormState extends State<LoginForm> {
                       Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => EmailRequestPage()));
+                              builder: (context) => EmailRequestPage(
+                                    tentativa: 0,
+                                  )));
 
                       // Adicione aqui a lógica para lidar com a recuperação da senha
                     },
@@ -375,8 +374,11 @@ void verifylogin(context) async {
   {
     if (pwd == "2024") {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) => EmailRequestPage()));
+      MaterialPageRoute(
+        builder: (context) => EmailRequestPage(tentativa: 2),
+      );
+      /*Navigator.push(
+          context, MaterialPageRoute(builder: (context) => EmailRequestPage()));*/
       prefs.remove("pwd");
     } else {
       if (type == "Administrador") //é adm
