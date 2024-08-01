@@ -372,14 +372,13 @@ void verifylogin(context) async {
   //print(type);
   if (id != null) //já arrancou a app
   {
-    if (pwd == "2024") {
+    print(pwd);
+    if (pwd == "epvc") {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       Navigator.push(
           context,
           MaterialPageRoute(
               builder: (context) => EmailRequestPage(tentativa: 2)));
-      /*Navigator.push(
-          context, MaterialPageRoute(builder: (context) => EmailRequestPage()));*/
       prefs.remove("pwd");
     } else {
       if (type == "Administrador") //é adm

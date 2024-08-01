@@ -48,13 +48,20 @@ class _ReenserirPasswordState extends State<ReenserirPassword> {
         'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=16&password=$pwd&email=$email'));
 
     if (response.statusCode == 200) {
-      setState(() {
-       Navigator.push(
-            context, MaterialPageRoute(builder: (context) => LoginForm()));
+      setState(() async {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+                await prefs.clear();
+
+                // ignore: use_build_context_synchronously
+                Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (BuildContext ctx) => const LoginForm()));
+                ModalRoute.withName('/');
         passwordController.clear();
         confirmPasswordController.clear();
       });
-    } 
+    }
   }
 
   @override
