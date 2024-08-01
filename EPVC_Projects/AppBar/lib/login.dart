@@ -374,9 +374,10 @@ void verifylogin(context) async {
   {
     if (pwd == "2024") {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      MaterialPageRoute(
-        builder: (context) => EmailRequestPage(tentativa: 2),
-      );
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => EmailRequestPage(tentativa: 2)));
       /*Navigator.push(
           context, MaterialPageRoute(builder: (context) => EmailRequestPage()));*/
       prefs.remove("pwd");
