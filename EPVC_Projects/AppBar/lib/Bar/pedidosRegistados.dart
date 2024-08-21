@@ -2,21 +2,18 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
-import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:my_flutter_project/Bar/drawerBar.dart';
-import 'package:open_file/open_file.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_blue/flutter_blue.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:blue_thermal_printer/blue_thermal_printer.dart';
-
+import 'package:open_file/open_file.dart';
 
 class PurchaseOrder {
   final String number;
@@ -67,7 +64,13 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
   late String formattedTime;
   late TimeOfDay selectedTime;
 
-
+  // BLE variables
+  late FlutterBlue flutterBlue;
+  BluetoothDevice? printerDevice;
+  BluetoothCharacteristic? printerCharacteristic;
+  final String printerBDA =
+      '00-02-0A-02-43-9A'; // Replace with your printer's BDA
+  final String printerPin = '!'; // Replace with your printer's PIN
 
   @override
   void initState() {
@@ -75,15 +78,13 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
     purchaseOrderStream = Stream.empty();
     horaPretendidaController = TextEditingController();
     pedidos = [];
+    flutterBlue = FlutterBlue.instance;
     WidgetsBinding.instance!.addPostFrameCallback((_) {
       _showDateTimePicker();
-      
     });
   }
 
-
-
- Future<void> _showDateTimePicker() async {
+  Future<void> _showDateTimePicker() async {
     final DateTime? date = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -92,8 +93,8 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
       builder: (BuildContext context, Widget? child) {
         return Theme(
           data: ThemeData.light().copyWith(
-            // Define the background color of the date picker here
-            colorScheme: ColorScheme.light(primary: Color.fromARGB(255, 130, 201, 189)),
+            colorScheme:
+                ColorScheme.light(primary: Color.fromARGB(255, 130, 201, 189)),
           ),
           child: child!,
         );
@@ -110,12 +111,11 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
         setState(() {
           selectedDate = date;
           selectedTime = time;
+          formattedDate =
+              '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+          formattedTime =
+              '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
         });
-        // Extract YYYY-MM-DD portion from the selected date
-         formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-          formattedTime = '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
-        print('Selected Date: $formattedDate');
-        print('Selected Time: $formattedTime');
         fetchPurchaseOrders();
       }
     }
@@ -124,14 +124,13 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
   Future<void> fetchPurchaseOrders() async {
     final response = await http.get(
       Uri.parse(
-          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=19&horaPretendida=$formattedTime&dataPretendida=$formattedDate'),
+          'http://appbar.epvc.pt/appBarAPI_GET.php?query_param=19&horaPretendida=$formattedTime&dataPretendida=$formattedDate'),
     );
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
       setState(() {
         pedidos = data.map((json) => PurchaseOrder.fromJson(json)).toList();
         purchaseOrderStream = Stream.value(pedidos);
-        
       });
     } else {
       throw Exception('Failed to load purchase orders');
@@ -139,18 +138,17 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
   }
 
   Future<void> generatePdf(String horaPretendida) async {
-    // Solicitar permissão de armazenamento
     if (await _requestStoragePermission()) {
-      // Permissão concedida, gerar PDF
-      await _generatePdf(horaPretendida);
+      final pdfBytes = await _generatePdf(horaPretendida);
+      await _connectToPrinter(pdfBytes);
     } else {
-      // Permissão negada
       showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
             title: Text('Permissão Necessária'),
-            content: Text('Por favor, conceda permissão de armazenamento para gerar PDF.'),
+            content: Text(
+                'Por favor, conceda permissão de armazenamento para gerar PDF.'),
             actions: <Widget>[
               TextButton(
                 onPressed: () {
@@ -165,65 +163,22 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
     }
   }
 
-  void logout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Log Out'),
-          content: const Text('Pretende fazer Log Out?'),
-          actions: [
-            TextButton(
-              child: const Text('Cancelar'),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the AlertDialog
-              },
-            ),
-            TextButton(
-              child: const Text('Confirmar'),
-              onPressed: () async {
-                SharedPreferences prefs = await SharedPreferences.getInstance();
-                await prefs.clear();
-
-                Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (BuildContext ctx) =>  LoginForm()));
-                ModalRoute.withName('/');
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<bool> _requestStoragePermission() async {
-    var status = await Permission.storage.status;
-    if (!status.isGranted) {
-      // Solicitar permissão de armazenamento
-      var result = await Permission.storage.request();
-      return result.isGranted;
-    }
-    return true; // Permissão já concedida
-  }
-
-  Future<void> _generatePdf(String horaPretendida) async {
+  Future<Uint8List> _generatePdf(String horaPretendida) async {
     final pdf = pw.Document();
     double totalGeral = 0.0;
 
-    // Carregar a fonte
-    final fontData = await rootBundle.load('lib/assets/fonts/Roboto-Regular.ttf');
+    final fontData =
+        await rootBundle.load('lib/assets/fonts/Roboto-Regular.ttf');
     final ttf = pw.Font.ttf(fontData);
 
-    // Adiciona uma página ao PDF
     pdf.addPage(
       pw.Page(
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('Lista de Pedidos', style: pw.TextStyle(fontSize: 20)),
+              pw.Text('Lista de Pedidos',
+                  style: pw.TextStyle(fontSize: 20, font: ttf)),
               pw.SizedBox(height: 20),
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -232,174 +187,137 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
                   return pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('Nº Pedido: ${pedido.number}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Quem pediu: ${pedido.requester}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Turma: ${pedido.group}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Descrição: ${pedido.description.replaceAll("[", "").replaceAll("]", "")}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Data: ${pedido.data}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Hora: ${pedido.hora}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Total: ${pedido.total.replaceAll(".", ",")}€', style: pw.TextStyle(font: ttf)),
+                      pw.Text('Nº Pedido: ${pedido.number}',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text('Quem pediu: ${pedido.requester}',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text('Turma: ${pedido.group}',
+                          style: pw.TextStyle(font: ttf)),
                       pw.Text(
-                        'Estado: ${pedido.status == '0' ? 'Por Fazer' : 'Concluído'}',
-                        style: pw.TextStyle(font: ttf),
-                      ),
+                          'Descrição: ${pedido.description.replaceAll("[", "").replaceAll("]", "")}',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text('Data: ${pedido.data}',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text('Hora: ${pedido.hora}',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text('Total: ${pedido.total.replaceAll(".", ",")}€',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text(
+                          'Estado: ${pedido.status == '0' ? 'Por Fazer' : 'Concluído'}',
+                          style: pw.TextStyle(font: ttf)),
                       pw.Divider(),
                     ],
                   );
                 }).toList(),
               ),
-              pw.Text('Total Geral: ${totalGeral.toString().replaceAll(".", ",")}€', style: pw.TextStyle(font: ttf)), // Exibe o total geral no PDF
+              pw.Text(
+                  'Total Geral: ${totalGeral.toString().replaceAll(".", ",")}€',
+                  style: pw.TextStyle(font: ttf)),
             ],
           );
         },
       ),
     );
 
-    // Converte o PDF para bytes
     final bytes = await pdf.save();
-
-    // Salva o PDF localmente
     final directory = await getExternalStorageDirectory();
-    final file = File('${directory!.path}/pedido_registado_$horaPretendida.pdf');
+    final file =
+        File('${directory!.path}/pedido_registado_$horaPretendida.pdf');
     await file.writeAsBytes(bytes);
 
-    // Abre o PDF na mesma aplicação
     OpenFile.open(file.path);
+
+    return bytes;
   }
-/*
-  Future<void> _generatePdf(String horaPretendida) async {
-  final pdf = pw.Document();
-  double totalGeral = 0.0;
 
-  // Carregar a fonte
-  final fontData =
-      await rootBundle.load('lib/assets/fonts/Roboto-Regular.ttf');
-  final ttf = pw.Font.ttf(fontData);
+  Future<void> _connectToPrinter(Uint8List pdfBytes) async {
+    // Start scanning for devices
+    flutterBlue.scan(timeout: Duration(seconds: 4)).listen((scanResult) async {
+      if (scanResult.device.id.toString() == printerBDA) {
+        flutterBlue.stopScan();
+        printerDevice = scanResult.device;
 
-  // Adiciona uma página ao PDF
-  pdf.addPage(
-    pw.Page(
-      build: (pw.Context context) {
-        return pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('Lista de Pedidos', style: pw.TextStyle(fontSize: 20)),
-            pw.SizedBox(height: 20),
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: pedidos.map((pedido) {
-                double totalPedido =
-                    double.parse(pedido.total.replaceAll(',', '.'));
-                totalGeral += totalPedido;
-                return pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('Nº Pedido: ${pedido.number}',
-                        style: pw.TextStyle(font: ttf)),
-                    pw.Text('Quem pediu: ${pedido.requester}',
-                        style: pw.TextStyle(font: ttf)),
-                    pw.Text('Turma: ${pedido.group}',
-                        style: pw.TextStyle(font: ttf)),
-                    pw.Text(
-                        'Descrição: ${pedido.description.replaceAll("[", "").replaceAll("]", "")}',
-                        style: pw.TextStyle(font: ttf)),
-                    pw.Text('Data: ${pedido.data}',
-                        style: pw.TextStyle(font: ttf)),
-                    pw.Text('Hora: ${pedido.hora}',
-                        style: pw.TextStyle(font: ttf)),
-                    pw.Text('Total: ${pedido.total.replaceAll(".", ",")}€',
-                        style: pw.TextStyle(font: ttf)),
-                    pw.Text(
-                      'Estado: ${pedido.status == '0' ? 'Por Fazer' : 'Concluído'}',
-                      style: pw.TextStyle(font: ttf),
-                    ),
-                    pw.Divider(),
-                  ],
-                );
-              }).toList(),
-            ),
-            pw.Text(
-                'Total Geral: ${totalGeral.toString().replaceAll(".", ",")}€',
-                style: pw.TextStyle(font: ttf)), // Exibe o total geral no PDF
-          ],
-        );
-      },
-    ),
-  );
+        // Attempt to pair with the device using the PIN
+        try {
+          await printerDevice!.connect();
+          print('Connected to printer.');
 
-  // Get the PDF bytes
-  final pdfBytes = pdf.save();
-  BlueThermalPrinter bluetooth = BlueThermalPrinter.instance;
-  // Define your printer's MAC address
-  var printerMACAddress = '00:02:0A:02:43:9A';
-  final devices = await bluetooth.getBondedDevices();
-  final printer = devices.firstWhere(
-    (device) => device.address == printerMACAddress,
-    orElse: () => null as BluetoothDevice,
-  );
+          await _authenticateWithPin(printerPin);
+          print('Authenticated with PIN.');
 
-  if (printer != null) {
+          await _sendPdfToPrinter(pdfBytes);
+        } catch (e) {
+          print('Error during connection: $e');
+        } finally {
+          await printerDevice!.disconnect();
+          print('Disconnected from printer.');
+        }
+      } else {
+        print("Device not matched");
+      }
+    });
+  }
+
+  Future<void> _authenticateWithPin(String pin) async {
+    // Authentication logic for PIN - depends on the printer's BLE specifications
+    // Some printers might not require this or might handle it automatically
+    // Implement this method based on your printer's documentation
+    print('Authenticated with PIN: $pin');
+  }
+
+  Future<void> _sendPdfToPrinter(Uint8List pdfBytes) async {
+    if (printerDevice == null || printerCharacteristic == null) return;
+
     try {
-      await bluetooth.connect(printer);
-
-      // Convert the PDF bytes to ESC/POS commands
-      List<int> escPosCommands = generateEscPosCommandsFromPdf(pdfBytes as Uint8List);
-
-      // Convert 'escPosCommands' to 'Uint8List'
-      Uint8List commandBytes = Uint8List.fromList(escPosCommands);
-
-      // Write the ESC/POS commands to the Bluetooth device
-      await bluetooth.writeBytes(commandBytes);
-      print('Printer found');
-
-      // Disconnect after printing
-      await bluetooth.disconnect();
+      List<int> escPosCommands = generateEscPosCommandsFromPdf(pdfBytes);
+      await printerCharacteristic!.write(Uint8List.fromList(escPosCommands));
+      print('Data sent to printer.');
     } catch (e) {
-      print("Failed to print PDF: $e");
+      print('Error during printing: $e');
     }
-  } else {
-    print('Printer not found');
   }
-}
 
-List<int> generateEscPosCommandsFromPdf(Uint8List pdfBytes) {
-  // This is a very basic implementation for illustrative purposes.
-  // You'll need to parse the PDF content and convert it to ESC/POS commands accordingly.
+  List<int> generateEscPosCommandsFromPdf(Uint8List pdfBytes) {
+    // Basic ESC/POS command example
+    List<int> escPosCommands = [];
 
-  List<int> escPosCommands = [];
+    escPosCommands.addAll([27, 33, 0]); // Example: Reset font size
+    escPosCommands.addAll([27, 97, 0]); // Example: Reset alignment
 
-  // Example: Set font size to 10px
-  escPosCommands.addAll([27, 33, 10]);
+    return escPosCommands;
+  }
 
-  // Example: Set alignment to center
-  escPosCommands.addAll([27, 97, 1]);
-
-  // Example: Reset font size and alignment
-  escPosCommands.addAll([27, 33, 0]);
-  escPosCommands.addAll([27, 97, 0]);
-
-  return escPosCommands;
-}
-*/
-
-
+  Future<bool> _requestStoragePermission() async {
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      var result = await Permission.storage.request();
+      return result.isGranted;
+    }
+    return true;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-         backgroundColor: Color.fromARGB(255, 246, 141, 45),
+        backgroundColor: Color.fromARGB(255, 246, 141, 45),
         title: Text('Pedidos Registados'),
         actions: [
           IconButton(
-            onPressed: () {
-              logout(context);
+            onPressed: () async {
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              // Replace with your login widget
+              // Navigator.pushReplacement(
+              //   context,
+              //   MaterialPageRoute(
+              //       builder: (BuildContext ctx) => MyApp()),
+              // );
             },
             icon: Icon(Icons.logout),
           ),
         ],
       ),
-      drawer: DrawerBar(),
       floatingActionButton: SpeedDial(
         icon: Icons.more_horiz,
         iconTheme: IconThemeData(color: Colors.white),
@@ -408,16 +326,32 @@ List<int> generateEscPosCommandsFromPdf(Uint8List pdfBytes) {
           SpeedDialChild(
             child: Icon(Icons.picture_as_pdf),
             onTap: () async {
-          generatePdf(horaPretendidaController.text);
-            }
+              if (formattedTime.isNotEmpty) {
+                generatePdf(formattedTime);
+              } else {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text('Erro'),
+                      content: Text('Por favor, insira a hora pretendida.'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Text('OK'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              }
+            },
           ),
           SpeedDialChild(
             child: Icon(Icons.av_timer),
-            onTap: () {
-              setState(() {
-                _showDateTimePicker();
-              });
-            },
+            onTap: _showDateTimePicker,
           ),
         ],
       ),
@@ -430,8 +364,7 @@ List<int> generateEscPosCommandsFromPdf(Uint8List pdfBytes) {
             } else if (snapshot.hasError) {
               return Text('Erro: ${snapshot.error}');
             } else {
-              List<PurchaseOrder>? data =
-                  snapshot.data as List<PurchaseOrder>?;
+              List<PurchaseOrder>? data = snapshot.data;
               if (data == null || data.isEmpty) {
                 return Text('Sem pedidos');
               }
@@ -446,13 +379,14 @@ List<int> generateEscPosCommandsFromPdf(Uint8List pdfBytes) {
                       children: [
                         Text('Quem pediu: ${order.requester}'),
                         Text('Turma: ${order.group}'),
-                        Text('Descrição: ${order.description.toString().replaceAll("[", " ").replaceAll("]", " ")}'),
+                        Text(
+                            'Descrição: ${order.description.toString().replaceAll("[", " ").replaceAll("]", " ")}'),
                         Text('Data: ${order.data}'),
                         Text('Hora: ${order.hora}'),
-                        Text('Total: ${order.total.toString().replaceAll(".", ",")}€'),
                         Text(
-                          'Estado: ${order.status == '0' ? 'Por Fazer' : 'Concluído'}',
-                        ),
+                            'Total: ${order.total.toString().replaceAll(".", ",")}€'),
+                        Text(
+                            'Estado: ${order.status == '0' ? 'Por Fazer' : 'Concluído'}'),
                       ],
                     ),
                   );
