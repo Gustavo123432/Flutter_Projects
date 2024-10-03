@@ -7,6 +7,8 @@ import 'package:my_flutter_project/Aluno/drawerHome.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/status.dart' as status;
 import 'package:intl/intl.dart';
 
 void main() {
@@ -841,6 +843,84 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
+  void sendOrderToWebSocket(
+      List<Map<String, dynamic>> cartItems, String total) async {
+    int orderNumber = generateRandomNumber(1000, 9999);
+
+    try {
+      // Check if cartItems is not empty
+      print('Cart items: $cartItems'); // Debugging
+
+      // Extract item names or any other needed data
+      List<String> itemNames =
+          cartItems.map((item) => item['Nome'] as String).toList();
+      print('Item names: $itemNames'); // Debugging
+
+      var turma = users[0]['Turma'];
+      var nome = users[0]['Nome'];
+      var apelido = users[0]['Apelido'];
+      var permissao = users[0]['Permissao'];
+
+      final channel = WebSocketChannel.connect(
+        Uri.parse('ws://snipeit.gfserver.pt:8080'),
+      );
+
+      // Send all necessary cart data
+      Map<String, dynamic> orderData = {
+        'QPediu': nome,
+        'NPedido': orderNumber,
+        'Troco': dinheiroAtual,
+        'Turma': turma,
+        'Permissao': permissao,
+        'Descricao': itemNames, // Cart item names
+        'Total': total,
+      };
+
+      print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
+
+      channel.sink.add(json.encode(orderData));
+
+      channel.stream.listen(
+        (message) {
+          var serverResponse = json.decode(message);
+          if (serverResponse['status'] == 'success') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Pedido enviado com sucesso! Pedido Nº' +
+                    orderNumber.toString()),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
+              ),
+            );
+          }
+          channel.sink.close(status.normalClosure);
+        },
+        onError: (error) {
+          print('Erro ao fazer a requisição WebSocket: $error');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      print('Erro ao estabelecer conexão WebSocket: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+        ),
+      );
+    }
+  }
+
   void updateItemCountMap() {
     itemCountMap.clear();
     for (var item in cartItems) {
@@ -955,6 +1035,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       if (allAvailable) {
         sendOrderToApi(cartItems, total.toString());
         sendRecentOrderToApi(cartItems);
+        sendOrderToWebSocket(cartItems, total.toString());
+
         setState(() {
           cartItems.clear();
           updateItemCountMap();

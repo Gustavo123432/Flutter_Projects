@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Bar/drawerBar.dart';
-import 'package:my_flutter_project/login.dart';
+import 'package:my_flutter_project/Bar/produtoPageBar.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PurchaseOrder {
@@ -26,17 +27,19 @@ class PurchaseOrder {
     required this.status,
     required this.userPermission,
   });
-
   factory PurchaseOrder.fromJson(Map<String, dynamic> json) {
     return PurchaseOrder(
-      number: json['NPedido'],
-      requester: json['QPediu'],
-      group: json['Turma'],
-      description: json['Descricao'],
-      total: json['Total'],
-      troco: json['Troco'],
-      status: json['Estado'],
-      userPermission: json['Permissao'],
+      number: json['NPedido']?.toString() ?? 'N/A',
+      requester: json['QPediu'] ?? 'Desconhecido',
+      group: json['Turma'] ?? 'Sem turma',
+      description: (json['Descricao'] is List)
+          ? (json['Descricao'] as List)
+              .join(', ') // Join list items with a comma
+          : json['Descricao']?.toString() ?? 'Sem descrição',
+      total: json['Total']?.toString() ?? '0.00',
+      troco: json['Troco']?.toString() ?? '0.00',
+      status: json['concluido']?.toString() ?? '0',
+      userPermission: json['Permissao'] ?? 'Sem permissão',
     );
   }
 }
@@ -48,59 +51,101 @@ class BarPagePedidos extends StatefulWidget {
 
 class _BarPagePedidosState extends State<BarPagePedidos> {
   late Stream<List<PurchaseOrder>> purchaseOrderStream;
-  String formattedTotal = "";
-  String formattedTroco = "";
-  String troco = "";
-
+  final StreamController<List<PurchaseOrder>> purchaseOrderController =
+      StreamController.broadcast();
+  List<PurchaseOrder> currentOrders = [];
+  int cont = 0;
 
   @override
   void initState() {
     super.initState();
-    purchaseOrderStream = Stream.periodic(Duration(seconds: 1), (_) {
-      return fetchPurchaseOrders();
-    }).asyncMap((_) => fetchPurchaseOrders());
+    purchaseOrderStream = getPurchaseOrdersStream();
+    _fetchInitialPurchaseOrders();
   }
 
-  Future<List<PurchaseOrder>> fetchPurchaseOrders() async {
-    final response = await http.get(
-        Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=10'));
-    if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => PurchaseOrder.fromJson(json)).toList();
-    } else {
-      throw Exception('Erro 1, Verifique a Internet');
+  // Fetch orders from API and filter only those with `concluido = 0`
+  Future<void> _fetchInitialPurchaseOrders() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=10'),
+      );
+      if (response.statusCode == 200) {
+        List<dynamic> data = jsonDecode(response.body);
+        List<PurchaseOrder> orders = data
+            .map((json) => PurchaseOrder.fromJson(json))
+            .where((order) => order.status == '0') // Filter where `status` is 0
+            .toList();
+
+        currentOrders = orders;
+        purchaseOrderController.add(currentOrders);
+        _connectToWebSocket(); // Connect to WebSocket after initial fetch
+      } else {
+        throw Exception('Erro ao carregar pedidos. Verifique a Internet.');
+      }
+    } catch (e) {
+      print('Erro ao buscar pedidos: $e');
     }
+  }
+
+  // WebSocket connection and message handling
+  void _connectToWebSocket() {
+    final channel = WebSocketChannel.connect(
+      Uri.parse('ws://snipeit.gfserver.pt:8080'),
+    );
+
+    channel.stream.listen(
+      (message) {
+        if (message != null && message.isNotEmpty) {
+          try {
+            Map<String, dynamic> data = jsonDecode(message);
+            PurchaseOrder order = PurchaseOrder.fromJson(data);
+
+            // Add only orders with `concluido = 0`
+            if (order.status == '0') {
+              setState(() {
+                currentOrders.add(order);
+                purchaseOrderController.add(currentOrders);
+              });
+            }
+          } catch (e) {
+            print('Erro ao processar a mensagem: $e');
+          }
+        }
+      },
+      onError: (error) => print('Erro WebSocket: $error'),
+      onDone: () => channel.sink.close(),
+    );
+  }
+
+  Stream<List<PurchaseOrder>> getPurchaseOrdersStream() {
+    return purchaseOrderController.stream;
   }
 
   void checkPedido(String orderNumber, String orderRequester) async {
     final response = await http.get(Uri.parse(
         'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=17&nome=$orderRequester&npedido=$orderNumber'));
     if (response.statusCode == 200) {
-      setState(() async {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Pedido Concluído'),
-          ),
-        );
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pedido Concluído'),
+        ),
+      );
     } else {
-      throw Exception('Erro 1, Verifique a Internet');
+      throw Exception('Erro ao verificar pedido. Verifique a Internet.');
     }
   }
 
-  void apagarpedido (String orderNumber, String orderRequester) async{
- final response = await http.get(Uri.parse(
+  void apagarpedido(String orderNumber, String orderRequester) async {
+    final response = await http.get(Uri.parse(
         'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=24&nome=$orderRequester&ids=$orderNumber'));
     if (response.statusCode == 200) {
-      setState(() async {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Pedido Eliminado'),
-          ),
-        );
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pedido Eliminado'),
+        ),
+      );
     } else {
-      throw Exception('Erro 1, Verifique a Internet');
+      throw Exception('Erro ao eliminar pedido. Verifique a Internet.');
     }
   }
 
@@ -127,10 +172,9 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (BuildContext ctx) => const LoginForm(),
+                    builder: (BuildContext ctx) => LoginForm(),
                   ),
                 );
-                ModalRoute.withName('/');
               },
             ),
           ],
@@ -156,156 +200,167 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       ),
       drawer: DrawerBar(),
       body: Center(
-        child: StreamBuilder<List<PurchaseOrder>>(
-          stream: purchaseOrderStream,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return CircularProgressIndicator();
-            } else if (snapshot.hasError) {
-              return Text('Sem Pedidos');
-            } else {
-              List<PurchaseOrder>? data = snapshot.data;
-              if (data == null || data.isEmpty) {
-                return Text('Sem Pedidos');
-              }
+          child: StreamBuilder<List<PurchaseOrder>>(
+        stream: purchaseOrderStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return CircularProgressIndicator();
+          } else if (snapshot.hasError) {
+            return Text('Erro ao carregar pedidos');
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Text('Sem Pedidos');
+          }
 
-              // Ordenar a lista de pedidos, colocando os pedidos de professor no topo
-              data.sort((a, b) {
-                if (a.userPermission == 'Professor' &&
-                    b.userPermission != 'Professor') {
-                  return -1;
-                } else if (a.userPermission != 'Professor' &&
-                    b.userPermission == 'Professor') {
-                  return 1;
-                }
-                return 0;
-              });
+          List<PurchaseOrder> data = snapshot.data!;
 
-              return ListView.builder(
-                itemCount: data.length,
-                itemBuilder: (context, index) {
-                  PurchaseOrder order = data[index];
-                  try {
-                    formattedTotal = double.parse(order.total)
-                        .toStringAsFixed(2)
-                        .replaceAll('.', ',');
-                    formattedTroco = double.parse(order.troco).toStringAsFixed(2)
-                        .replaceAll('.', ',');
-                  } catch (e) {
-                    formattedTotal = 'Invalid Total';
-                  }
+          // Ordenar a lista de pedidos, colocando os pedidos de professor no topo
+          data.sort((a, b) {
+            if (a.userPermission == 'Professor' &&
+                b.userPermission != 'Professor') {
+              return -1;
+            } else if (a.userPermission != 'Professor' &&
+                b.userPermission == 'Professor') {
+              return 1;
+            }
+            return 0;
+          });
 
-                  return Dismissible(
-                    key: Key(order.number),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      color: Color.fromARGB(255, 130, 201, 189),
-                      alignment: Alignment.centerRight,
-                      padding: EdgeInsets.symmetric(horizontal: 20.0),
-                      child: Icon(
-                        Icons.check,
-                        color: Colors.white,
-                      ),
+          return ListView.builder(
+            itemCount: data.length,
+            itemBuilder: (context, index) {
+              PurchaseOrder order = data[index];
+              String formattedTotal = double.parse(order.total)
+                  .toStringAsFixed(2)
+                  .replaceAll('.', ',');
+
+              return Dismissible(
+                key: Key(order.number
+                    .replaceAll("[", "")
+                    .replaceAll("]", "")), // Unique key
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  color: Color.fromARGB(255, 130, 201, 189),
+                  alignment: Alignment.centerRight,
+                  padding: EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Icon(
+                    Icons.check,
+                    color: Colors.white,
+                  ),
+                ),
+                confirmDismiss: (direction) async {
+                  return await showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text('Confirmar Conclusão'),
+                        content:
+                            Text('Deseja marcar este pedido como concluído?'),
+                        actions: [
+                          TextButton(
+                            child: Text('Cancelar'),
+                            onPressed: () {
+                              Navigator.of(context).pop(false);
+                            },
+                          ),
+                          TextButton(
+                            child: Text('Confirmar'),
+                            onPressed: () {
+                              checkPedido(order.number, order.requester);
+                              Navigator.of(context)
+                                  .pop(true); // Dismiss the dialog
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                onDismissed: (direction) {
+                  setState(() {
+                    // Remove the order from the list after confirmation
+                    data.removeWhere((item) =>
+                        item.number == order.number); // Update the list
+                  });
+
+                  // Show a snackbar or some feedback if needed
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text("Pedido ${order.number} foi concluído.")),
+                  );
+                },
+                child: Card(
+                  margin:
+                      EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                  color: Color.fromARGB(255, 228, 225, 223),
+                  elevation: 4.0,
+                  child: ListTile(
+                    title: Text(
+                      'Pedido ${order.number} - ${order.requester}',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18,),
                     ),
-                    onDismissed: (direction) {},
-                    confirmDismiss: (direction) async {
-                      return await showDialog(
+                    subtitle: Text(
+                      '${order.group}\n${order.description.replaceAll("[", "").replaceAll("]", "")}',style: TextStyle(fontSize: 16),
+                    ),
+                    trailing: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('Total: $formattedTotal€'),
+                        Text('Troco: ${order.troco}€'),
+                      ],
+                    ),
+                    onTap: () {
+                      // Código para exibir detalhes do pedido
+                      showDialog(
                         context: context,
                         builder: (BuildContext context) {
                           return AlertDialog(
-                            title: Text('Confirmar Conclusão'),
-                            content: Text(
-                                'Deseja marcar este pedido como concluído?'),
-                            actions: <Widget>[
+                            title: Text('Detalhes do Pedido ${order.number}'),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Requisitante: ${order.requester}'),
+                                Text('Turma: ${order.group}'),
+                                Text('Descrição: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
+                                Text('Total: $formattedTotal€'),
+                                Text('Troco: ${order.troco}€'),
+                              ],
+                            ),
+                            actions: [
                               TextButton(
-                                onPressed: () async{
-                                    apagarpedido(order.number, order.requester);
-                                    Navigator.of(context).pop(false);
+                                child: Text('Fechar'),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
                                 },
-                                child: Text('Apagar Pedido'),
                               ),
                               TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(false),
-                                child: Text('Cancelar'),
-                              ),
-                              TextButton(
-                                onPressed: () async {
-                                  checkPedido(order.number, order.requester);
-                                  Navigator.of(context).pop(false);
+                                child: Text('Eliminar Pedido'),
+                                onPressed: () {
+                                  apagarpedido(order.number, order.requester);
+                                  data.removeWhere(
+                                      (item) => item.number == order.number);
+                                  Navigator.of(context).pop();
                                 },
-                                child: Text('Confirmar'),
                               ),
                             ],
                           );
                         },
                       );
                     },
-                    child: Card(
-                      elevation: 3,
-                      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      color: order.userPermission == 'Professor'
-                          ? Colors.red[300]
-                          : (order.userPermission == 'Funcionária'
-                              ? Colors.green
-                              : null),
-                      child: ListTile(
-                        title: Text('Nº Pedido: ${order.number.toString()}'),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Quem pediu: ${order.requester}',
-                              style: TextStyle(
-                                fontSize: 20.0,
-                                color: Color.fromARGB(255, 176, 176, 176),
-                              ), 
-                            ),
-                            Text(
-                              'Descrição: ${order.description.replaceAll('[', '').replaceAll(']', '')}',
-                              style: TextStyle(
-                                fontSize: 20.0,
-                                color: Color.fromARGB(255, 4, 2, 164),
-                              ),
-                            ),
-                            Text(
-                              'Total: $formattedTotal€',
-                              style: TextStyle(
-                                fontSize: 20.0,
-                                                                color: Color.fromARGB(255, 127, 127, 127),
-
-                              ),
-                            ),
-                            Text(
-                              'Troco: $formattedTroco€',
-                              style: TextStyle(
-                                fontSize: 20.0,
-                                color: Color.fromARGB(255, 255, 0, 0),
-                              ),
-                            ),
-                            Text(
-                              'Estado: ${order.status == '0' ? 'Por Fazer' : 'Concluído'}',
-                              style: TextStyle(
-                                color: Color.fromARGB(255, 127, 127, 127),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
+                  ),
+                ),
               );
-            }
-          },
-        ),
-      ),
+            },
+          );
+        },
+      )),
     );
   }
-}
 
-void main() {
-  runApp(MaterialApp(
-    home: BarPagePedidos(),
-  ));
+  @override
+  void dispose() {
+    purchaseOrderController
+        .close(); // Close the stream controller when widget is disposed
+    super.dispose();
+  }
 }

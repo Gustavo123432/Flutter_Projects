@@ -13,7 +13,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:open_file/open_file.dart';
-import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart'; // Import Print Bluetooth Thermal
+//import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart'; // Import Print Bluetooth Thermal
 
 class PurchaseOrder {
   final String number;
@@ -129,7 +129,7 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
   Future<void> generatePdf(String horaPretendida) async {
     if (await _requestStoragePermission()) {
       final pdfBytes = await _generatePdf(horaPretendida);
-      await _printBluetooth(pdfBytes);
+      //await _printBluetooth(pdfBytes);
     } else {
       showDialog(
         context: context,
@@ -203,7 +203,7 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
     return bytes;
   }
 
-  Future<void> _printBluetooth(Uint8List pdfBytes) async {
+ /* Future<void> _printBluetooth(Uint8List pdfBytes) async {
     bool isConnected = await PrintBluetoothThermal.connectionStatus;
     if (!isConnected) {
       await PrintBluetoothThermal.startScan(timeout: Duration(seconds: 5));
@@ -229,7 +229,7 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
     // Send ESC/POS commands to the printer
     await PrintBluetoothThermal.writeBytes(Uint8List.fromList(escPosCommands));
     print('Printed successfully.');
-  }
+  }*/
 
   Future<bool> _requestStoragePermission() async {
     PermissionStatus status = await Permission.storage.request();

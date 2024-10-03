@@ -3,9 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  charset_converter
   file_selector_windows
-  flutter_thermal_printer
   permission_handler_windows
 )
 
