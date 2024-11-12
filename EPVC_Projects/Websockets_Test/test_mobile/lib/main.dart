@@ -1,7 +1,6 @@
-import 'dart:convert';  // For jsonDecode and jsonEncode
+import 'dart:io'; // For WebSocket
+import 'dart:convert'; // For jsonDecode and jsonEncode
 import 'package:flutter/material.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,86 +17,89 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const WebSocketPage(title: 'WebSocket Data Display'),
+      home: const MyHomePage(title: 'WebSocket Demo Home Page'),
     );
   }
 }
 
-class WebSocketPage extends StatefulWidget {
-  const WebSocketPage({super.key, required this.title});
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key, required this.title});
 
   final String title;
 
   @override
-  State<WebSocketPage> createState() => _WebSocketPageState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _WebSocketPageState extends State<WebSocketPage> {
-  String _webSocketData = "0";
-  WebSocketChannel? _channel;
-  late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
+class _MyHomePageState extends State<MyHomePage> {
+  int _counter = 0; // Counter for the button clicks
+  WebSocket? _webSocket; // WebSocket variable to hold connection
+  int _webSocketData = 0; // Variable to hold WebSocket data
+
+  final GlobalKey<FormState> _formKey =
+      GlobalKey<FormState>(); // Form key to validate and save
+  String _name = ''; // Variable to hold the name value
 
   @override
   void initState() {
     super.initState();
-    _initializeNotifications();
-    _connectWebSocket();
+    _connectWebSocket(); // Initialize the WebSocket connection
   }
 
-  // Initialize local notifications
-  void _initializeNotifications() {
-    flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+  void _connectWebSocket() async {
+    try {
+      // Connect to the WebSocket server
+      _webSocket = await WebSocket.connect('ws://10.5.48.156:1000');
+      print('Connected to WebSocket');
 
-    final InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
-    
-    flutterLocalNotificationsPlugin.initialize(initializationSettings);
-  }
-
-  // Show notification
-  Future<void> _showNotification(String message) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'websocket_channel', 'WebSocket Notifications',
-      channelDescription: 'Notifications from WebSocket messages',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      'New WebSocket Message',
-      message,
-      platformChannelSpecifics,
-      payload: 'WebSocket message received',
-    );
-  }
-
-  void _connectWebSocket() {
-    _channel = WebSocketChannel.connect(
-      Uri.parse('ws://192.168.1.214:1000'), // Replace with your WebSocket URL
-    );
-
-    _channel!.stream.listen((event) {
-      try {
-        Map<String, dynamic> data = jsonDecode(event);
-        if (data.containsKey('Counter_reached')) {
+      // Listen for incoming messages from WebSocket
+      _webSocket!.listen(
+        (message) {
+          print('Received message: $message');
           setState(() {
-            _webSocketData = data['Counter_reached'].toString();
+            _webSocketData =
+                int.tryParse(message) ?? 0; // Update WebSocket data
           });
+        },
+        onError: (error) {
+          print('WebSocket error: $error');
+        },
+        onDone: () {
+          print('WebSocket connection closed');
+        },
+      );
+    } catch (e) {
+      print('Error connecting to WebSocket: $e');
+    }
+  }
 
-          // Show notification when data is received
-          _showNotification('Counter reached: $_webSocketData');
+  void _incrementCounter() {
+    setState(() {
+      _counter++;
+      if (_counter % 10 == 0) {
+        // Send notification through WebSocket every 10 increments
+        if (_webSocket != null && _webSocket!.readyState == WebSocket.open) {
+          String jsonMessage =
+              jsonEncode({'Counter_reached': _counter.toString()});
+          _webSocket!.add(jsonMessage); // Send message
+          print('Notification sent: Counter reached $_counter');
+        } else {
+          print('WebSocket connection not open');
         }
-      } catch (e) {
-        print('Error decoding WebSocket data: $e');
       }
-    }, onError: (error) {
-      print('WebSocket error: $error');
+    });
+  }
+
+  void _incrementCounterLetter(String value) {
+    setState(() {     
+        if (_webSocket != null && _webSocket!.readyState == WebSocket.open) {
+          String jsonMessage =
+              jsonEncode({'Counter_reached': value.toString()});
+          _webSocket!.add(jsonMessage); // Send message
+          print('Notification sent: Counter reached $_counter');
+        } else {
+          print('WebSocket connection not open');
+        }
     });
   }
 
@@ -109,171 +111,82 @@ class _WebSocketPageState extends State<WebSocketPage> {
         title: Text(widget.title),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('WebSocket Data Received:'),
-            Text(
-              '$_webSocketData',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+        child: Form(
+          key: _formKey, // Attach form key to the form
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              const Text('You have pushed the button this many times:'),
+              Text(
+                '$_counter',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              Text('WebSocket Data: $_webSocketData'), // Display WebSocket data
+              TextFormField(
+                decoration: const InputDecoration(
+                  icon: Icon(Icons.person),
+                  hintText: 'What do people call you?',
+                  labelText: 'Name *',
+                ),
+                onSaved: (String? value) {
+                  if (value != null) {
+                    _name = value; // Save value
+                  }
+                },
+                validator: (String? value) {
+                  return (value != null && value.contains('@'))
+                      ? 'Do not use the @ char.'
+                      : null;
+                },
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // Validate form before sending the value
+                  if (_formKey.currentState?.validate() ?? false) {
+                    _formKey.currentState?.save(); // Save the form state
+                    _incrementCounterLetter(_name); // Send the saved value
+                  }
+                },
+                child: const Text('Send Value'),
+              ),
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _channel?.sink.close(); // Close WebSocket connection when widget is disposed
-    super.dispose();
-  }
-}
-//IOS Code
-/*import 'dart:convert';  // For jsonDecode and jsonEncode
-import 'package:flutter/material.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'WebSocket Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const WebSocketPage(title: 'WebSocket Data Display'),
-    );
-  }
-}
-
-class WebSocketPage extends StatefulWidget {
-  const WebSocketPage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<WebSocketPage> createState() => _WebSocketPageState();
-}
-
-class _WebSocketPageState extends State<WebSocketPage> {
-  int _webSocketData = 0;
-  WebSocketChannel? _channel;
-  late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeNotifications();
-    _connectWebSocket();
-  }
-
-  // Initialize local notifications and request iOS permissions
-  void _initializeNotifications() {
-    flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-
-    // Initialize settings for Android
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    // Initialize settings for iOS
-    const IOSInitializationSettings initializationSettingsIOS =
-        IOSInitializationSettings();
-
-    final InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid, iOS: initializationSettingsIOS);
-
-    flutterLocalNotificationsPlugin.initialize(initializationSettings);
-
-    // Request permission on iOS
-    flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(alert: true, badge: true, sound: true);
-  }
-
-  // Show notification
-  Future<void> _showNotification(String message) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'websocket_channel', 'WebSocket Notifications',
-      channelDescription: 'Notifications from WebSocket messages',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-    const IOSNotificationDetails iosPlatformChannelSpecifics =
-        IOSNotificationDetails();
-
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(
-            android: androidPlatformChannelSpecifics, iOS: iosPlatformChannelSpecifics);
-
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      'New WebSocket Message',
-      message,
-      platformChannelSpecifics,
-      payload: 'WebSocket message received',
-    );
-  }
-
-  void _connectWebSocket() {
-    _channel = WebSocketChannel.connect(
-      Uri.parse('ws://192.168.1.166:8080'), // Replace with your WebSocket URL
-    );
-
-    _channel!.stream.listen((event) {
-      try {
-        Map<String, dynamic> data = jsonDecode(event);
-        if (data.containsKey('Counter_reached')) {
-          setState(() {
-            _webSocketData = int.parse(data['Counter_reached']);
-          });
-
-          // Show notification when data is received
-          _showNotification('Counter reached: $_webSocketData');
-        }
-      } catch (e) {
-        print('Error decoding WebSocket data: $e');
-      }
-    }, onError: (error) {
-      print('WebSocket error: $error');
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('WebSocket Data Received:'),
-            Text(
-              '$_webSocketData',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _incrementCounter,
+        tooltip: 'Increment',
+        child: const Icon(Icons.add),
       ),
     );
   }
-
-  @override
-  void dispose() {
-    _channel?.sink.close(); // Close WebSocket connection when widget is disposed
-    super.dispose();
-  }
 }
- */
+
+/*  import 'package:http/http.dart' as http;
+
+void main() async {
+  final headers = {
+    'accept': '*//**',
+    'Content-Type': 'application/json',
+  };
+
+  final data = '{\n  "chatId": "351932840768@c.us",\n  "contentType": "string",\n  "content": "Hello World!"\n}';
+
+  final url = Uri.parse('https://sms.gfserver.pt/client/sendMessage/f8377d8d-a589-4242-9ba6-9486a04ef80c');
+
+  final res = await http.post(url, headers: headers, body: data);
+  final status = res.statusCode;
+  if (status != 200) throw Exception('http.post error: statusCode= $status');
+
+  print(res.body);
+} */
+
+/* curl -X 'POST' \
+  'https://sms.gfserver.pt/client/sendMessage/f8377d8d-a589-4242-9ba6-9486a04ef80c' \
+  -H 'accept: *//**' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "chatId": "351932840768@c.us",
+  "contentType": "string",
+  "content": "Hello World!"
+}' */
