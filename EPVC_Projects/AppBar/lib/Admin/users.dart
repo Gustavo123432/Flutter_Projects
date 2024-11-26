@@ -328,7 +328,7 @@ class _UserTableState extends State<UserTable> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      /*appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 246, 141, 45),
         title: Row(
           children: [
@@ -373,7 +373,7 @@ class _UserTableState extends State<UserTable> {
             icon: Icon(Icons.logout),
           ),
         ],
-      ),
+      ),*/
       drawer: DrawerAdmin(),
       body: SingleChildScrollView(
         child: Container(

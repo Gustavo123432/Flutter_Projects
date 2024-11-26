@@ -7,6 +7,7 @@ import 'package:my_flutter_project/Admin/users.dart';
 import 'package:my_flutter_project/Aluno/formatPWDFirst.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
 import 'package:my_flutter_project/Bar/barPage.dart';
+import 'package:my_flutter_project/Drawer/drawer.dart';
 import 'package:my_flutter_project/PasswordRecovery/esqueciPWD.dart';
 import 'package:my_flutter_project/PasswordRecovery/reenserirPWD.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -385,7 +386,14 @@ void verifylogin(context) async {
       {
         print("Administrador");
         Navigator.push(
-            context, MaterialPageRoute(builder: (context) => UserTable()));
+          context,
+          MaterialPageRoute(
+            builder: (context) => AdminDrawer(
+              currentPage: UserTable(),
+              numero: 1,
+            ),
+          ),
+        );
       } else if (type == "Professor") {
         //é user
         print("Professor");
