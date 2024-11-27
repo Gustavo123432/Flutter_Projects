@@ -6,6 +6,9 @@ import 'package:my_flutter_project/Admin/produtoPage.dart';
 import 'package:my_flutter_project/Admin/turmasPage.dart';
 import 'package:my_flutter_project/Admin/users.dart';
 import 'package:my_flutter_project/Bar/pedidosRegistados.dart';
+import 'package:my_flutter_project/Bar/produtoPageBar.dart';
+import 'package:my_flutter_project/Drawer/logout.dart';
+import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sidebarx/sidebarx.dart'; // Import SidebarX package
 
@@ -25,25 +28,7 @@ class Company {
   }
 }
 
-// Function to fetch companies from the API
-Future<List<Company>> fetchCompanies() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  var idUser = prefs.getString("idUser");
-  final response = await http.post(
-    Uri.parse('https://services.interagit.com/API/Sado/api_Sado.php'),
-    body: {
-      'query_param': 'C1',
-      'id': idUser,
-    },
-  );
 
-  if (response.statusCode == 200) {
-    List<dynamic> data = jsonDecode(response.body);
-    return data.map((json) => Company.fromJson(json)).toList();
-  } else {
-    throw Exception('Failed to load companies');
-  }
-}
 
 // AdminDrawer Widget
 class AdminDrawer extends StatefulWidget {
@@ -51,6 +36,7 @@ class AdminDrawer extends StatefulWidget {
   int numero;
 
   AdminDrawer({required this.currentPage, required this.numero});
+  
   @override
   _AdminDrawerState createState() => _AdminDrawerState();
 }
@@ -58,88 +44,21 @@ class AdminDrawer extends StatefulWidget {
 class _AdminDrawerState extends State<AdminDrawer> {
   late Future<List<Company>> futureCompanies;
 
-  var _controller = SidebarXController(
-    selectedIndex: 0, // Set the default selected index here
-    extended: true,
-  );
+  late SidebarXController _controller;  // Defined late here, will initialize in initState()
   final _key = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-    futureCompanies = fetchCompanies();
     pageController();
   }
 
   void pageController() {
-    switch (widget.numero) {
-      case 0:
-        _controller = SidebarXController(
-          selectedIndex: 0, // Set the default selected index here
-          extended: true,
-        );
-      case 1:
-        _controller = SidebarXController(
-          selectedIndex: 1, // Set the default selected index here
-          extended: true,
-        );
-      case 2:
-        _controller = SidebarXController(
-          selectedIndex: 2, // Set the default selected index here
-          extended: true,
-        );
-      case 3:
-        _controller = SidebarXController(
-          selectedIndex: 3, // Set the default selected index here
-          extended: true,
-        );
-      case 4:
-        _controller = SidebarXController(
-          selectedIndex: 4, // Set the default selected index here
-          extended: true,
-        );
-      case 5:
-        _controller = SidebarXController(
-          selectedIndex: 5, // Set the default selected index here
-          extended: true,
-        );
-      case 6:
-        _controller = SidebarXController(
-          selectedIndex: 6, // Set the default selected index here
-          extended: true,
-        );
-
-      case 7:
-        _controller = SidebarXController(
-          selectedIndex: 5, // Set the default selected index here
-          extended: true,
-        );
-      case 9:
-        _controller = SidebarXController(
-          selectedIndex: 9, // Set the default selected index here
-          extended: true,
-        );
-      case 10:
-        _controller = SidebarXController(
-          selectedIndex: 10, // Set the default selected index here
-          extended: true,
-        );
-      case 11:
-        _controller = SidebarXController(
-          selectedIndex: 11, // Set the default selected index here
-          extended: true,
-        );
-      case 12:
-        _controller = SidebarXController(
-          selectedIndex: 12, // Set the default selected index here
-          extended: true,
-        );
-      case 13:
-        _controller = SidebarXController(
-          selectedIndex: 13, // Set the default selected index here
-          extended: true,
-        );
-    }
+    // Only assign the SidebarXController once based on the widget.numero value
+    _controller = SidebarXController(
+      selectedIndex: widget.numero,
+      extended: true,
+    );
   }
 
   void logout(BuildContext context) {
@@ -161,12 +80,14 @@ class _AdminDrawerState extends State<AdminDrawer> {
               onPressed: () async {
                 SharedPreferences prefs = await SharedPreferences.getInstance();
                 await prefs.clear();
-                /*Navigator.pushReplacement(
-                  context,
-                  /*SlideTransitionPageRoute(
-                    page: LoginForm(),
-                  ),*/
-                );*/
+
+                // Ensure navigation happens after the current frame finishes rendering
+                
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (BuildContext ctx) => LoginForm()),
+                  );
+                
               },
             ),
           ],
@@ -201,9 +122,8 @@ class _AdminDrawerState extends State<AdminDrawer> {
                 child: AnimatedBuilder(
                   animation: _controller,
                   builder: (context, child) {
-                    // Check the selected index and update the page accordingly
+                    // Handle page transition logic based on selected index
                     if (_controller.selectedIndex == 8) {
-                      // Return the current page without changing it
                       return widget.currentPage;
                     } else if (_controller.selectedIndex != 0 &&
                         _controller.selectedIndex != 1 &&
@@ -239,14 +159,15 @@ class _AdminDrawerState extends State<AdminDrawer> {
                         break;
                       case 5:
                         _key.currentState?.closeDrawer();
-                        newPage = ProdutoPage();
-                        break;
+                        //logout(context);  // Perform logout action directly here
+                        newPage = LogoutDialog();
+                        //return widget.currentPage;  // Return the current page
                       default:
                         _key.currentState?.closeDrawer();
                         newPage = Center(child: Text("Unexpected Page"));
                     }
 
-                    // Update the current page and return it
+                    // Update currentPage and return the new page
                     widget.currentPage = newPage;
                     return newPage;
                   },
@@ -263,7 +184,6 @@ class _AdminDrawerState extends State<AdminDrawer> {
 class SideBarWidget extends StatefulWidget {
   const SideBarWidget({Key? key, required this.controller}) : super(key: key);
 
-  // The SidebarXController should be defined as a final member of the widget
   final SidebarXController controller;
 
   @override
@@ -271,80 +191,54 @@ class SideBarWidget extends StatefulWidget {
 }
 
 class _SideBarWidgetState extends State<SideBarWidget> {
-  final _controller = SidebarXController(selectedIndex: 0);
-
-  // Boolean variable to track expansion state
-  bool _isSettingsExpanded = false;
-
   @override
   Widget build(BuildContext context) {
     return SidebarX(
-        controller: widget.controller,
-        theme: const SidebarXTheme(
-          decoration: BoxDecoration(
-            color: Color.fromARGB(255, 246, 141, 45),
-            borderRadius: BorderRadius.only(
-              topRight: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-          iconTheme: IconThemeData(color: Colors.white),
-          textStyle: TextStyle(color: Colors.white),
-          selectedItemDecoration: BoxDecoration(
-            color: Colors.white60,
-            borderRadius: BorderRadius.all(
-              Radius.circular(20),
-            ),
+      controller: widget.controller,
+      theme: const SidebarXTheme(
+        decoration: BoxDecoration(
+          color: Color.fromARGB(255, 246, 141, 45),
+          borderRadius: BorderRadius.only(
+            topRight: Radius.circular(20),
+            bottomRight: Radius.circular(20),
           ),
         ),
-        extendedTheme: SidebarXTheme(width: 250),
-        headerBuilder: (context, extended) {
-          return Column(
-            children: [
-              SizedBox(height: 20),
-              SizedBox(
-                height: 60,
-                child: Image.asset(
-                  'lib/assets/barapp.png', // Replace with the path to your image
-                  fit: BoxFit.cover,
-                ),
+        iconTheme: IconThemeData(color: Colors.white),
+        textStyle: TextStyle(color: Colors.white),
+        selectedItemDecoration: BoxDecoration(
+          color: Colors.white60,
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+        ),
+      ),
+      extendedTheme: SidebarXTheme(width: 250),
+      headerBuilder: (context, extended) {
+        return Column(
+          children: [
+            SizedBox(height: 20),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8.0),
+              child: Image.asset(
+                'lib/assets/barapp.png', // Replace with the path to your image
+                height: 70,
+                fit: BoxFit.cover,
               ),
-              SizedBox(height: 20),
-            ],
-          );
-        },
-        footerDivider: Divider(
-          color: Colors.white,
-          height: 1,
-        ),
-        items: [
-          const SidebarXItem(icon: Icons.home, label: "  Dashboard"),
-          const SidebarXItem(icon: Icons.business, label: "  Users"),
-          const SidebarXItem(icon: Icons.group, label: "  Turmas"),
-          const SidebarXItem(icon: Icons.handshake, label: "  Registos"),
-          const SidebarXItem(icon: Icons.shopping_cart, label: "  Produtos"),
-          /*const SidebarXItem(icon: Icons.location_on, label: "  Places"),
-  const SidebarXItem(icon: Icons.file_present_rounded, label: "  Records Types"),
-  const SidebarXItem(icon: Icons.bar_chart, label: "  Reports"),*/
-
-          /*SidebarXItem(
-    icon: Icons.settings,
-    label: "  Settings",
-    onTap: () {
-      setState(() {
-        _isSettingsExpanded = !_isSettingsExpanded;
-      });
-    },
-  ),
-
-  // Expanded items with label-based indentation
-  if (_isSettingsExpanded) ...[
-    const SidebarXItem(icon: Icons.business, label: "      Company"),
-    const SidebarXItem(icon: Icons.group, label: "      Users"),
-    const SidebarXItem(icon: Icons.security, label: "      Accesses"),
-    const SidebarXItem(icon: Icons.settings_applications, label: "      App Settings"),
-    const SidebarXItem(icon: Icons.logout, label: "      Logout"),
-  ],*/
-        ]);
+            ),
+            SizedBox(height: 20),
+          ],
+        );
+      },
+      footerDivider: Divider(
+        color: Colors.white,
+        height: 1,
+      ),
+      items: [
+        const SidebarXItem(icon: Icons.home, label: "  Dashboard"),
+        const SidebarXItem(icon: Icons.account_circle, label: "  Users"),
+        const SidebarXItem(icon: Icons.group, label: "  Turmas"),
+        const SidebarXItem(icon: Icons.archive_rounded, label: "  Registos"),
+        const SidebarXItem(icon: Icons.local_pizza, label: "  Produtos"),
+        const SidebarXItem(icon: Icons.logout, label: "      Logout"),
+      ],
+    );
   }
 }

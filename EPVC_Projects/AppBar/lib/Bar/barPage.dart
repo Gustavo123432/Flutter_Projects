@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Bar/drawerBar.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
+import 'package:my_flutter_project/login.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -67,7 +68,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   Future<void> _fetchInitialPurchaseOrders() async {
     try {
       final response = await http.get(
-        Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=10'),
+        Uri.parse('http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=10'),
       );
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
@@ -123,7 +124,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
 
   void checkPedido(String orderNumber, String orderRequester) async {
     final response = await http.get(Uri.parse(
-        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=17&nome=$orderRequester&npedido=$orderNumber'));
+        'http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=17&nome=$orderRequester&npedido=$orderNumber'));
     if (response.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -137,7 +138,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
 
   void apagarpedido(String orderNumber, String orderRequester) async {
     final response = await http.get(Uri.parse(
-        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=24&nome=$orderRequester&ids=$orderNumber'));
+        'http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=24&nome=$orderRequester&ids=$orderNumber'));
     if (response.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

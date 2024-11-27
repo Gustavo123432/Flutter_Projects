@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Bar/drawerBar.dart';
+import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 List<Product> filteredProducts = []; // Assuming this is where filtered products will be stored
@@ -46,7 +47,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
 
   Future<void> fetchData() async {
     final response = await http.post(
-      Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
+      Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'),
       body: {
         'query_param': '4',
       },
@@ -146,7 +147,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
   void updateProduct(String id, bool newAvailability) async {
     var availableValue = newAvailability ? "1" : "0";
     var response = await http.get(
-      Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=18&id=$id&qtd=$availableValue'),
+      Uri.parse('http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=18&id=$id&qtd=$availableValue'),
     );
     if (response.statusCode == 200) {
       //print('Product updated successfully');
@@ -338,10 +339,4 @@ class AddProdutoPageBar extends StatelessWidget {
   }
 }
 
-class LoginForm extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Implement your login form UI here
-    return Container();
-  }
-}
+

@@ -43,7 +43,7 @@ class _AddUserPageState extends State<AddUserPage> {
 
   Future<List<String>> _fetchTurmasFromAPI() async {
     try {
-      final response = await http.get(Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=20'));
+      final response = await http.get(Uri.parse('http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=20'));
       if (response.statusCode == 200) {
         final List<dynamic> responseData = json.decode(response.body);
         List<String> turmas = responseData.map((data) => data['Turma'] as String).toList();
@@ -233,7 +233,7 @@ class _AddUserPageState extends State<AddUserPage> {
 
     try {
       var response = await http.post(
-          Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
+          Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'),
           body: {
             'query_param': '2',
             'nome': nome,

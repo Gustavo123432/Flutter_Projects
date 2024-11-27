@@ -39,7 +39,7 @@ class _FirstLoginState extends State<FirstLogin> {
 
     try {
       final response = await http.get(Uri.parse(
-          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=16&password=$pwd&email=$email'));
+          'http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=16&password=$pwd&email=$email'));
 
       if (response.statusCode == 200) {
         // Delay navigation for 1 second to show the login screen briefly

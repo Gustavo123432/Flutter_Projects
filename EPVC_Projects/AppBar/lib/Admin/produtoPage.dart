@@ -46,7 +46,7 @@ class _ProductPageState extends State<ProdutoPage> {
 
   Future<void> fetchData() async {
     final response = await http.post(
-      Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
+      Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'),
       body: {
         'query_param': '4',
       },
@@ -88,7 +88,7 @@ class _ProductPageState extends State<ProdutoPage> {
     var categoria = product.category;
     var response = await http.get(
       Uri.parse(
-          'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=6&id=$id&nome=$nome&preco=$preco&available=$qtd&categoria=$categoria'),
+          'http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=6&id=$id&nome=$nome&preco=$preco&available=$qtd&categoria=$categoria'),
       //body: jsonEncode(product.toJson()),
     );
     print(response);
@@ -378,7 +378,7 @@ class _ProductCardState extends State<ProductCard> {
 
 void removeProduct(String id) async {
   var response = await http.get(
-    Uri.parse('http://appbar.epvc.pt//appBarAPI_GET.php?query_param=7&id=$id'),
+    Uri.parse('http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=7&id=$id'),
     //body: jsonEncode(product.toJson()),
   );
   print(response);

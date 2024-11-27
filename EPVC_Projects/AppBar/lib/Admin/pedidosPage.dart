@@ -6,6 +6,7 @@ import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Admin/drawerAdmin.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
+import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 //coment
 /*
@@ -66,7 +67,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
 
   Future<List<PurchaseOrder>> fetchPurchaseOrders() async {
     final response = await http.get(
-        Uri.parse('http://appbar.epvc.pt/appBarAPI_GET.php?query_param=9'));
+        Uri.parse('http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=9'));
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => PurchaseOrder.fromJson(json)).toList();
@@ -346,7 +347,7 @@ Future<void> _showDatePicker(List<PurchaseOrder> orders) async {
 
   Future<void> removeAllApi() async {
     var response = await http.get(
-        Uri.parse('http://appbar.epvc.pt/appBarAPI_GET.php?query_param=12'));
+        Uri.parse('http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=12'));
 
     if (response.statusCode == 200) {
       setState(() {

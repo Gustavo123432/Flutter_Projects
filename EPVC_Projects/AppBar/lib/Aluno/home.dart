@@ -61,7 +61,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     var user = prefs.getString("username");
 
     final response = await http.post(
-      Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
+      Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'),
       body: {
         'query_param': '1',
         'user': user,
@@ -114,7 +114,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     String productNamee = productName.replaceAll('"', '');
 
     var response = await http.get(Uri.parse(
-        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=8&nome=$productNamee'));
+        'http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=8&nome=$productNamee'));
 
     if (response.statusCode == 200) {
       setState(() {
@@ -138,7 +138,7 @@ class _HomeAlunoState extends State<HomeAluno> {
           var apelido = userData['Apelido'];
           var user = nome + " " + apelido;
           var response = await http.post(
-            Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
+            Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'),
             body: {
               'query_param': '7',
               'user': user,
@@ -167,7 +167,7 @@ class _HomeAlunoState extends State<HomeAluno> {
 
   void _getAllProducts() async {
     final response = await http.post(
-      Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
+      Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'),
       body: {
         'query_param': '4',
       },
@@ -608,7 +608,7 @@ class _CategoryPageState extends State<CategoryPage> {
   Future<void> fetchData(String categoria) async {
     try {
       final response = await http.post(
-        Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
+        Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'),
         body: {
           'query_param': '5',
           'categoria': '$categoria',
@@ -770,7 +770,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     var user = prefs.getString("username");
 
     final response = await http.post(
-      Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
+      Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'),
       body: {
         'query_param': '1',
         'user': user,
@@ -812,7 +812,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
       // Send GET request to API
       var response = await http.get(Uri.parse(
-        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=5&nome=$nome&apelido=$apelido&orderNumber=$orderNumber&valor=$dinheiroAtual&turma=$turma&permissao=$permissao&descricao=$itemNames&total=$total',
+        'http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=5&nome=$nome&apelido=$apelido&orderNumber=$orderNumber&valor=$dinheiroAtual&turma=$turma&permissao=$permissao&descricao=$itemNames&total=$total',
       ));
 
       if (response.statusCode == 200) {
@@ -966,7 +966,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
         // Enviar solicitação POST para a API para cada pedido
         var response = await http.post(
-          Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
+          Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'),
           body: {
             'query_param': '6',
             'user': user,
@@ -995,7 +995,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     String productNamee = productName.replaceAll('"', '');
 
     var response = await http.get(Uri.parse(
-        'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=8&nome=$productNamee'));
+        'http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=8&nome=$productNamee'));
 
     if (response.statusCode == 200) {
       // Decode the response body into a list of maps

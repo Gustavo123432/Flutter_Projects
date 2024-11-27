@@ -37,7 +37,7 @@ class _PedidosPageAlunosState extends State<PedidosPageAlunos> {
 
     if (user != null) {
       final response = await http.post(
-        Uri.parse('http://appbar.epvc.pt//appBarAPI_Post.php'),
+        Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'),
         body: {
           'query_param': '1',
           'user': user,
@@ -61,7 +61,7 @@ class _PedidosPageAlunosState extends State<PedidosPageAlunos> {
 
       final response = await http.get(
         Uri.parse(
-            'http://appbar.epvc.pt//appBarAPI_GET.php?query_param=13&nome=$user'),
+            'http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=13&nome=$user'),
       );
       if (response.statusCode == 200) {
         setState(() {
