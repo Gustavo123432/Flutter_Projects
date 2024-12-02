@@ -47,7 +47,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
 
   Future<void> fetchData() async {
     final response = await http.post(
-      Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'),
+      Uri.parse('http://appbar.epvc.pt/API/appBarAPI_Post.php'),
       body: {
         'query_param': '4',
       },
@@ -147,7 +147,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
   void updateProduct(String id, bool newAvailability) async {
     var availableValue = newAvailability ? "1" : "0";
     var response = await http.get(
-      Uri.parse('http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=18&id=$id&qtd=$availableValue'),
+      Uri.parse('http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&id=$id&qtd=$availableValue'),
     );
     if (response.statusCode == 200) {
       //print('Product updated successfully');

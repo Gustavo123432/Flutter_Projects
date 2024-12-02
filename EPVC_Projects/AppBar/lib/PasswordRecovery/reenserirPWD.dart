@@ -45,7 +45,7 @@ class _ReenserirPasswordState extends State<ReenserirPassword> {
     var pwd = passwordController.text;
 
     var response = await http.get(Uri.parse(
-        'http://appbar.epvc.pt/API//appBarAPI_GET.php?query_param=16&password=$pwd&email=$email'));
+        'http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=16&password=$pwd&email=$email'));
 
     if (response.statusCode == 200) {
       setState(() async {

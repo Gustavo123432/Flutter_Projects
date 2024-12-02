@@ -293,7 +293,7 @@ class _AddProdutoPageState extends State<AddProdutoPage> {
 
     try {
       var response = await http
-          .post(Uri.parse('http://appbar.epvc.pt/API//appBarAPI_Post.php'), body: {
+          .post(Uri.parse('http://appbar.epvc.pt/API/appBarAPI_Post.php'), body: {
         'query_param': '8',
         'nome': nome,
         'categoria': categoria,
