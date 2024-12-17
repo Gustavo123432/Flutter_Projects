@@ -9,13 +9,13 @@ import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 //coment
-/*
+
 import 'dart:io' as io;
 import 'dart:html' as html;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-*/
+
 //finish coment
 
 class PurchaseOrder {
@@ -93,14 +93,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
             TextButton(
               child: const Text('Confirmar'),
               onPressed: () async {
-                SharedPreferences prefs = await SharedPreferences.getInstance();
-                await prefs.clear();
-
-                Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (BuildContext ctx) => LoginForm()));
-                ModalRoute.withName('/');
+                
               },
             ),
           ],
@@ -109,7 +102,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     );
   }
   //coment
-/*
+
 Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildContext context) async {
   final regularFont = await http.get(Uri.parse("lib/assets/fonts/Roboto-Regular.ttf"));
   final Uint8List fontData = regularFont.bodyBytes;
@@ -184,7 +177,7 @@ Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildC
       ),
     );
   }
-}*/
+}
 //finish coment
 
 
