@@ -191,7 +191,7 @@ Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildC
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+     /* appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 246, 141, 45),
         title: Text('Registo de Pedidos'),
         actions: [
@@ -204,7 +204,7 @@ Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildC
         ],
     
       ),
-      drawer: DrawerAdmin(),
+      drawer: DrawerAdmin(),*/
       body: Container(
         width: double.infinity,
         height: double.infinity,

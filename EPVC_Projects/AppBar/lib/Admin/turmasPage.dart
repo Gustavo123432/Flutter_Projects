@@ -110,11 +110,11 @@ class _TurmasPageState extends State<TurmasPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+     /* appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 246, 141, 45),
         title: Text('Turmas'),
       ),
-      drawer: DrawerAdmin(),
+      drawer: DrawerAdmin(),*/
       body: Container(
         width: double.infinity, // Usar toda a largura disponível
         height: double.infinity, // Usar toda a altura disponível

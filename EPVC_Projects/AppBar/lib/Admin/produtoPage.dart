@@ -138,7 +138,7 @@ class _ProductPageState extends State<ProdutoPage> {
 @override
 Widget build(BuildContext context) {
   return Scaffold(
-    appBar: AppBar(
+   /* appBar: AppBar(
       backgroundColor: Color.fromARGB(255, 246, 141, 45),
       title: Text(
         'Produtos',
@@ -156,7 +156,7 @@ Widget build(BuildContext context) {
         ),
       ],
     ),
-    drawer: DrawerAdmin(),
+    drawer: DrawerAdmin(),*/
     body: Stack(
       children: [
        Container(

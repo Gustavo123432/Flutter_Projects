@@ -327,7 +327,8 @@ class _UserTableState extends State<UserTable> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return MaterialApp(
+        home: Scaffold(
       /*appBar: AppBar(
         backgroundColor: Color.fromARGB(255, 246, 141, 45),
         title: Row(
@@ -405,7 +406,7 @@ class _UserTableState extends State<UserTable> {
                       DataColumn(label: Text('ID')),
                       DataColumn(label: Text('Email')),
                       DataColumn(label: Text('Nome')),
-                      DataColumn(label: Text('Apelido')),
+                     // DataColumn(label: Text('Apelido')),
                       DataColumn(label: Text('Turma')),
                       DataColumn(label: Text('Permissão')),
                       DataColumn(label: Text('')),
@@ -418,7 +419,7 @@ class _UserTableState extends State<UserTable> {
                       return DataRow(
                         cells: [
                           DataCell(Text(user['IdUser'])),
-                          DataCell(Text(user['Email'])),
+                          DataCell(Text(user['Email'].toString().length > 14 ? '${user['Email'].toString().substring(0,11)}...':user['Email'] )),
                           DataCell(isEditing
                               ? TextField(
                                   controller:
@@ -429,8 +430,8 @@ class _UserTableState extends State<UserTable> {
                                     });
                                   },
                                 )
-                              : Text(user['Nome'])),
-                          DataCell(isEditing
+                              : Text(user['Nome'].toString().length > 18 ? '${user['Nome'].toString().substring(0,11)}...':user['Nome'] )),
+                          /*DataCell(isEditing
                               ? TextField(
                                   controller: getApelidoController(
                                       index, user['Apelido']),
@@ -440,7 +441,7 @@ class _UserTableState extends State<UserTable> {
                                     });
                                   },
                                 )
-                              : Text(user['Apelido'])),
+                              : Text(user['Apelido'])),*/
                           DataCell(isEditing
                               ? TextField(
                                   controller:
@@ -551,6 +552,6 @@ class _UserTableState extends State<UserTable> {
           ),
         ],
       ),
-    );
+    ));
   }
 }
