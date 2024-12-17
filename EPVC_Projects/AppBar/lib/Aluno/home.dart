@@ -862,7 +862,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       var permissao = users[0]['Permissao'];
 
       final channel = WebSocketChannel.connect(
-        Uri.parse('ws://snipeit.gfserver.pt:8080'),
+        Uri.parse('ws://websocket.appbar.epvc.pt'),
       );
 
       // Send all necessary cart data

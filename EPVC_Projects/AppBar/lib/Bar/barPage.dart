@@ -91,7 +91,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   // WebSocket connection and message handling
   void _connectToWebSocket() {
     final channel = WebSocketChannel.connect(
-      Uri.parse('ws://snipeit.gfserver.pt:8080'),
+      Uri.parse('ws://websocket.appbar.epvc.pt'),
     );
 
     channel.stream.listen(
