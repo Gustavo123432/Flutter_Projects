@@ -9,13 +9,13 @@ import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 //coment
-
+/*
 import 'dart:io' as io;
 import 'dart:html' as html;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-
+*/
 //finish coment
 
 class PurchaseOrder {
@@ -67,7 +67,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
 
   Future<List<PurchaseOrder>> fetchPurchaseOrders() async {
     final response = await http.get(
-        Uri.parse('http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=9'));
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=9'));
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => PurchaseOrder.fromJson(json)).toList();
@@ -102,7 +102,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     );
   }
   //coment
-
+/*
 Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildContext context) async {
   final regularFont = await http.get(Uri.parse("lib/assets/fonts/Roboto-Regular.ttf"));
   final Uint8List fontData = regularFont.bodyBytes;
@@ -177,7 +177,7 @@ Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildC
       ),
     );
   }
-}
+}*/
 //finish coment
 
 
@@ -340,7 +340,7 @@ Future<void> _showDatePicker(List<PurchaseOrder> orders) async {
 
   Future<void> removeAllApi() async {
     var response = await http.get(
-        Uri.parse('http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=12'));
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=12'));
 
     if (response.statusCode == 200) {
       setState(() {

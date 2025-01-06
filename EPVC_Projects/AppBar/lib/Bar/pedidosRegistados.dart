@@ -113,7 +113,7 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
 
   Future<void> fetchPurchaseOrders() async {
     final response = await http.get(
-      Uri.parse('http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=19&horaPretendida=$formattedTime&dataPretendida=$formattedDate'),
+      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=19&horaPretendida=$formattedTime&dataPretendida=$formattedDate'),
     );
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);

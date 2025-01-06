@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Admin/addUser.dart';
 import 'package:my_flutter_project/Admin/drawerAdmin.dart';
 import 'package:my_flutter_project/login.dart';
+import 'package:my_flutter_project/models/listUsers.dart';
+import 'package:my_flutter_project/models/search/searchDelegate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:file_picker/file_picker.dart';
@@ -18,14 +20,23 @@ class UserTable extends StatefulWidget {
 class _UserTableState extends State<UserTable> {
   bool isEditing = false;
   dynamic users;
-  List<dynamic> tableUsers = [];
-  List<dynamic> filteredUsers = [];
+  List<Map<String, dynamic>> tableUsers = [];
+  List<Map<String, dynamic>> filteredUsers = [];
+  List<Map<String, dynamic>> displayedSuppliers = [];
+
+  List<int> rowsPerPageOptions = [25, 50, 100]; // For the "All" option
+  List<String> selectedSupplierIds = [];
+  String? countSuppliers;
+  int rowsPerPage = 25;
+  int currentPage = 0; // Current page index
+  int totalPages = 0;
 
   // Mapa para armazenar os controladores de texto para cada linha da tabela
   Map<int, TextEditingController> nomeControllers = {};
   Map<int, TextEditingController> apelidoControllers = {};
   Map<int, TextEditingController> turmaController = {};
   Map<int, TextEditingController> usercontrollers = {};
+  TextEditingController searchController = TextEditingController();
 
   void _toggleEditMode() {
     setState(() {
@@ -36,6 +47,9 @@ class _UserTableState extends State<UserTable> {
   @override
   void initState() {
     UserInfo();
+    tableUsers = [];
+    filteredUsers = [];
+    fetchCountSuppliers();
     _getTableData();
 
     super.initState();
@@ -47,7 +61,7 @@ class _UserTableState extends State<UserTable> {
     var user = prefs.getString("username");
 
     final response = await http.post(
-      Uri.parse('http://appbar.epvc.pt/API/appBarAPI_Post.php'),
+      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
       body: {
         'query_param': '1',
         'user': user,
@@ -60,17 +74,39 @@ class _UserTableState extends State<UserTable> {
     }
   }
 
+  Future<void> fetchCountSuppliers() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var user = prefs.getString("username");
+
+    var response = await http.get(Uri.parse(
+        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2'));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        countSuppliers = data['supplier_count'].toString();
+      });
+    }
+  }
+
   // Função para buscar dados da tabela de usuários
   Future<void> _getTableData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     var user = prefs.getString("username");
 
-    var response = await http.get(
-        Uri.parse('http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2'));
+    var response = await http.get(Uri.parse(
+        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2.1&limit=${rowsPerPage.toString()}&page=${currentPage.toString()}'));
 
     if (response.statusCode == 200) {
       setState(() {
-        tableUsers = json.decode(response.body);
+        tableUsers =
+            List<Map<String, dynamic>>.from(json.decode(response.body));
+        displayedSuppliers = rowsPerPage == -1
+            ? tableUsers
+            : tableUsers
+                .skip(currentPage * rowsPerPage)
+                .take(rowsPerPage)
+                .toList();
         filteredUsers =
             tableUsers; // Inicialmente, os usuários filtrados são iguais a todos os usuários
       });
@@ -101,10 +137,11 @@ class _UserTableState extends State<UserTable> {
 
   // Função para atualizar um usuário
   Future<void> updateUser(String userId, String user, String nome,
-      String apelido, String turma, String permissao) async {
+      String apelido, String turma, String permissao, String estado) async {
+        print(estado);
     try {
       var response = await http.get(Uri.parse(
-          'http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=3&userId=$userId&user=$user&nome=$nome&apelido=$apelido&turma=$turma&permissao=$permissao'));
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=3&userId=$userId&user=$user&nome=$nome&apelido=$apelido&turma=$turma&permissao=$permissao&estado=$estado'));
       if (response.statusCode == 200) {
         // Se a atualização foi bem-sucedida, exiba uma mensagem ou faça qualquer outra ação necessária
         ScaffoldMessenger.of(context).showSnackBar(
@@ -113,6 +150,7 @@ class _UserTableState extends State<UserTable> {
           ),
         );
         UserInfo();
+        searchController.text="";
         _getTableData();
       } else {
         // Se houve um erro na atualização, exiba uma mensagem de erro
@@ -145,7 +183,7 @@ class _UserTableState extends State<UserTable> {
       );
     } else {
       var response = await http.get(Uri.parse(
-          'http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=11&idUser=$idUser'));
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=11&idUser=$idUser'));
 
       if (response.statusCode == 200) {
         setState(() {
@@ -325,8 +363,82 @@ class _UserTableState extends State<UserTable> {
     );
   }
 
+  Future<void> _filterUsers() async {
+    String query = searchController.text.toString().toLowerCase();
+    if (query == "") {
+      setState(() {
+        tableUsers = [];
+        filteredUsers = [];
+        rowsPerPage = 25;
+        currentPage = 0; // Reset to the first page
+        fetchCountSuppliers();
+        _getTableData();
+      });
+    } else {
+      try {
+        var response = await http.get(Uri.parse(
+            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2.2&op=$query'));
+
+        if (response.statusCode == 200) {
+          final decodedData = json.decode(response.body);
+
+          if (decodedData is List) {
+            // Explicitly cast and sanitize data
+            List<Map<String, dynamic>> sanitizedData = decodedData
+                .map((item) {
+                  // Ensure each field is treated as a String, even if it is an int
+                  return {
+                    "Email": item["Email"]?.toString() ?? "",
+                    "Nome": item["Nome"]?.toString() ?? "",
+                    "Apelido": item["Apelido"]?.toString() ?? "",
+                    "Permissao": item["Permissao"]?.toString() ?? "",
+                    "Turma": item["Turma"]?.toString() ?? "",
+                    "IdUser": item["IdUser"] != null
+                        ? item["IdUser"].toString()
+                        : "0",
+                    "Estado": item["Estado"] != null
+                        ? item["Estado"].toString()
+                        : "0",
+                  };
+                })
+                .where((item) => item.isNotEmpty)
+                .toList();
+
+            setState(() {
+              tableUsers = sanitizedData;
+              filteredUsers = sanitizedData;
+              currentPage = 0;
+            });
+          } else {
+            setState(() {
+              tableUsers = [];
+              filteredUsers = [];
+            });
+          }
+        } else {
+          throw Exception('Failed to load users');
+        }
+
+        setState(() {
+          // Paginate the displayed users
+          displayedSuppliers = rowsPerPage == -1
+              ? tableUsers
+              : tableUsers
+                  .skip(currentPage * rowsPerPage)
+                  .take(rowsPerPage)
+                  .toList();
+        });
+      } catch (e) {
+        setState(() {});
+        print('Error: $e');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    int countSupplier = int.parse(countSuppliers.toString());
+    totalPages = (countSupplier / rowsPerPage).ceil();
     return MaterialApp(
         home: Scaffold(
       /*appBar: AppBar(
@@ -392,126 +504,384 @@ class _UserTableState extends State<UserTable> {
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Color.fromARGB(255, 255, 255, 255)
-                        .withOpacity(0.80), // Cor preta com opacidade de 40%
+                    color: const Color.fromARGB(255, 255, 255, 255)
+                        .withOpacity(0.80), // Cor branca com opacidade de 80%
                   ),
                 ),
               ),
-              // Sua tabela aqui
-              Center(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: [
-                      DataColumn(label: Text('ID')),
-                      DataColumn(label: Text('Email')),
-                      DataColumn(label: Text('Nome')),
-                     // DataColumn(label: Text('Apelido')),
-                      DataColumn(label: Text('Turma')),
-                      DataColumn(label: Text('Permissão')),
-                      DataColumn(label: Text('')),
-                      DataColumn(label: Text('')),
-                    ],
-                    rows: filteredUsers.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final user = entry.value;
 
-                      return DataRow(
-                        cells: [
-                          DataCell(Text(user['IdUser'])),
-                          DataCell(Text(user['Email'].toString().length > 14 ? '${user['Email'].toString().substring(0,11)}...':user['Email'] )),
-                          DataCell(isEditing
-                              ? TextField(
-                                  controller:
-                                      getNomeController(index, user['Nome']),
-                                  onChanged: (newValue) {
-                                    setState(() {
-                                      user['Nome'] = newValue;
-                                    });
-                                  },
-                                )
-                              : Text(user['Nome'].toString().length > 18 ? '${user['Nome'].toString().substring(0,11)}...':user['Nome'] )),
-                          /*DataCell(isEditing
-                              ? TextField(
-                                  controller: getApelidoController(
-                                      index, user['Apelido']),
-                                  onChanged: (newValue) {
-                                    setState(() {
-                                      user['Apelido'] = newValue;
-                                    });
-                                  },
-                                )
-                              : Text(user['Apelido'])),*/
-                          DataCell(isEditing
-                              ? TextField(
-                                  controller:
-                                      getTurmaController(index, user['Turma']),
-                                  onChanged: (newValue) {
-                                    setState(() {
-                                      user['Turma'] = newValue;
-                                    });
-                                  },
-                                )
-                              : Text(user['Turma'])),
-                          DataCell(
-                            isEditing
-                                ? DropdownButtonFormField<String>(
-                                    value: user['Permissao'],
-                                    onChanged: (newValue) {
-                                      setState(() {
-                                        user['Permissao'] = newValue;
-                                      });
-                                    },
-                                    items: [
-                                      'Administrador',
-                                      'Professor',
-                                      'Funcionária',
-                                      'Bar',
-                                      'Aluno'
-                                    ].map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value),
-                                      );
-                                    }).toList(),
-                                  )
-                                : Text(user['Permissao']),
+              // Sua tabela aqui
+              Padding(
+                padding: EdgeInsets.all(10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: searchController,
+                        decoration: InputDecoration(
+                          labelText: 'Search',
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.search),
+                            onPressed: _filterUsers,
                           ),
-                          DataCell(
-                            isEditing
-                                ? ElevatedButton(
-                                    onPressed: () {
-                                      updateUser(
-                                        user['IdUser'],
-                                        user['Email'],
-                                        user['Nome'],
-                                        user['Apelido'],
-                                        user['Turma'],
-                                        user['Permissao'],
-                                      );
-                                      isEditing = false;
-                                    },
-                                    child: Text('Guardar'),
-                                  )
-                                : Text(""),
-                          ),
-                          DataCell(
-                            isEditing
-                                ? ElevatedButton(
-                                    onPressed: () {
-                                      removeUser(
-                                        user['IdUser'],
-                                      );
-                                      isEditing = false;
-                                    },
-                                    child: Text('Eliminar'),
-                                  )
-                                : Text(""),
-                          ),
-                        ],
-                      );
-                    }).toList(),
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          _filterUsers();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Center(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 50),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('ID')),
+                        DataColumn(label: Text('Email')),
+                        DataColumn(label: Text('Nome')),
+                        DataColumn(label: Text('Turma')),
+                        DataColumn(label: Text('Permissão')),
+                        DataColumn(label: Text('Editar')),
+                        DataColumn(label: Text('Remover')),
+                      ],
+                      rows: filteredUsers.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final user = entry.value;
+
+                        return DataRow(
+                          onSelectChanged: (selected) {
+                            if (selected != null && selected) {
+                              showDialog(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: const Text('Editar'),
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        TextFormField(
+                                          controller: getNomeController(
+                                              index, user['Nome']),
+                                          decoration: const InputDecoration(
+                                              labelText: 'Nome'),
+                                          onChanged: (newValue) {
+                                            setState(() {
+                                              user['Nome'] = newValue;
+                                            });
+                                          },
+                                        ),
+                                        TextFormField(
+                                          controller: getTurmaController(
+                                              index, user['Turma']),
+                                          decoration: const InputDecoration(
+                                              labelText: 'Turma'),
+                                          onChanged: (newValue) {
+                                            setState(() {
+                                              user['Turma'] = newValue;
+                                            });
+                                          },
+                                        ),
+                                        DropdownButtonFormField<String>(
+                                          value: user['Permissao'],
+                                          onChanged: (newValue) {
+                                            setState(() {
+                                              user['Permissao'] = newValue;
+                                            });
+                                          },
+                                          items: [
+                                            'Administrador',
+                                            'Professor',
+                                            'Funcionária',
+                                            'Bar',
+                                            'Aluno'
+                                          ].map((String value) {
+                                            return DropdownMenuItem<String>(
+                                              value: value,
+                                              child: Text(value),
+                                            );
+                                          }).toList(),
+                                          decoration: const InputDecoration(
+                                              labelText: 'Permissão'),
+                                        ),
+                                        DropdownButtonFormField<String>(
+                                          value: user['Estado'] == '1'
+                                              ? 'Ativo'
+                                              : 'Desativo', // Show the correct string based on numeric value
+                                          onChanged: (newValue) {
+                                             setState(() {
+                                              // Map the selected string to the numeric value
+                                              user['Estado'] =
+                                                  newValue == 'Ativo'
+                                                      ? '1'
+                                                      : '0';
+                                            });
+                                          },
+                                          items: [
+                                            'Ativo',
+                                            'Desativo',
+                                          ].map((String value) {
+                                            return DropdownMenuItem<String>(
+                                              value: value,
+                                              child: Text(value),
+                                            );
+                                          }).toList(),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Estado',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    actions: [
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          updateUser(
+                                              user['IdUser'],
+                                              user['Email'],
+                                              user['Nome'],
+                                              user['Apelido'],
+                                              user['Turma'],
+                                              user['Permissao'],
+                                              user['Estado']);
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: const Text('Guardar'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: const Text('Cancelar'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            }
+                          },
+                          cells: [
+                            DataCell(Text(user['IdUser'])),
+                            DataCell(Text(user['Email'].toString().length > 14
+                                ? '${user['Email'].toString().substring(0, 11)}...'
+                                : user['Email'])),
+                            DataCell(Text(user['Nome'].toString().length > 18
+                                ? '${user['Nome'].toString().substring(0, 11)}...'
+                                : user['Nome'])),
+                            DataCell(Text(user['Turma'])),
+                            DataCell(Text(user['Permissao'])),
+                            DataCell(ElevatedButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      title: const Text('Editar Usuário'),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          TextFormField(
+                                            controller: getNomeController(
+                                                index, user['Nome']),
+                                            decoration: const InputDecoration(
+                                                labelText: 'Nome'),
+                                            onChanged: (newValue) {
+                                              setState(() {
+                                                user['Nome'] = newValue;
+                                              });
+                                            },
+                                          ),
+                                          TextFormField(
+                                            controller: getTurmaController(
+                                                index, user['Turma']),
+                                            decoration: const InputDecoration(
+                                                labelText: 'Turma'),
+                                            onChanged: (newValue) {
+                                              setState(() {
+                                                user['Turma'] = newValue;
+                                              });
+                                            },
+                                          ),
+                                          DropdownButtonFormField<String>(
+                                            value: user['Permissao'],
+                                            onChanged: (newValue) {
+                                              setState(() {
+                                                user['Permissao'] = newValue;
+                                              });
+                                            },
+                                            items: [
+                                              'Administrador',
+                                              'Professor',
+                                              'Funcionária',
+                                              'Bar',
+                                              'Aluno'
+                                            ].map((String value) {
+                                              return DropdownMenuItem<String>(
+                                                value: value,
+                                                child: Text(value),
+                                              );
+                                            }).toList(),
+                                            decoration: const InputDecoration(
+                                                labelText: 'Permissão'),
+                                          ),
+                                         DropdownButtonFormField<String>(
+                                          value: user['Estado'] == '1'
+                                              ? 'Ativo'
+                                              : 'Desativo', // Show the correct string based on numeric value
+                                          onChanged: (newValue) {
+                                            setState(() {
+                                              // Map the selected string to the numeric value
+                                              user['Estado'] =
+                                                  newValue == 'Ativo'
+                                                      ? '1'
+                                                      : '0';
+                                            });
+                                          },
+                                          items: [
+                                            'Ativo',
+                                            'Desativo',
+                                          ].map((String value) {
+                                            return DropdownMenuItem<String>(
+                                              value: value,
+                                              child: Text(value),
+                                            );
+                                          }).toList(),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Estado',
+                                          ),
+                                        ),
+                                        ],
+                                      ),
+                                      actions: [
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            updateUser(
+                                              user['IdUser'],
+                                              user['Email'],
+                                              user['Nome'],
+                                              user['Apelido'],
+                                              user['Turma'],
+                                              user['Permissao'],
+                                              user['Estado'],
+                                            );
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: const Text('Guardar'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: const Text('Cancelar'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                              child: const Text('Editar'),
+                            )),
+                            DataCell(ElevatedButton(
+                              onPressed: () {
+                                removeUser(user['IdUser']);
+                              },
+                              child: const Text('Eliminar'),
+                            )),
+                          ],
+                        );
+                      }).toList(),
+                    ),
                   ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: BottomAppBar(
+        color: Colors.white, // Set the background color to white
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    Text("Utilizadores por Página: "),
+                    DropdownButton<int>(
+                      value: rowsPerPage,
+                      items: [25, 50, 100].map((int value) {
+                        return DropdownMenuItem<int>(
+                          value: value,
+                          child: Text(value == -1 ? 'Todos' : value.toString()),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setState(() {
+                          rowsPerPage = newValue!;
+                          currentPage = 0; // Reset to the first page
+                          fetchCountSuppliers();
+                          _getTableData();
+                        });
+                      },
+                    ),
+                    SizedBox(width: 16.0),
+                    Text("Página: ${currentPage + 1} de $totalPages"),
+                    IconButton(
+                      icon: Icon(Icons.first_page),
+                      onPressed: currentPage > 0
+                          ? () {
+                              setState(() {
+                                currentPage = 0;
+                                fetchCountSuppliers();
+                                _getTableData();
+                              });
+                            }
+                          : null,
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.arrow_back_ios),
+                      onPressed: currentPage > 0
+                          ? () {
+                              setState(() {
+                                currentPage--;
+                                fetchCountSuppliers();
+                                _getTableData();
+                              });
+                            }
+                          : null,
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.arrow_forward_ios),
+                      onPressed: currentPage < totalPages - 1
+                          ? () {
+                              setState(() {
+                                currentPage++;
+                                fetchCountSuppliers();
+                                _getTableData();
+                              });
+                            }
+                          : null,
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.last_page),
+                      onPressed: currentPage < totalPages - 1
+                          ? () {
+                              setState(() {
+                                currentPage = totalPages - 1;
+                                fetchCountSuppliers();
+                                _getTableData();
+                              });
+                            }
+                          : null,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -530,12 +900,6 @@ class _UserTableState extends State<UserTable> {
                 _showFilterDialog();
               }),
           SpeedDialChild(
-            child: Icon(Icons.edit),
-            onTap: () {
-              _toggleEditMode();
-            },
-          ),
-          SpeedDialChild(
             child: Icon(Icons.file_upload),
             onTap: () {
               _pickFile();
@@ -544,9 +908,14 @@ class _UserTableState extends State<UserTable> {
           SpeedDialChild(
             child: Icon(Icons.add),
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AddUserPage()),
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    content: AddUserDialog(),
+                    // This is your AddUserPage within the Dialog
+                  );
+                },
               );
             },
           ),

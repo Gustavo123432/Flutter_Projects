@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:my_flutter_project/Admin/users.dart';
 
-class AddUserPage extends StatefulWidget {
+class AddUserDialog extends StatefulWidget {
   @override
-  _AddUserPageState createState() => _AddUserPageState();
+  _AddUserDialogState createState() => _AddUserDialogState();
 }
 
-class _AddUserPageState extends State<AddUserPage> {
+class _AddUserDialogState extends State<AddUserDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nomeController = TextEditingController();
   final _apelidoController = TextEditingController();
@@ -43,10 +43,12 @@ class _AddUserPageState extends State<AddUserPage> {
 
   Future<List<String>> _fetchTurmasFromAPI() async {
     try {
-      final response = await http.get(Uri.parse('http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=20'));
+      final response = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=20'));
       if (response.statusCode == 200) {
         final List<dynamic> responseData = json.decode(response.body);
-        List<String> turmas = responseData.map((data) => data['Turma'] as String).toList();
+        List<String> turmas =
+            responseData.map((data) => data['Turma'] as String).toList();
         return turmas;
       } else {
         throw Exception('Failed to load turmas from API');
@@ -58,158 +60,165 @@ class _AddUserPageState extends State<AddUserPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Adicionar Utilizador'),
-        backgroundColor: Color.fromARGB(255, 246, 141, 45),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
       ),
-      body: SingleChildScrollView(
+      content: SingleChildScrollView(
+          child: Container(
+        width: 600,
         child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                SizedBox(height: 20),
-                Text("\nImagem de Perfil\n"),
-                GestureDetector(
-                    onTap: _getImage,
-                    child: CircleAvatar(
-                      radius: 50.0,
-                      backgroundColor: Color.fromARGB(255, 246, 141, 45),
-                      child: ClipOval(
-                        child: (_selectedImage != null)
-                            ? Image.memory(
-                                _selectedImage,
-                                fit: BoxFit.cover,
-                                height: 100,
-                                width: 100,
-                              )
-                            : Icon(
-                                // If users list is null or empty, display a default icon
-                                Icons.person,
-                                size: 47,
-                                color: Colors.white,
-                              ),
-                      ),
-                    )),
-                SizedBox(height: 20),
-                TextFormField(
-                  controller: _nomeController,
-                  decoration: InputDecoration(labelText: 'Nome'),
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Insira o nome.';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 20),
-                TextFormField(
-                  controller: _apelidoController,
-                  decoration: InputDecoration(labelText: 'Apelido'),
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Insira o Apelido.';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 20),
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(labelText: 'Email'),
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Insira o Email.';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 20),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(labelText: 'Password'),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Insira a sua Password.';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 20),
-                TextFormField(
-                  controller: _passwordConfirmController,
-                  decoration: InputDecoration(labelText: 'Confirmar Password'),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Confirme a Password';
-                    }
-                    /*if (value != null && value != _passwordController) {
-                      return 'Password não coicide';
-                    }*/
-                    return null;
-                  },
-                ),
-                SizedBox(height: 20),
-                Text("\nTurma\n"),
-                DropdownButton<String>(
-                  value: _turma,
-                  items: _turmas.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? value) {
-                    setState(() {
-                      _turma = value!;
-                    });
-                  },
-                ),
-                SizedBox(height: 20),
-                Text("\nPermissão\n"),
-                DropdownButton<String>(
-                  value: _role,
-                  items: [
-                    'Administrador',
-                    'Professor',
-                    'Funcionária',
-                    'Bar',
-                    'Aluno'
-                  ].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? value) {
-                    setState(() {
-                      _role = value!;
-                    });
-                  },
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        _submitForm();
+            padding: EdgeInsets.all(1.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  SizedBox(height: 20),
+                  Text("\nImagem de Perfil\n"),
+                  GestureDetector(
+                      onTap: _getImage,
+                      child: CircleAvatar(
+                        radius: 50.0,
+                        backgroundColor: Color.fromARGB(255, 246, 141, 45),
+                        child: ClipOval(
+                          child: (_selectedImage != null)
+                              ? Image.memory(
+                                  _selectedImage,
+                                  fit: BoxFit.cover,
+                                  height: 100,
+                                  width: 100,
+                                )
+                              : Icon(
+                                  Icons.person,
+                                  size: 47,
+                                  color: Colors.white,
+                                ),
+                        ),
+                      )),
+                  SizedBox(height: 20),
+                  TextFormField(
+                    controller: _nomeController,
+                    decoration: InputDecoration(labelText: 'Nome'),
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Insira o nome.';
                       }
+                      return null;
                     },
-                    child: Text('Submit'),
                   ),
-                ),
-              ],
+                  SizedBox(height: 20),
+                  TextFormField(
+                    controller: _apelidoController,
+                    decoration: InputDecoration(labelText: 'Apelido'),
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Insira o Apelido.';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 20),
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(labelText: 'Email'),
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Insira o Email.';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 20),
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: InputDecoration(labelText: 'Password'),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Insira a sua Password.';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 20),
+                  TextFormField(
+                    controller: _passwordConfirmController,
+                    decoration:
+                        InputDecoration(labelText: 'Confirmar Password'),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Confirme a Password';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 20),
+                  Text("\nTurma\n"),
+                  DropdownButton<String>(
+                    value: _turma,
+                    items: _turmas.map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (String? value) {
+                      setState(() {
+                        _turma = value!;
+                      });
+                    },
+                  ),
+                  SizedBox(height: 20),
+                  Text("\nPermissão\n"),
+                  DropdownButton<String>(
+                    value: _role,
+                    items: [
+                      'Administrador',
+                      'Professor',
+                      'Funcionária',
+                      'Bar',
+                      'Aluno'
+                    ].map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (String? value) {
+                      setState(() {
+                        _role = value!;
+                      });
+                    },
+                  ),
+                  Row(children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            _submitForm();
+                          }
+                        },
+                        child: Text('Submit'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 20,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Closes the dialog
+                        },
+                        child: Text('Cancel'),
+                      ),
+                    ),
+                  ]),
+                ],
+              ),
             ),
           ),
         ),
@@ -233,7 +242,7 @@ class _AddUserPageState extends State<AddUserPage> {
 
     try {
       var response = await http.post(
-          Uri.parse('http://appbar.epvc.pt/API/appBarAPI_Post.php'),
+          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
           body: {
             'query_param': '2',
             'nome': nome,
@@ -294,4 +303,13 @@ class _AddUserPageState extends State<AddUserPage> {
       _selectedImage = imagefile;
     });
   }
+}
+
+void showAddUserDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AddUserDialog();
+    },
+  );
 }

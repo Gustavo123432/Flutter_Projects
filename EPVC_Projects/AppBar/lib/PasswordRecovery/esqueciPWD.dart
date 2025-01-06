@@ -25,7 +25,7 @@ class _EmailRequestPageState extends State<EmailRequestPage> {
       var tentativa = widget.tentativa;
 
       var response = await http.get(Uri.parse(
-                    'http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14&email=$email&tentativa=$tentativa'));
+                    'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14&email=$email&tentativa=$tentativa'));
       if (response.statusCode == 200) {
         var responseData = json.decode(response.body);
 

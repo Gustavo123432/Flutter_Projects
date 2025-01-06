@@ -26,6 +26,8 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final TextEditingController NameController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
   final TextEditingController PwdController = TextEditingController();
   bool _obscureText = true;
 
@@ -53,7 +55,7 @@ class _LoginFormState extends State<LoginForm> {
 
     dynamic tar;
     dynamic response = await http.get(Uri.parse(
-        'http://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$pwd'));
+        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$pwd'));
     if (response.statusCode == 200) {
       setState(() {
         tar = json.decode(response.body);
@@ -116,56 +118,181 @@ class _LoginFormState extends State<LoginForm> {
 
   Widget webScreenLayout() {
     return Scaffold(
-      backgroundColor: Colors.white, // Background color
-      body: Center(
-        child: Container(
-          width: 570,
-          height: 520,
-          padding: const EdgeInsets.all(1),
-          decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 130, 201, 189),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: const Color.fromARGB(255, 130, 201, 189),
-                spreadRadius: 5,
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+        backgroundColor: Colors.white, // Background color
+        body: Center(
+          child: Container(
+            width: 570,
+            height: 520,
+            padding: const EdgeInsets.all(1),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 130, 201, 189),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color.fromARGB(255, 130, 201, 189),
+                  spreadRadius: 5,
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 350,
+                    height: 150,
+                    color: Color.fromARGB(255, 130, 201, 189),
+                    child: Image.asset(
+                      'lib/assets/barapp.png',
+                      width: 350,
+                      height: 150,
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  SizedBox(
+                    width: 350,
+                    child: Container(
+                      color: Colors.white,
+                      child: TextFormField(
+                        controller: NameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Color.fromARGB(255, 130, 201,
+                                    189)), // Change border color here
+                          ),
+                          prefixIcon: Icon(Icons.email), // User icon
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          return null;
+                        },
+                        onFieldSubmitted: (_) {
+                          if (_formKey.currentState!.validate()) {
+                            login();
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  SizedBox(
+                    width: 350,
+                    child: Container(
+                      color: Colors.white,
+                      child: TextFormField(
+                        controller: PwdController,
+                        obscureText: _obscureText,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Color.fromARGB(255, 130, 201,
+                                  189), // Change border color here
+                            ),
+                          ),
+                          prefixIcon: Icon(Icons.lock), // User icon
+                          suffixIcon: IconButton(
+                            icon: _obscureText
+                                ? Icon(Icons.visibility)
+                                : Icon(Icons.visibility_off),
+                            onPressed: _togglePasswordVisibility,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your password';
+                          }
+                          return null;
+                        },
+                        onFieldSubmitted: (_) {
+                          if (_formKey.currentState!.validate()) {
+                            login();
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text.rich(
+                    TextSpan(
+                      text: 'Esqueceu-se da Password? ',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                      children: <TextSpan>[
+                        TextSpan(
+                          text: 'Clique Aqui',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              // Lógica para lidar com o clique no texto
+                              print('Esqueceu-se da Password? Clique Aqui');
+                              // Adicione aqui a lógica para lidar com a recuperação da senha
+                            },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        login();
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      // ignore: deprecated_member_use
+                      backgroundColor:
+                          Color.fromARGB(255, 246, 141, 45), // Button color
+                      minimumSize: const Size(350, 50), // Button size
+                    ),
+                    child: const Text(
+                      'Login',
+                      style: TextStyle(
+                        color: Colors.white, // Text color
+                        fontSize: 18, // Text size
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
+        ));
+  }
+
+  Widget mobileScreenLayout() {
+    return Scaffold(
+        backgroundColor: Color.fromARGB(255, 255, 255, 255),
+        body: Form(
+          key: _formKey,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 350,
-                height: 150,
-                color: Color.fromARGB(255, 130, 201, 189),
-                child: Image.asset(
-                  'lib/assets/barapp.png',
-                  width: 350,
-                  height: 150,
-                ),
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              SizedBox(
-                width: 350,
-                child: Container(
-                  color: Colors.white,
-                  child: TextField(
-                    controller: NameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: Color.fromARGB(255, 130, 201,
-                                189)), // Change border color here
-                      ),
-                      prefixIcon: Icon(Icons.email), // User icon
-                    ),
+              Center(
+                child: Hero(
+                  tag: 'Logo',
+                  child: Image.asset(
+                    'lib/assets/barapp.png',
+                    width: 100,
                   ),
                 ),
               ),
@@ -174,26 +301,41 @@ class _LoginFormState extends State<LoginForm> {
               ),
               SizedBox(
                 width: 350,
-                child: Container(
-                  color: Colors.white,
-                  child: TextField(
-                    controller: PwdController,
-                    obscureText: _obscureText,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(
+                child: TextField(
+                  controller: NameController,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(
                           color: Color.fromARGB(
-                              255, 130, 201, 189), // Change border color here
-                        ),
+                              255, 130, 201, 189)), // Change border color here
+                    ),
+                    prefixIcon: Icon(Icons.email), // User icon
+                  ),
+                ),
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              SizedBox(
+                width: 350,
+                child: TextField(
+                  controller: PwdController,
+                  obscureText: _obscureText,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color.fromARGB(
+                            255, 130, 201, 189), // Change border color here
                       ),
-                      prefixIcon: Icon(Icons.lock), // User icon
-                      suffixIcon: IconButton(
-                        icon: _obscureText
-                            ? Icon(Icons.visibility)
-                            : Icon(Icons.visibility_off),
-                        onPressed: _togglePasswordVisibility,
-                      ),
+                    ),
+                    prefixIcon: Icon(Icons.lock), // User icon
+                    suffixIcon: IconButton(
+                      icon: _obscureText
+                          ? Icon(Icons.visibility)
+                          : Icon(Icons.visibility_off),
+                      onPressed: _togglePasswordVisibility,
                     ),
                   ),
                 ),
@@ -203,8 +345,8 @@ class _LoginFormState extends State<LoginForm> {
                 TextSpan(
                   text: 'Esqueceu-se da Password? ',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
+                    color: Colors.black,
+                    fontSize: 12,
                   ),
                   children: <TextSpan>[
                     TextSpan(
@@ -218,6 +360,14 @@ class _LoginFormState extends State<LoginForm> {
                         ..onTap = () {
                           // Lógica para lidar com o clique no texto
                           print('Esqueceu-se da Password? Clique Aqui');
+
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => EmailRequestPage(
+                                        tentativa: 0,
+                                      )));
+
                           // Adicione aqui a lógica para lidar com a recuperação da senha
                         },
                     ),
@@ -226,139 +376,21 @@ class _LoginFormState extends State<LoginForm> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  login();
-                },
-                style: ElevatedButton.styleFrom(
-                  // ignore: deprecated_member_use
-                  backgroundColor:
-                      Color.fromARGB(255, 246, 141, 45), // Button color
-                  minimumSize: const Size(350, 50), // Button size
-                ),
-                child: const Text(
-                  'Login',
-                  style: TextStyle(
-                    color: Colors.white, // Text color
-                    fontSize: 18, // Text size
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all<Color>(
+                    Color.fromARGB(255, 246, 141, 45), // Button color
                   ),
                 ),
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    login();
+                  }
+                },
+                child: Text('Login'), // Add a child widget to the button
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget mobileScreenLayout() {
-    return Scaffold(
-      backgroundColor: Color.fromARGB(255, 255, 255, 255),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Center(
-            child: Hero(
-              tag: 'Logo',
-              child: Image.asset(
-                'lib/assets/barapp.png',
-                width: 100,
-              ),
-            ),
-          ),
-          const SizedBox(
-            height: 20,
-          ),
-          SizedBox(
-            width: 350,
-            child: TextField(
-              controller: NameController,
-              decoration: InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(
-                      color: Color.fromARGB(
-                          255, 130, 201, 189)), // Change border color here
-                ),
-                prefixIcon: Icon(Icons.email), // User icon
-              ),
-            ),
-          ),
-          const SizedBox(
-            height: 20,
-          ),
-          SizedBox(
-            width: 350,
-            child: TextField(
-              controller: PwdController,
-              obscureText: _obscureText,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Color.fromARGB(
-                        255, 130, 201, 189), // Change border color here
-                  ),
-                ),
-                prefixIcon: Icon(Icons.lock), // User icon
-                suffixIcon: IconButton(
-                  icon: _obscureText
-                      ? Icon(Icons.visibility)
-                      : Icon(Icons.visibility_off),
-                  onPressed: _togglePasswordVisibility,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text.rich(
-            TextSpan(
-              text: 'Esqueceu-se da Password? ',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 12,
-              ),
-              children: <TextSpan>[
-                TextSpan(
-                  text: 'Clique Aqui',
-                  style: TextStyle(
-                    color: Colors.blue,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
-                  ),
-                  recognizer: TapGestureRecognizer()
-                    ..onTap = () {
-                      // Lógica para lidar com o clique no texto
-                      print('Esqueceu-se da Password? Clique Aqui');
-
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => EmailRequestPage(
-                                    tentativa: 0,
-                                  )));
-
-                      // Adicione aqui a lógica para lidar com a recuperação da senha
-                    },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.all<Color>(
-                Color.fromARGB(255, 246, 141, 45), // Button color
-              ),
-            ),
-            onPressed: () {
-              login();
-            },
-            child: Text('Login'), // Add a child widget to the button
-          ),
-        ],
-      ),
-    );
+        ));
   }
 }
 

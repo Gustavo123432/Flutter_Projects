@@ -59,6 +59,7 @@ dependencies:
   #print_bluetooth_thermal: ^1.1.1
   web_socket_channel: ^3.0.1
   sidebarx: ^0.17.1
+  auto_size_text: ^3.0.0
   #url_launcher: ^6.2.5
 
 
