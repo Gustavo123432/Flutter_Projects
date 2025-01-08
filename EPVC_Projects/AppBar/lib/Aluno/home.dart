@@ -470,7 +470,8 @@ class _HomeAlunoState extends State<HomeAluno> {
           borderRadius: BorderRadius.circular(3.0),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.5),
+              color: Colors.grey.withOpacity(0.8
+              ),
               spreadRadius: 1.0,
               blurRadius: 2.0,
             ),
@@ -569,6 +570,7 @@ class _HomeAlunoState extends State<HomeAluno> {
               style: TextStyle(
                 fontSize: 32.0,
                 color: Colors.white,
+               
               ),
               textAlign: TextAlign.center,
             ),
@@ -589,19 +591,23 @@ class CategoryPage extends StatefulWidget {
 }
 
 class _CategoryPageState extends State<CategoryPage> {
-  List<dynamic> items = [];
+  List<dynamic> items = []; // Original data
   late StreamController<List<dynamic>> _streamController;
+  TextEditingController searchController = TextEditingController();
+  List<dynamic> filteredItems = []; // Filtered data
+  List<Map<String, dynamic>> cartItems = []; // Cart items
 
   @override
   void initState() {
     super.initState();
-    _streamController = StreamController<List<dynamic>>();
+    _streamController = StreamController<List<dynamic>>.broadcast();
     fetchData(widget.title);
   }
 
   @override
   void dispose() {
     _streamController.close();
+    searchController.dispose();
     super.dispose();
   }
 
@@ -614,10 +620,15 @@ class _CategoryPageState extends State<CategoryPage> {
           'categoria': '$categoria',
         },
       );
+
       if (response.statusCode == 200) {
         final dynamic responseData = json.decode(response.body);
         if (responseData is List<dynamic>) {
-          _streamController.add(responseData.cast<Map<String, dynamic>>());
+          setState(() {
+            items = responseData.cast<Map<String, dynamic>>();
+            filteredItems = List.from(items);
+          });
+          _streamController.add(filteredItems);
         } else {
           throw Exception('Response data is not a List<dynamic>');
         }
@@ -627,11 +638,6 @@ class _CategoryPageState extends State<CategoryPage> {
     } catch (e) {
       print('Error fetching data: $e');
     }
-
-    // Chamar novamente a função fetchData após um pequeno atraso para verificar atualizações
-    /*Future.delayed(Duration(seconds: 5), () {
-      fetchData(categoria);
-    });*/
   }
 
   void addToCart(Map<String, dynamic> item) {
@@ -644,6 +650,16 @@ class _CategoryPageState extends State<CategoryPage> {
     setState(() {
       cartItems.remove(item);
     });
+  }
+
+  void _filterItems() {
+    final query = searchController.text.toLowerCase();
+    setState(() {
+      filteredItems = query.isEmpty
+          ? List.from(items)
+          : items.where((item) => item['Nome'].toLowerCase().contains(query)).toList();
+    });
+    _streamController.add(filteredItems);
   }
 
   @override
@@ -665,88 +681,117 @@ class _CategoryPageState extends State<CategoryPage> {
           ),
         ],
       ),
-      body: StreamBuilder<List<dynamic>>(
-        stream: _streamController.stream,
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            List<dynamic> items = snapshot.data!;
-            return ListView.builder(
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-                final double preco = double.parse(item['Preco']);
-                return Card(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListTile(
-                        leading: Image.memory(
-                          base64.decode(item['Imagem']),
-                          fit: BoxFit.cover,
-                          height: 50,
-                          width: 50,
-                        ),
-                        title: Text(item['Nome']),
-                        subtitle: Text(
-                          item['Qtd'] == "1"
-                              ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
-                              : "Indisponível",
-                        ),
-                        trailing: cartItems.any(
-                                (cartItem) => cartItem['Nome'] == item['Nome'])
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  /*IconButton(
-                                    onPressed: () {
-                                      removeFromCart(item);
-                                    },
-                                    icon: Icon(Icons.remove),
-                                  ),*/
-                                  Text(
-                                    cartItems
-                                        .where((element) =>
-                                            element['Nome'] == item['Nome'])
-                                        .length
-                                        .toString(),
-                                    style: TextStyle(fontSize: 15.0),
-                                  ),
-                                  IconButton(
-                                    onPressed: () {
-                                      addToCart(item);
-                                    },
-                                    icon: Icon(Icons.add),
-                                  ),
-                                ],
-                              )
-                            : Visibility(
-                                visible: item['Qtd'] == "1",
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    addToCart(item);
-                                  },
-                                  child: Text('Comprar'),
-                                ),
-                              ),
+      body: Padding(
+        padding: EdgeInsets.all(10),
+        child: Column(
+          children: [
+            // Search Field
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      labelText: 'Search',
+                      suffixIcon: IconButton(
+                        icon: Icon(Icons.search),
+                        onPressed: _filterItems,
                       ),
-                    ],
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) => _filterItems(),
                   ),
-                );
-              },
-            );
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
-          }
-          return Center(
-            child: CircularProgressIndicator(),
-          );
-        },
+                ),
+              ],
+            ),
+            SizedBox(height: 10),
+            // Items List
+            Expanded(
+              child: StreamBuilder<List<dynamic>>(
+                stream: _streamController.stream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  if (snapshot.hasData) {
+                    final List<dynamic> itemsToShow = snapshot.data!;
+                    if (itemsToShow.isEmpty) {
+                      return Center(child: Text('Nenhum item encontrado.'));
+                    }
+
+                    return ListView.builder(
+                      itemCount: itemsToShow.length,
+                      itemBuilder: (context, index) {
+                        final item = itemsToShow[index];
+                        final double preco = double.parse(item['Preco']);
+                        final isAvailable = item['Qtd'] == "1";
+                        final isInCart = cartItems.any((cartItem) => cartItem['Nome'] == item['Nome']);
+
+                        return Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ListTile(
+                                leading: Image.memory(
+                                  base64.decode(item['Imagem']),
+                                  fit: BoxFit.cover,
+                                  height: 50,
+                                  width: 50,
+                                ),
+                                title: Text(item['Nome']),
+                                subtitle: Text(
+                                  isAvailable
+                                      ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
+                                      : "Indisponível",
+                                ),
+                                trailing: isInCart
+                                    ? Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            cartItems
+                                                .where((element) => element['Nome'] == item['Nome'])
+                                                .length
+                                                .toString(),
+                                            style: TextStyle(fontSize: 15.0),
+                                          ),
+                                          IconButton(
+                                            onPressed: () => addToCart(item),
+                                            icon: Icon(Icons.add),
+                                          ),
+                                        ],
+                                      )
+                                    : Visibility(
+                                        visible: isAvailable,
+                                        child: ElevatedButton(
+                                          onPressed: () => addToCart(item),
+                                          child: Text('Comprar'),
+                                        ),
+                                      ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  }
+
+                  return Center(child: Text('Nenhum item encontrado.'));
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
 
 class ShoppingCartPage extends StatefulWidget {
   @override

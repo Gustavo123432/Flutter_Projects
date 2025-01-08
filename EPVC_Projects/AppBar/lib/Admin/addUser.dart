@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:my_flutter_project/Admin/users.dart';
+import 'package:my_flutter_project/Drawer/drawer.dart';
 
 class AddUserDialog extends StatefulWidget {
   @override
@@ -65,9 +66,9 @@ class _AddUserDialogState extends State<AddUserDialog> {
         borderRadius: BorderRadius.circular(12),
       ),
       content: SingleChildScrollView(
-          child: Container(
-        width: 600,
-        child: Padding(
+        child: Container(
+          width: 600,
+          child: Padding(
             padding: EdgeInsets.all(1.0),
             child: Form(
               key: _formKey,
@@ -239,57 +240,115 @@ class _AddUserDialogState extends State<AddUserDialog> {
       List<int> imageBytes = _selectedImage.buffer.asUint8List();
       base64Image = base64Encode(imageBytes);
     }
+    if (base64Image != null) {
+      try {
+        var response = await http.post(
+            Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+            body: {
+              'query_param': '2',
+              'nome': nome,
+              'apelido': apelido,
+              'user': username,
+              'imagem': base64Image,
+              'pwd': password,
+              'permissao': permissao,
+              'turma': turma,
+            });
 
-    try {
-      var response = await http.post(
-          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-          body: {
-            'query_param': '2',
-            'nome': nome,
-            'apelido': apelido,
-            'user': username,
-            'imagem': base64Image,
-            'pwd': password,
-            'permissao': permissao,
-            'turma': turma,
-          });
-
-      if (response.statusCode == 200) {
-        dynamic res = json.decode(response.body);
-        print(res);
-        String teste = res[0].toString();
-        print(teste);
-        if (teste == "1") {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Utilizador já existe na base de dados"),
-            ),
+        if (response.statusCode == 200) {
+          dynamic res = json.decode(response.body);
+          print(res);
+          String teste = res[0].toString();
+          print(teste);
+          if (teste == "1") {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Utilizador já existe na base de dados"),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text('Utilizador criado com sucesso no base de dados!'),
+              ),
+            );
+          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) =>
+                    AdminDrawer(currentPage: UserTable(), numero: 1)),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Valor atualizado com sucesso no banco de dados!'),
+              content: Text('Erro ao criar utilizador na base de dados'),
             ),
           );
         }
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => UserTable()),
-        );
-      } else {
+      } catch (e) {
+        print('Erro ao fazer a requisição POST: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao atualizar valor no banco de dados'),
+            content: Text('Erro ao criar utilizador na base de dados'),
           ),
         );
       }
-    } catch (e) {
-      print('Erro ao fazer a requisição POST: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao atualizar valor no banco de dados'),
-        ),
-      );
+    } else if (base64Image == null) {
+      try {
+        var response = await http.post(
+            Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+            body: {
+              'query_param': '2.1',
+              'nome': nome,
+              'apelido': apelido,
+              'user': username,
+              'pwd': password,
+              'permissao': permissao,
+              'turma': turma,
+            });
+
+        if (response.statusCode == 200) {
+          dynamic res = json.decode(response.body);
+          print(res);
+          String teste = res[0].toString();
+          print(teste);
+          if (teste == "1") {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Utilizador já existe na base de dados"),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text('Utilizador criado com sucesso na base de dados!'),
+              ),
+            );
+          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) =>
+                    AdminDrawer(currentPage: UserTable(), numero: 1)),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao criar utilizador na base de dados'),
+            ),
+          );
+        }
+      } catch (e) {
+        print('Erro ao fazer a requisição POST: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao criar utilizador na base de dados'),
+          ),
+        );
+      }
     }
   }
 

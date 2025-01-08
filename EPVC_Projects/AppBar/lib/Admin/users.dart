@@ -31,6 +31,8 @@ class _UserTableState extends State<UserTable> {
   int currentPage = 0; // Current page index
   int totalPages = 0;
 
+  List<String> _turmas = []; // List to store fetched turmas
+
   // Mapa para armazenar os controladores de texto para cada linha da tabela
   Map<int, TextEditingController> nomeControllers = {};
   Map<int, TextEditingController> apelidoControllers = {};
@@ -51,6 +53,7 @@ class _UserTableState extends State<UserTable> {
     filteredUsers = [];
     fetchCountSuppliers();
     _getTableData();
+    _loadTurmas();
 
     super.initState();
   }
@@ -71,6 +74,34 @@ class _UserTableState extends State<UserTable> {
       setState(() {
         users = json.decode(response.body);
       });
+    }
+  }
+
+   Future<void> _loadTurmas() async {
+    try {
+      List<String> turmas = await _fetchTurmasFromAPI();
+      setState(() {
+        _turmas = turmas;
+      });
+    } catch (e) {
+      print('Error loading turmas: $e');
+      // Here you can display an error message to the user or take other appropriate action.
+    }
+  }
+  Future<List<String>> _fetchTurmasFromAPI() async {
+    try {
+      final response = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=20'));
+      if (response.statusCode == 200) {
+        final List<dynamic> responseData = json.decode(response.body);
+        List<String> turmas =
+            responseData.map((data) => data['Turma'] as String).toList();
+        return turmas;
+      } else {
+        throw Exception('Failed to load turmas from API');
+      }
+    } catch (e) {
+      throw Exception('Error fetching turmas: $e');
     }
   }
 
@@ -138,7 +169,7 @@ class _UserTableState extends State<UserTable> {
   // Função para atualizar um usuário
   Future<void> updateUser(String userId, String user, String nome,
       String apelido, String turma, String permissao, String estado) async {
-        print(estado);
+    print(estado);
     try {
       var response = await http.get(Uri.parse(
           'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=3&userId=$userId&user=$user&nome=$nome&apelido=$apelido&turma=$turma&permissao=$permissao&estado=$estado'));
@@ -146,17 +177,17 @@ class _UserTableState extends State<UserTable> {
         // Se a atualização foi bem-sucedida, exiba uma mensagem ou faça qualquer outra ação necessária
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Valor atualizado com sucesso no banco de dados!'),
+            content: Text('Utilizador atualizado com sucesso na base de dados!'),
           ),
         );
         UserInfo();
-        searchController.text="";
+        searchController.text = "";
         _getTableData();
       } else {
         // Se houve um erro na atualização, exiba uma mensagem de erro
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao atualizar valor no banco de dados'),
+            content: Text('Erro ao atualizar utilizador na base de dados'),
           ),
         );
       }
@@ -165,7 +196,7 @@ class _UserTableState extends State<UserTable> {
       // Exibir mensagem de erro se a requisição falhar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao atualizar valor no banco de dados'),
+          content: Text('Erro ao atualizar utilizador na base de dados'),
         ),
       );
     }
@@ -297,6 +328,7 @@ class _UserTableState extends State<UserTable> {
 
   void _showFilterDialog() {
     String? selectedTurma;
+    selectedTurma = _turmas[0];
 
     showDialog(
       context: context,
@@ -312,8 +344,7 @@ class _UserTableState extends State<UserTable> {
                     selectedTurma = newValue;
                   });
                 },
-                items: tableUsers
-                    .map((user) => user['Turma'].toString())
+                items: _turmas
                     .toSet()
                     .toList()
                     .map((turma) {
@@ -334,16 +365,76 @@ class _UserTableState extends State<UserTable> {
             ),
             TextButton(
               child: Text('Filtrar'),
-              onPressed: () {
-                setState(() {
-                  // Atualize o estado para refletir a filtragem
-                  filteredUsers = [];
-                  tableUsers.forEach((user) {
-                    if (user['Turma'] == selectedTurma) {
-                      filteredUsers.add(user);
-                    }
+              onPressed: () async {
+                if (selectedTurma == "") {
+                  setState(() {
+                    tableUsers = [];
+                    filteredUsers = [];
+                    rowsPerPage = 25;
+                    currentPage = 0; // Reset to the first page
+                    fetchCountSuppliers();
+                    _getTableData();
                   });
-                });
+                } else {
+                  try {
+                    var response = await http.get(Uri.parse(
+                        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2.3&op=$selectedTurma'));
+
+                    if (response.statusCode == 200) {
+                      final decodedData = json.decode(response.body);
+
+                      if (decodedData is List) {
+                        // Explicitly cast and sanitize data
+                        List<Map<String, dynamic>> sanitizedData = decodedData
+                            .map((item) {
+                              // Ensure each field is treated as a String, even if it is an int
+                              return {
+                                "Email": item["Email"]?.toString() ?? "",
+                                "Nome": item["Nome"]?.toString() ?? "",
+                                "Apelido": item["Apelido"]?.toString() ?? "",
+                                "Permissao":
+                                    item["Permissao"]?.toString() ?? "",
+                                "Turma": item["Turma"]?.toString() ?? "",
+                                "IdUser": item["IdUser"] != null
+                                    ? item["IdUser"].toString()
+                                    : "0",
+                                "Estado": item["Estado"] != null
+                                    ? item["Estado"].toString()
+                                    : "0",
+                              };
+                            })
+                            .where((item) => item.isNotEmpty)
+                            .toList();
+
+                        setState(() {
+                          tableUsers = sanitizedData;
+                          filteredUsers = sanitizedData;
+                          currentPage = 0;
+                        });
+                      } else {
+                        setState(() {
+                          tableUsers = [];
+                          filteredUsers = [];
+                        });
+                      }
+                    } else {
+                      throw Exception('Failed to load users');
+                    }
+
+                    setState(() {
+                      // Paginate the displayed users
+                      displayedSuppliers = rowsPerPage == -1
+                          ? tableUsers
+                          : tableUsers
+                              .skip(currentPage * rowsPerPage)
+                              .take(rowsPerPage)
+                              .toList();
+                    });
+                  } catch (e) {
+                    setState(() {});
+                    print('Error: $e');
+                  }
+                }
                 Navigator.of(context).pop();
               },
             ),
@@ -351,9 +442,13 @@ class _UserTableState extends State<UserTable> {
               child: Text('Mostrar Todos'),
               onPressed: () {
                 setState(() {
-                  // Se "Mostrar Todos" for pressionado, exibimos todos os usuários novamente
-                  filteredUsers = tableUsers;
-                });
+                    tableUsers = [];
+                    filteredUsers = [];
+                    rowsPerPage = 25;
+                    currentPage = 0; // Reset to the first page
+                    fetchCountSuppliers();
+                    _getTableData();
+                  });
                 Navigator.of(context).pop();
               },
             ),
@@ -614,7 +709,7 @@ class _UserTableState extends State<UserTable> {
                                               ? 'Ativo'
                                               : 'Desativo', // Show the correct string based on numeric value
                                           onChanged: (newValue) {
-                                             setState(() {
+                                            setState(() {
                                               // Map the selected string to the numeric value
                                               user['Estado'] =
                                                   newValue == 'Ativo'
@@ -728,32 +823,32 @@ class _UserTableState extends State<UserTable> {
                                             decoration: const InputDecoration(
                                                 labelText: 'Permissão'),
                                           ),
-                                         DropdownButtonFormField<String>(
-                                          value: user['Estado'] == '1'
-                                              ? 'Ativo'
-                                              : 'Desativo', // Show the correct string based on numeric value
-                                          onChanged: (newValue) {
-                                            setState(() {
-                                              // Map the selected string to the numeric value
-                                              user['Estado'] =
-                                                  newValue == 'Ativo'
-                                                      ? '1'
-                                                      : '0';
-                                            });
-                                          },
-                                          items: [
-                                            'Ativo',
-                                            'Desativo',
-                                          ].map((String value) {
-                                            return DropdownMenuItem<String>(
-                                              value: value,
-                                              child: Text(value),
-                                            );
-                                          }).toList(),
-                                          decoration: const InputDecoration(
-                                            labelText: 'Estado',
+                                          DropdownButtonFormField<String>(
+                                            value: user['Estado'] == '1'
+                                                ? 'Ativo'
+                                                : 'Desativo', // Show the correct string based on numeric value
+                                            onChanged: (newValue) {
+                                              setState(() {
+                                                // Map the selected string to the numeric value
+                                                user['Estado'] =
+                                                    newValue == 'Ativo'
+                                                        ? '1'
+                                                        : '0';
+                                              });
+                                            },
+                                            items: [
+                                              'Ativo',
+                                              'Desativo',
+                                            ].map((String value) {
+                                              return DropdownMenuItem<String>(
+                                                value: value,
+                                                child: Text(value),
+                                              );
+                                            }).toList(),
+                                            decoration: const InputDecoration(
+                                              labelText: 'Estado',
+                                            ),
                                           ),
-                                        ),
                                         ],
                                       ),
                                       actions: [
