@@ -10,6 +10,7 @@ import 'dart:math';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:intl/intl.dart';
+import 'package:diacritic/diacritic.dart'; // Import the diacritic package
 
 void main() {
   runApp(HomeAlunoMain());
@@ -43,11 +44,11 @@ class HomeAluno extends StatefulWidget {
 }
 
 class _HomeAlunoState extends State<HomeAluno> {
-  dynamic users;
   List<dynamic> recentBuys = [];
   dynamic checkquantidade;
   var contador = 1;
   bool _isSearching = false;
+  dynamic users;
 
   @override
   void initState() {
@@ -293,132 +294,115 @@ class _HomeAlunoState extends State<HomeAluno> {
           SizedBox(height: 15),
           Expanded(
             child: Container(
-              child: ListView(
-                children: [
-                  buildCategoryCard(
-                    title: 'Bebidas',
-                    backgroundImagePath: 'lib/assets/bebida.png',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CategoryPage(
-                            title: 'Bebidas',
-                          ),
-                        ),
+              child: GridView.builder(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2, // Number of cards per row
+                  childAspectRatio: 1, // Adjust the aspect ratio as needed
+                  crossAxisSpacing: 10, // Space between columns
+                  mainAxisSpacing: 10, // Space between rows
+                ),
+                itemCount: 6, // Total number of items
+                itemBuilder: (context, index) {
+                  switch (index) {
+                    case 0:
+                      return buildCategoryCard(
+                        title: 'Bebidas',
+                        backgroundImagePath: 'lib/assets/bebida.png',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryPage(
+                                title: 'Bebidas',
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-                  buildCategoryCard(
-                    title: 'Café',
-                    backgroundImagePath: 'lib/assets/cafe.JPG',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CategoryPage(
-                            title: 'Café',
-                          ),
-                        ),
+                    case 1:
+                      return buildCategoryCard(
+                        title: 'Quentes',
+                        backgroundImagePath: 'lib/assets/cafe.JPG',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryPage(
+                                title: 'Quentes',
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-                  buildCategoryCard(
-                    title: 'Comidas',
-                    backgroundImagePath: 'lib/assets/comida.jpg',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CategoryPage(
-                            title: 'Comidas',
-                          ),
-                        ),
+                    case 2:
+                      return buildCategoryCard(
+                        title: 'Comidas',
+                        backgroundImagePath: 'lib/assets/comida.jpg',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryPage(
+                                title: 'Comidas',
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-                  buildCategoryCard(
-                    title: 'Snacks',
-                    backgroundImagePath: 'lib/assets/snacks.jpg',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CategoryPage(
-                            title: 'Snacks',
-                          ),
-                        ),
+                    case 3:
+                      return buildCategoryCard(
+                        title: 'Snacks',
+                        backgroundImagePath: 'lib/assets/snacks.jpg',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryPage(
+                                title: 'Snacks',
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-                  buildCategoryCard(
-                    title: 'Doces',
-                    backgroundImagePath: 'lib/assets/doces.jpg',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CategoryPage(
-                            title: 'Doces',
-                          ),
-                        ),
+                    case 4:
+                      return buildCategoryCard(
+                        title: 'Doces',
+                        backgroundImagePath: 'lib/assets/doces.jpg',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryPage(
+                                title: 'Doces',
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-                ],
+                    case 5:
+                      return buildCategoryCard(
+                        title: 'Restaurante',
+                        backgroundImagePath: 'lib/assets/monteRestaurante.jpg',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryPageMonte(
+                                title: 'Restaurante',
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    default:
+                      return Container(); // Fallback for safety
+                  }
+                },
               ),
             ),
           ),
         ],
       ),
-      /* bottomNavigationBar: Container(
-        height: 60,
-        child: BottomAppBar(
-          color: Color.fromARGB(255, 246, 141, 45),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButton(
-                icon: Icon(Icons.home, color: Colors.white),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => HomeAlunoMain(),
-                    ),
-                  );
-                },
-                iconSize: 25,
-              ),
-              IconButton(
-                icon: Icon(Icons.shopping_cart, color: Colors.white),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ShoppingCartPage(),
-                    ),
-                  );
-                },
-                iconSize: 25,
-              ),
-              IconButton(
-                icon: Icon(Icons.menu, color: Colors.white),
-                onPressed: () {
-                  // Replace `DrawerHome()` with proper navigation to your drawer widget
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DrawerHome(),
-                    ),
-                  );
-                },
-                iconSize: 25,
-              ),
-            ],
-          ),
-        ),
-      ),*/
     );
   }
 
@@ -431,10 +415,6 @@ class _HomeAlunoState extends State<HomeAluno> {
       CheckQuantidade(title.replaceAll('"', ''));
       contador = 0;
     }
-    /*
-    Timer.periodic(Duration(seconds: 30), (timer) {
-      CheckQuantidade(title.replaceAll('"', ''));
-    });*/
     return GestureDetector(
       onTap: () async {
         contador = 1;
@@ -470,8 +450,7 @@ class _HomeAlunoState extends State<HomeAluno> {
           borderRadius: BorderRadius.circular(3.0),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.8
-              ),
+              color: Colors.grey.withOpacity(0.5),
               spreadRadius: 1.0,
               blurRadius: 2.0,
             ),
@@ -554,25 +533,48 @@ class _HomeAlunoState extends State<HomeAluno> {
       child: Container(
         height: 150.0,
         margin: EdgeInsets.symmetric(vertical: 8.0),
-        padding: EdgeInsets.all(8.0),
         decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(backgroundImagePath),
-            fit: BoxFit.cover,
-          ),
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(20.0),
+          // No need for overflow property here
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 32.0,
-                color: Colors.white,
-               
+            // Background image
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                image: DecorationImage(
+                  image: AssetImage(backgroundImagePath),
+                  fit: BoxFit.cover,
+                ),
               ),
-              textAlign: TextAlign.center,
+            ),
+            // Panel to highlight the text
+            Positioned(
+              bottom: 0, // Position the panel at the bottom
+              left: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black
+                      .withOpacity(0.5), // Semi-transparent black panel
+                  borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(20.0)), // Rounded top corners
+                  border: Border.all(
+                      color: Colors.white, width: 1), // Optional: white border
+                ),
+                padding: EdgeInsets.all(8.0), // Padding for the text
+                child: Center(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 24.0, // Adjust font size as needed
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -591,23 +593,23 @@ class CategoryPage extends StatefulWidget {
 }
 
 class _CategoryPageState extends State<CategoryPage> {
-  List<dynamic> items = []; // Original data
+  List<dynamic> items = [];
+  List<dynamic> filteredItems = [];
   late StreamController<List<dynamic>> _streamController;
-  TextEditingController searchController = TextEditingController();
-  List<dynamic> filteredItems = []; // Filtered data
-  List<Map<String, dynamic>> cartItems = []; // Cart items
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _streamController = StreamController<List<dynamic>>.broadcast();
+    _streamController = StreamController<List<dynamic>>();
     fetchData(widget.title);
+    _searchController.addListener(_filterItems);
   }
 
   @override
   void dispose() {
     _streamController.close();
-    searchController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -620,14 +622,11 @@ class _CategoryPageState extends State<CategoryPage> {
           'categoria': '$categoria',
         },
       );
-
       if (response.statusCode == 200) {
         final dynamic responseData = json.decode(response.body);
         if (responseData is List<dynamic>) {
-          setState(() {
-            items = responseData.cast<Map<String, dynamic>>();
-            filteredItems = List.from(items);
-          });
+          items = responseData.cast<Map<String, dynamic>>();
+          filteredItems = items; // Initialize filteredItems
           _streamController.add(filteredItems);
         } else {
           throw Exception('Response data is not a List<dynamic>');
@@ -640,6 +639,16 @@ class _CategoryPageState extends State<CategoryPage> {
     }
   }
 
+  void _filterItems() {
+    final query = removeDiacritics(_searchController.text.toLowerCase());
+    setState(() {
+      filteredItems = items.where((item) {
+        return removeDiacritics(item['Nome'].toLowerCase()).contains(query);
+      }).toList();
+      _streamController.add(filteredItems);
+    });
+  }
+
   void addToCart(Map<String, dynamic> item) {
     setState(() {
       cartItems.add(item);
@@ -650,16 +659,6 @@ class _CategoryPageState extends State<CategoryPage> {
     setState(() {
       cartItems.remove(item);
     });
-  }
-
-  void _filterItems() {
-    final query = searchController.text.toLowerCase();
-    setState(() {
-      filteredItems = query.isEmpty
-          ? List.from(items)
-          : items.where((item) => item['Nome'].toLowerCase().contains(query)).toList();
-    });
-    _streamController.add(filteredItems);
   }
 
   @override
@@ -681,117 +680,514 @@ class _CategoryPageState extends State<CategoryPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.all(10),
-        child: Column(
-          children: [
-            // Search Field
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: searchController,
-                    decoration: InputDecoration(
-                      labelText: 'Search',
-                      suffixIcon: IconButton(
-                        icon: Icon(Icons.search),
-                        onPressed: _filterItems,
-                      ),
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) => _filterItems(),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 10),
-            // Items List
-            Expanded(
-              child: StreamBuilder<List<dynamic>>(
-                stream: _streamController.stream,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-
-                  if (snapshot.hasData) {
-                    final List<dynamic> itemsToShow = snapshot.data!;
-                    if (itemsToShow.isEmpty) {
-                      return Center(child: Text('Nenhum item encontrado.'));
-                    }
-
-                    return ListView.builder(
-                      itemCount: itemsToShow.length,
-                      itemBuilder: (context, index) {
-                        final item = itemsToShow[index];
-                        final double preco = double.parse(item['Preco']);
-                        final isAvailable = item['Qtd'] == "1";
-                        final isInCart = cartItems.any((cartItem) => cartItem['Nome'] == item['Nome']);
-
-                        return Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ListTile(
-                                leading: Image.memory(
-                                  base64.decode(item['Imagem']),
-                                  fit: BoxFit.cover,
-                                  height: 50,
-                                  width: 50,
-                                ),
-                                title: Text(item['Nome']),
-                                subtitle: Text(
-                                  isAvailable
-                                      ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
-                                      : "Indisponível",
-                                ),
-                                trailing: isInCart
-                                    ? Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            cartItems
-                                                .where((element) => element['Nome'] == item['Nome'])
-                                                .length
-                                                .toString(),
-                                            style: TextStyle(fontSize: 15.0),
-                                          ),
-                                          IconButton(
-                                            onPressed: () => addToCart(item),
-                                            icon: Icon(Icons.add),
-                                          ),
-                                        ],
-                                      )
-                                    : Visibility(
-                                        visible: isAvailable,
-                                        child: ElevatedButton(
-                                          onPressed: () => addToCart(item),
-                                          child: Text('Comprar'),
-                                        ),
-                                      ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  }
-
-                  return Center(child: Text('Nenhum item encontrado.'));
-                },
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: 'Search',
+                border: OutlineInputBorder(),
               ),
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: StreamBuilder<List<dynamic>>(
+              stream: _streamController.stream,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  List<dynamic> items = snapshot.data!;
+                  return ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      final double preco = double.parse(item['Preco']);
+                      return Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ListTile(
+                              leading: Image.memory(
+                                base64.decode(item['Imagem']),
+                                fit: BoxFit.cover,
+                                height: 50,
+                                width: 50,
+                              ),
+                              title: Text(item['Nome']),
+                              subtitle: Text(
+                                item['Qtd'] == "1"
+                                    ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
+                                    : "Indisponível",
+                              ),
+                              trailing: cartItems.any((cartItem) =>
+                                      cartItem['Nome'] == item['Nome'])
+                                  ? Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          onPressed: () {
+                                            removeFromCart(item);
+                                          },
+                                          icon: Icon(Icons.remove),
+                                        ),
+                                        Text(
+                                          cartItems
+                                              .where((element) =>
+                                                  element['Nome'] ==
+                                                  item['Nome'])
+                                              .length
+                                              .toString(),
+                                          style: TextStyle(fontSize: 15.0),
+                                        ),
+                                        IconButton(
+                                          onPressed: () {
+                                            addToCart(item);
+                                          },
+                                          icon: Icon(Icons.add),
+                                        ),
+                                      ],
+                                    )
+                                  : Visibility(
+                                      visible: item['Qtd'] == "1",
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          addToCart(item);
+                                        },
+                                        child: Text('Comprar'),
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Error: ${snapshot.error}'),
+                  );
+                }
+                return Center(
+                  child: CircularProgressIndicator(),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
+//Monte
+
+class CategoryPageMonte extends StatefulWidget {
+  final String title;
+
+  const CategoryPageMonte({Key? key, required this.title}) : super(key: key);
+
+  @override
+  _CategoryPageMonteState createState() => _CategoryPageMonteState();
+}
+
+class _CategoryPageMonteState extends State<CategoryPageMonte> {
+  List<dynamic> items = [];
+  List<dynamic> filteredItems = [];
+  late StreamController<List<dynamic>> _streamController;
+  final TextEditingController _searchController = TextEditingController();
+
+  // Reservation fields
+  final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _timeController = TextEditingController();
+  String? _selectedTime;
+
+  dynamic users;
+
+  @override
+  void initState() {
+    super.initState();
+    _streamController = StreamController<List<dynamic>>();
+    fetchData(widget.title);
+    _searchController.addListener(_filterItems);
+    UserInfo();
+  }
+
+  void UserInfo() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var user = prefs.getString("username");
+
+    final response = await http.post(
+      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+      body: {
+        'query_param': '1',
+        'user': user,
+      },
+    );
+    if (response.statusCode == 200) {
+      setState(() {
+        users = json.decode(response.body);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _streamController.close();
+    _searchController.dispose();
+    _dateController.dispose();
+    _timeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> fetchData(String categoria) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+        body: {
+          'query_param': '2',
+        },
+      );
+      if (response.statusCode == 200) {
+        final dynamic responseData = json.decode(response.body);
+        if (responseData is List<dynamic>) {
+          items = responseData.cast<Map<String, dynamic>>();
+          filteredItems = items; // Initialize filteredItems
+          _streamController.add(filteredItems);
+        } else {
+          throw Exception('Response data is not a List<dynamic>');
+        }
+      } else {
+        throw Exception('Failed to load data');
+      }
+    } catch (e) {
+      print('Error fetching data: $e');
+    }
+  }
+
+  void _filterItems() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      filteredItems = items.where((item) {
+        return item['nome'].toLowerCase().contains(query);
+      }).toList();
+      _streamController.add(filteredItems);
+    });
+  }
+
+  Future<void> _makeReservation(
+      Map<String, dynamic> item, DateTime date, TimeOfDay time) async {
+    // Get the selected time
+    var selectedTime =
+        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+
+    // Validate inputs
+    if (selectedTime.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select a time.')),
+      );
+      return;
+    }
+
+    // Get the current time
+    TimeOfDay currentTime = TimeOfDay.now();
+    TimeOfDay cutoffTime = TimeOfDay(hour: 11, minute: 0); // 11:00 AM
+
+    // Determine if the current time is after 11:00 AM
+    bool isAfterCutoffTime = (currentTime.hour > cutoffTime.hour) ||
+        (currentTime.hour == cutoffTime.hour &&
+            currentTime.minute > cutoffTime.minute);
+
+    // Set the reservation date based on the current time
+    DateTime reservationDate =
+        date;
+
+    // Show loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Making reservation...')),
+    );
+
+    try {
+      final response = await http.post(
+        Uri.parse(
+            'https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'), // Replace with your API endpoint
+        body: {
+          'query_param': '1', // Ensure this is a string
+          'name': users[0]['Nome'].toString(),
+          'hora': selectedTime, // Use the selected time directly
+          'people': '1', // Convert to string
+          'aluno': users[0]['Email'].toString(),
+          'food':
+              item['nome'].toString(), // Include item name in the reservation
+          'date': reservationDate
+              .toIso8601String()
+              .split('T')[0], // Add the reservation date
+        },
+      );
+
+      print(response.body);
+
+      if (response.statusCode == 200) {
+        // Handle successful reservation
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Reservado com sucesso!')),
+        );
+      } else {
+        // Handle server error
+        final errorMessage = response.body.isNotEmpty
+            ? response.body
+            : 'Erro ao fazer a reserva';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } catch (e) {
+      print('Erro ao fazer a reserva: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao fazer a reserva: $e')),
+      );
+    }
+  }
+
+  void _showReservationDialog(Map<String, dynamic> item) {
+    DateTime? selectedDate; // Variable to hold the selected date
+
+    // Get the current time
+    TimeOfDay currentTime = TimeOfDay.now();
+    TimeOfDay cutoffTime = TimeOfDay(hour: 11, minute: 0); // 11:00 AM
+
+    // Check if the current time is after 11:00 AM
+    bool isAfterCutoffTime = (currentTime.hour > cutoffTime.hour) ||
+        (currentTime.hour == cutoffTime.hour &&
+            currentTime.minute > cutoffTime.minute);
+
+    // Set the reservation date based on the current time
+    DateTime reservationDate =
+        DateTime.now().add(Duration(days: isAfterCutoffTime ? 1 : 0));
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Reservar ${item['nome']}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Button to select the time
+              TextFormField(
+                controller: _timeController,
+                decoration: InputDecoration(
+                  labelText: 'Hora (HH:MM)',
+                ),
+                readOnly: true,
+                onTap: () {
+                  _showTimePicker();
+                },
+              ),
+              SizedBox(height: 20),
+              // Display the selected time
+              if (_selectedTime != null) Text('Selected Time: $_selectedTime'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (_selectedTime != null) {
+                  // Convert selected time string to TimeOfDay
+                  List<String> timeParts =
+                      _selectedTime!.split(':'); // Use null check here
+                  TimeOfDay selectedTime = TimeOfDay(
+                    hour: int.parse(timeParts[0]),
+                    minute: int.parse(timeParts[1]),
+                  );
+
+                  // Show confirmation dialog
+                  _showConfirmationDialog(item, reservationDate, selectedTime);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please select a time')),
+                  );
+                }
+              },
+              child: Text('Reservar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showConfirmationDialog(
+      Map<String, dynamic> item, DateTime date, TimeOfDay time) {
+    // Check if the selected time is after 14:00
+    if (time.hour >= 14) {
+      date = date.add(Duration(days: 1)); // Move reservation to the next day
+    }
+
+    // Create the reservation summary with bold date
+    String formattedDate = DateFormat('yyyy-MM-dd').format(date);
+    String formattedTime = time.format(context);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirm Reservation'),
+          content: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Reservas-te ${item['nome']} para o dia ',
+                  style: TextStyle(fontWeight: FontWeight.normal),
+                ),
+                TextSpan(
+                  text: formattedDate, // Bold date
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text: ' às $formattedTime.',
+                  style: TextStyle(fontWeight: FontWeight.normal),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _makeReservation(item, date,
+                    time); // Call the reservation method with three arguments
+                Navigator.of(context).pop(); // Close the confirmation dialog
+                 Navigator.of(context).pop();
+              },
+              child: Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTimePicker() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Time'),
+          content: DropdownButton<String>(
+            isExpanded: true,
+            hint: Text('Select a time'),
+            value: _selectedTime,
+            items: _getValidTimes().map((String time) {
+              return DropdownMenuItem<String>(
+                value: time,
+                child: Text(time),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedTime = newValue;
+                _timeController.text = newValue ?? '';
+              });
+              Navigator.of(context).pop(); // Close the dialog
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  List<String> _getValidTimes() {
+    List<String> validTimes = [];
+    // Generate valid times between 11:30 and 14:00
+    for (int hour = 11; hour <= 14; hour++) {
+      for (int minute = 0; minute < 60; minute += 10) {
+        if (hour == 11 && minute < 30) continue; // Skip times before 11:30
+        if (hour == 14 && minute > 0) continue; // Skip times after 14:00
+        validTimes.add(
+            '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
+      }
+    }
+    return validTimes;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(50.0),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+        ),
+      ),
+      body: StreamBuilder<List<dynamic>>(
+        stream: _streamController.stream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(child: Text('No items found'));
+          }
+
+          final items = snapshot.data!;
+          return ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return Card(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ListTile(
+                          leading: Image.memory(
+                            base64.decode(item['imagem']),
+                            fit: BoxFit.cover,
+                            height: 50,
+                            width: 50,
+                          ),
+                          title: Text(item['nome']),
+                          trailing: Visibility(
+                            visible: item['estado'] == "1",
+                            child: ElevatedButton(
+                              onPressed: () {
+                                _showReservationDialog(item);
+                              },
+                              child: Text('Reservar'),
+                            ),
+                          ))
+                    ]),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
 
 class ShoppingCartPage extends StatefulWidget {
   @override

@@ -60,6 +60,7 @@ dependencies:
   web_socket_channel: ^3.0.1
   sidebarx: ^0.17.1
   auto_size_text: ^3.0.0
+  diacritic: ^0.1.6
   #url_launcher: ^6.2.5
 
 
@@ -93,6 +94,7 @@ flutter:
     - lib/assets/snacks.jpg
     - lib/assets/doces.jpg
     - lib/assets/fonts/Roboto-Regular.ttf
+    - lib/assets/monteRestaurante.jpg
     #- lib/assets/fonts/Helvetica.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
