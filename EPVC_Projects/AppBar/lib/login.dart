@@ -401,11 +401,8 @@ void verifylogin(context) async {
   var type = prefs.getString("permissao");
   var pwd = prefs.getString("pwd").toString();
 
-  //print(id);
-  //print(type);
-  if (id != null) //já arrancou a app
+  if (id != null) // Already logged in
   {
-    print(pwd);
     if (pwd == "epvc") {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       Navigator.push(
@@ -414,10 +411,10 @@ void verifylogin(context) async {
               builder: (context) => EmailRequestPage(tentativa: 2)));
       prefs.remove("pwd");
     } else {
-      if (type == "Administrador") //é adm
+      if (type == "Administrador") // Admin
       {
         print("Administrador");
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => AdminDrawer(
@@ -427,26 +424,28 @@ void verifylogin(context) async {
           ),
         );
       } else if (type == "Professor") {
-        //é user
+        // User (Professor)
         print("Professor");
-        Navigator.push(
+        Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
       } else if (type == "Funcionária") {
-        //é user
+        // User (Funcionária)
         print("Funcionária");
-        Navigator.push(
+        Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
       } else if (type == "Bar") {
-        //é user
+        // User (Bar)
         print("Bar");
-        Navigator.push(
+        Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (context) => BarPagePedidos()));
       } else if (type == "Aluno") {
-        //é user
+        // User (Aluno)
         print("Aluno");
-        Navigator.push(
+        Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
       }
     }
   }
 }
+
+
