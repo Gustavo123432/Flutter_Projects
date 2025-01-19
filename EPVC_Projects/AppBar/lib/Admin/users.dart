@@ -6,7 +6,6 @@ import 'package:my_flutter_project/Admin/addUser.dart';
 import 'package:my_flutter_project/Admin/drawerAdmin.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:my_flutter_project/models/listUsers.dart';
-import 'package:my_flutter_project/models/search/searchDelegate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:file_picker/file_picker.dart';

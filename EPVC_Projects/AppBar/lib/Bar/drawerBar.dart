@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Bar/barPage.dart';
 import 'package:my_flutter_project/Bar/pedidosRegistados.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
+import 'package:my_flutter_project/Bar/restaurantePage.dart';
 
 class DrawerBar extends StatefulWidget {
   const DrawerBar({super.key});
@@ -58,6 +59,16 @@ class _DrawerBarState extends State<DrawerBar> {
               leading: Icon(Icons.archive_outlined),
               title: Text('Pedidos Registados'),
             ),
+                 ListTile(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => RestaurantePage()),
+                );
+              },
+              leading: Icon(Icons.restaurant),
+              title: Text('Restaurante'),
+            ),
             ListTile(
               onTap: () {
                 Navigator.push(
@@ -68,6 +79,7 @@ class _DrawerBarState extends State<DrawerBar> {
               leading: Icon(Icons.local_pizza),
               title: Text('Produtos'),
             ),
+        
             Spacer(),
             DefaultTextStyle(
               style: TextStyle(

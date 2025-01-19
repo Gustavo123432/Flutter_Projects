@@ -1,34 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
+import 'package:diacritic/diacritic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Bar/drawerBar.dart';
 import 'package:my_flutter_project/login.dart';
+import 'package:my_flutter_project/models/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-List<Product> filteredProducts = []; // Assuming this is where filtered products will be stored
-
-class Product {
-  String id;
-  String name;
-  String description;
-  double price;
-  int quantity;
-  bool available;
-  String category;
-  String base64Image;
-
-  Product({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.price,
-    required this.quantity,
-    required this.available,
-    required this.category,
-    required this.base64Image,
-  });
-}
+List<Product> filteredProducts =
+    []; // Assuming this is where filtered products will be stored
 
 class ProdutoPageBar extends StatefulWidget {
   @override
@@ -37,42 +19,68 @@ class ProdutoPageBar extends StatefulWidget {
 
 class _ProdutoPageBarState extends State<ProdutoPageBar> {
   List<Product> products = [];
+  List<Product> filteredProducts = []; // Initialize filteredProducts
   bool isLoading = true;
+  final TextEditingController _searchController = TextEditingController();
+  late StreamController<List<dynamic>> _streamController;
+
+  String selectedSortOption = 'Ascending';
+  double? minPrice;
+  double? maxPrice;
+  String normalize(String input) {
+    return removeDiacritics(input)
+        .toLowerCase(); // Remove diacritics and convert to lowercase
+  }
 
   @override
   void initState() {
     super.initState();
+    _streamController =
+        StreamController<List<dynamic>>(); // Initialize StreamController
     fetchData();
   }
 
   Future<void> fetchData() async {
-    final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-      body: {
-        'query_param': '4',
-      },
-    );
-    if (response.statusCode == 200) {
-      List<dynamic> responseBody = json.decode(response.body);
-      List<Product> fetchedProducts = [];
-      responseBody.forEach((productData) {
-        fetchedProducts.add(Product(
-          id: productData['Id'],
-          name: productData['Nome'],
-          description: productData['Nome'],
-          price: double.parse(productData['Preco'].toString()),
-          quantity: int.parse(productData['Qtd']),
-          available: int.parse(productData['Qtd']) == 1 ? true : false,
-          category: productData['Categoria'],
-          base64Image: productData['Imagem'],
-        ));
-      });
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        body: {'query_param': '4'},
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> responseBody = json.decode(response.body);
+        List<Product> fetchedProducts = responseBody.map((productData) {
+          return Product(
+            id: productData['Id'] ?? 0,
+            name: productData['Nome'] ?? '',
+            description: productData['Nome'] ?? '',
+            price:
+                double.tryParse(productData['Preco']?.toString() ?? '0') ?? 0.0,
+            quantity: int.tryParse(productData['Qtd']?.toString() ?? '0') ?? 0,
+            available: productData['Qtd'] != null &&
+                int.tryParse(productData['Qtd']) == 1,
+            category: productData['Categoria'] ?? '',
+            base64Image: productData['Imagem'] ?? '',
+          );
+        }).toList();
+
+        setState(() {
+          products = fetchedProducts;
+          filteredProducts = List.from(products); // Initialize filteredProducts
+          isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to load products');
+      }
+    } catch (e) {
       setState(() {
-        products = fetchedProducts;
         isLoading = false;
       });
-    } else {
-      throw Exception('Erro ao Obter Produtos');
+      print('Error: $e');
     }
   }
 
@@ -117,7 +125,6 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
               child: Text('Filtrar'),
               onPressed: () {
                 setState(() {
-                  // Update state to reflect the filtering
                   filteredProducts.clear();
                   products.forEach((product) {
                     if (product.category == selectedCategory) {
@@ -132,7 +139,6 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
               child: Text('Mostrar Todos'),
               onPressed: () {
                 setState(() {
-                  // If "Mostrar Todos" is pressed, we display all products again
                   filteredProducts = List.from(products);
                 });
                 Navigator.of(context).pop();
@@ -147,11 +153,10 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
   void updateProduct(String id, bool newAvailability) async {
     var availableValue = newAvailability ? "1" : "0";
     var response = await http.get(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&id=$id&qtd=$availableValue'),
+      Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&id=$id&qtd=$availableValue'),
     );
     if (response.statusCode == 200) {
-      //print('Product updated successfully');
-      // Atualize a lista de produtos após a atualização bem-sucedida, se necessário
       setState(() {
         var index = products.indexWhere((product) => product.id == id);
         if (index != -1) {
@@ -197,6 +202,19 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
     );
   }
 
+  Future<void> _onRefresh() async {
+    await fetchData();
+  }
+
+  void _filterItemsSearch() {
+    final query = normalize(_searchController.text);
+    setState(() {
+      filteredProducts = products.where((item) {
+        return normalize(item.name).contains(query);
+      }).toList();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -223,16 +241,46 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
           ? Center(
               child: CircularProgressIndicator(),
             )
-          : ListView.builder(
-              itemCount: filteredProducts.length,
-              itemBuilder: (context, index) {
-                return ProductCard(
-                  product: filteredProducts[index],
-                  onUpdate: (newAvailability) {
-                    updateProduct(filteredProducts[index].id, newAvailability);
-                  },
-                );
-              },
+          : Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            labelText: 'Procurar...',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) {
+                            _filterItemsSearch(); // Call filter on text change
+                          },
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.filter_list),
+                      onPressed: _showFilterDialog,
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: filteredProducts.length,
+                    itemBuilder: (context, index) {
+                      return ProductCard(
+                        product: filteredProducts[index],
+                        onUpdate: (newAvailability) {
+                          updateProduct(
+                              filteredProducts[index].id, newAvailability);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
       floatingActionButton: SpeedDial(
         icon: Icons.more_horiz,
@@ -315,7 +363,8 @@ class ProductCard extends StatelessWidget {
             children: [
               Text(
                   'Preço: ${product.price.toStringAsFixed(2).replaceAll('.', ',')}€'),
-              Text('Estado: ${product.available ? 'Disponível' : 'Indisponível'}'),
+              Text(
+                  'Estado: ${product.available ? 'Disponível' : 'Indisponível'}'),
               Text('Categoria: ${product.category}'),
             ],
           ),
@@ -338,5 +387,3 @@ class AddProdutoPageBar extends StatelessWidget {
     return Container();
   }
 }
-
-
