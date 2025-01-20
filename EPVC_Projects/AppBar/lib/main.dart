@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: false,
       ),
       home: Scaffold(
-        body: PermissionRequestWidget(),
+        body: LoginForm(),
       ),
     );
   }

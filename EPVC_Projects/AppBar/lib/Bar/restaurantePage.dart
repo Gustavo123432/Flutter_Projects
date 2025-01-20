@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -50,7 +51,7 @@ class _RestaurantePageState extends State<RestaurantePage> {
       final response = await http.post(
         Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
         body: {
-          'query_param': 'get_menu_items', // Adjust this according to your API
+          'query_param': '4', // Adjust this according to your API
         },
       );
       if (response.statusCode == 200) {
@@ -110,6 +111,50 @@ class _RestaurantePageState extends State<RestaurantePage> {
     } catch (e) {
       print('Error deleting menu item: $e');
     }
+  }
+
+  void showAddMenuItemDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Adicionar Prato'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _menuNameController,
+                decoration: InputDecoration(labelText: 'Menu Item Name'),
+              ),
+              TextField(
+                controller: _menuDescriptionController,
+                decoration: InputDecoration(labelText: 'Menu Item Description'),
+              ),
+              TextField(
+                controller: _menuPriceController,
+                decoration: InputDecoration(labelText: 'Menu Item Price'),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                addMenuItem();
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text('Adicionar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text('Cancelar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -178,51 +223,27 @@ class _RestaurantePageState extends State<RestaurantePage> {
               },
             ),
 
-            // Menu Management Section
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text('Gerir Pratos',
+              child: Text('Pratos',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             ),
-            TextField(
-              controller: _menuNameController,
-              decoration: InputDecoration(labelText: 'Menu Item Name'),
-            ),
-            TextField(
-              controller: _menuDescriptionController,
-              decoration: InputDecoration(labelText: 'Menu Item Description'),
-            ),
-            TextField(
-              controller: _menuPriceController,
-              decoration: InputDecoration(labelText: 'Menu Item Price'),
-              keyboardType: TextInputType.number,
-            ),
-            ElevatedButton(
-              onPressed: addMenuItem,
-              child: Text('Adicionar Prato'),
-            ),
-
             // Display Menu Items
-            ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: menuItems.length,
-              itemBuilder: (context, index) {
-                final menuItem = menuItems[index];
-                return ListTile(
-                  title: Text(menuItem['name']),
-                  subtitle: Text(menuItem['description']),
-                  trailing: IconButton(
-                    icon: Icon(Icons.delete),
-                    onPressed: () {
-                      deleteMenuItem(menuItem['id']);
-                    },
-                  ),
-                );
-              },
-            ),
+    
           ],
         ),
+      ),
+      floatingActionButton: SpeedDial(
+        animatedIcon: AnimatedIcons.menu_close,
+        backgroundColor: Colors.blue,
+        children: [
+          SpeedDialChild(
+            child: Icon(Icons.add),
+            label: 'Adicionar Prato',
+            onTap: () => showAddMenuItemDialog(context),
+          ),
+          // You can add more SpeedDialChild items here if needed
+        ],
       ),
     );
   }
