@@ -26,14 +26,27 @@ List<Map<String, dynamic>> allProducts =
 List<Map<String, dynamic>> filteredProducts = [];
 
 class HomeAlunoMain extends StatelessWidget {
+  final String? message; // Mensagem opcional
+
+  HomeAlunoMain({this.message});
   @override
   Widget build(BuildContext context) {
+    // Exibe a mensagem, se existir
+    if (message != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message!)),
+        );
+      });
+    }
+
     return MaterialApp(
-      title: 'App Bar EPVC',
       theme: ThemeData(
-        primarySwatch: Colors.blueGrey,
+        primarySwatch: Colors.blueGrey, // Define o tema da aplicação
       ),
-      home: HomeAluno(),
+      home: Scaffold(
+        body: HomeAluno(), // Substitua pelo widget que desejar
+      ),
     );
   }
 }
@@ -577,7 +590,7 @@ class _CategoryPageState extends State<CategoryPage> {
   List<dynamic> filteredItems = [];
   late StreamController<List<dynamic>> _streamController;
   final TextEditingController _searchController = TextEditingController();
-  String selectedSortOption = 'Ascending';
+  String? selectedSortOption;
   double? minPrice;
   double? maxPrice;
 
@@ -623,13 +636,29 @@ class _CategoryPageState extends State<CategoryPage> {
   }
 
   void _filterItems() {
-    final query = _searchController.text.toLowerCase();
+    final query = removeDiacritics(
+        _searchController.text.toLowerCase()); // Normalize query
+    print('Search Query: $query'); // Debugging line
+
     setState(() {
+      // Check if items are loaded
+      if (items.isEmpty) {
+        print('No items to search through.'); // Debugging line
+        filteredItems = [];
+        return;
+      }
+
+      // Filter items based on the search query
       filteredItems = items.where((item) {
-        return item['Nome'].toLowerCase().contains(query);
+        // Ensure 'Nome' exists and is a string
+        if (item['Nome'] != null && item['Nome'] is String) {
+          // Normalize 'Nome' for comparison
+          final normalizedNome = removeDiacritics(item['Nome'].toLowerCase());
+          return normalizedNome.contains(query);
+        }
+        return false; // Exclude items without a valid 'Nome'
       }).toList();
-      _filterByPrice(); // Apply price filter after search
-      _sortItems(); // Sort after filtering
+
       _streamController.add(filteredItems);
     });
   }
@@ -664,7 +693,7 @@ class _CategoryPageState extends State<CategoryPage> {
 
   void _sortItems() {
     setState(() {
-      if (selectedSortOption == 'Ascending') {
+      if (selectedSortOption == 'asc') {
         filteredItems.sort((a, b) =>
             double.parse(a['Preco']).compareTo(double.parse(b['Preco'])));
       } else {
@@ -692,45 +721,68 @@ class _CategoryPageState extends State<CategoryPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Filtro'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButton<String>(
-                value: selectedSortOption,
-                items: <String>['Ascendente', 'Descendente'].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedSortOption = newValue!;
-                    _sortItems();
-                  });
-                },
-              ),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Preço Mínimo',
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButton<String>(
+                  value: selectedSortOption, // This can be null
+                  hint: Text(
+                      'Selecione uma opção'), // Hint text when no value is selected
+                  items: [
+                    DropdownMenuItem(
+                      value: 'asc', // Value for ascending
+                      child: Row(
+                        children: [
+                          Icon(Icons.arrow_upward), // Icon for ascending
+                          SizedBox(width: 8),
+                          Text('Ascendente'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'desc', // Value for descending
+                      child: Row(
+                        children: [
+                          Icon(Icons.arrow_downward), // Icon for descending
+                          SizedBox(width: 8),
+                          Text('Descendente'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        selectedSortOption = newValue; // Update the selection
+                        _sortItems(); // Call the sorting function
+                        Navigator.pop(context); // Close the dialog
+                      });
+                    }
+                  },
                 ),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  minPrice = value.isNotEmpty ? double.parse(value) : null;
-                  _filterByPrice();
-                },
-              ),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: 'Preço Máximo',
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'Preço Mínimo',
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    minPrice = value.isNotEmpty ? double.tryParse(value) : null;
+                    _filterByPrice();
+                  },
                 ),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  maxPrice = value.isNotEmpty ? double.parse(value) : null;
-                  _filterByPrice();
-                },
-              ),
-            ],
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'Preço Máximo',
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    maxPrice = value.isNotEmpty ? double.tryParse(value) : null;
+                    _filterByPrice();
+                  },
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -777,6 +829,9 @@ class _CategoryPageState extends State<CategoryPage> {
                       labelText: 'Procurar...',
                       border: OutlineInputBorder(),
                     ),
+                    onChanged: (value) {
+                      _filterItems(); // Call filter on text change
+                    },
                   ),
                 ),
               ),

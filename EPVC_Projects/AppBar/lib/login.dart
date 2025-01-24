@@ -414,7 +414,7 @@ void verifylogin(context) async {
       if (type == "Administrador") // Admin
       {
         print("Administrador");
-        Navigator.pushReplacement(
+        Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => AdminDrawer(
@@ -426,26 +426,34 @@ void verifylogin(context) async {
       } else if (type == "Professor") {
         // User (Professor)
         print("Professor");
-        Navigator.pushReplacement(
+        Navigator.push(
             context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
       } else if (type == "Funcionária") {
         // User (Funcionária)
         print("Funcionária");
-        Navigator.pushReplacement(
+        Navigator.push(
             context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
       } else if (type == "Bar") {
         // User (Bar)
         print("Bar");
-        Navigator.pushReplacement(
+        Navigator.push(
             context, MaterialPageRoute(builder: (context) => BarPagePedidos()));
       } else if (type == "Aluno") {
-        // User (Aluno)
-        print("Aluno");
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+        // Exibe a mensagem antes de navegar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Bem-vindo, Aluno!"),
+          ),
+        );
+
+        // Aguarda um pequeno atraso para permitir que a mensagem seja exibida
+        Future.delayed(Duration(seconds: 2), () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomeAlunoMain()),
+          );
+        });
       }
     }
   }
 }
-
-
