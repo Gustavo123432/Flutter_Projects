@@ -60,6 +60,8 @@ class HomeAluno extends StatefulWidget {
 }
 
 class _HomeAlunoState extends State<HomeAluno> {
+    final DatabaseHelper dbHelper = DatabaseHelper();
+
   List<dynamic> recentBuys = [];
   dynamic checkquantidade;
   var contador = 1;
@@ -151,9 +153,8 @@ class _HomeAlunoState extends State<HomeAluno> {
     try {
       if (userr != null) {
         for (var userData in userr) {
-          var nome = userData['Nome'];
-          var apelido = userData['Apelido'];
-          var user = nome + " " + apelido;
+          var user = userData['Email'];
+         
           var response = await http.post(
             Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
             body: {
@@ -489,35 +490,37 @@ class _HomeAlunoState extends State<HomeAluno> {
   }
 
   void addToCart(String imagePath, String title, String price) {
-    // Verifica se os parâmetros necessários não são nulos
-    if (imagePath != null && title != null && price != null) {
-      // Cria um mapa representando o item a ser adicionado ao carrinho
-      Map<String, dynamic> item = {
-        'Imagem': imagePath,
-        'Nome': title.replaceAll('"', ''),
-        'Preco': price,
-      };
+  // Verifica se os parâmetros necessários não são nulos
+  if (imagePath != null && title != null && price != null) {
+    // Cria um CartItem a partir dos parâmetros
+    final cartItem = CartItem(
+      name: title.replaceAll('"', ''), // Remove double quotes from the title
+      image: imagePath,
+      price: double.parse(price), // Convert price to double
+      quantity: 1, // Set the initial quantity to 1
+    );
 
-      // Atualiza a interface do usuário e adiciona o item ao carrinho
-      setState(() {
-        cartItems.add(item);
-      });
+    // Atualiza a interface do usuário e adiciona o item ao carrinho
+    setState(() {
+      cartItems.add(cartItem);
+      dbHelper.insertCartItem(cartItem); // Insert into SQLite database
+    });
 
-      // Exibe um snackbar para informar ao usuário que o item foi adicionado ao carrinho
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Item adicionado ao carrinho com sucesso!'),
-        ),
-      );
-    } else {
-      // Exibe uma mensagem de erro se algum dos parâmetros for nulo
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro: Não foi possível adicionar o item ao carrinho.'),
-        ),
-      );
-    }
+    // Exibe um snackbar para informar ao usuário que o item foi adicionado ao carrinho
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Item adicionado ao carrinho com sucesso!'),
+      ),
+    );
+  } else {
+    // Exibe uma mensagem de erro se algum dos parâmetros for nulo
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Erro: Não foi possível adicionar o item ao carrinho.'),
+      ),
+    );
   }
+}
 
   Widget buildCategoryCard({
     required String title,
@@ -578,8 +581,6 @@ class _HomeAlunoState extends State<HomeAluno> {
     );
   }
 }
-
-
 
 class CategoryPage extends StatefulWidget {
   final String title;
@@ -648,7 +649,7 @@ class _CategoryPageState extends State<CategoryPage> {
     final query = _searchController.text.toLowerCase();
     setState(() {
       filteredItems = items.where((item) {
-        final name = item['Nome'].toLowerCase();
+        final name = removeDiacritics(item['Nome'].toLowerCase());
         return name.contains(query);
       }).toList();
       _streamController.add(filteredItems);
@@ -668,127 +669,170 @@ class _CategoryPageState extends State<CategoryPage> {
     });
   }
 
-void removeFromCart(String itemName) {
-  setState(() {
-    // Remove the item from cartItems by matching the name
-    cartItems.removeWhere((cartItem) => cartItem.name == itemName);
+  void removeFromCart(String itemName) {
+    setState(() {
+      // Find the first matching item
+      final cartItem = cartItems.firstWhere(
+        (cartItem) => cartItem.name == itemName,
+      );
 
-    // Optionally, also remove from your database if needed
-    final cartItem = cartItems.firstWhere((cartItem) => cartItem.name == itemName);
-    if (cartItem != null) {
-      setState(() {
-      dbHelper.removeCartItem(int.parse(cartItem.id.toString()));
-      });
-    }
-  });
-}
+      if (cartItem != null) {
+        // Remove from cart list
+        cartItems.remove(cartItem);
 
+        // Remove from database
+        dbHelper.removeCartItem(int.parse(cartItem.id.toString()));
+      }
+    });
+  }
 
   Future<void> _onRefresh() async {
     await fetchData(widget.title);
   }
 
- @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text(widget.title),
-      actions: [
-        IconButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ShoppingCartPage()),
-            );
-          },
-          icon: Icon(Icons.shopping_cart),
-        ),
-      ],
-    ),
-    body: Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              labelText: 'Search...',
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ),
-        Expanded(
-  child: RefreshIndicator(
-    onRefresh: _onRefresh,
-    child: StreamBuilder<List<dynamic>>(
-      stream: _streamController.stream,
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          List<dynamic> items = snapshot.data!;
-          return ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              final isAvailable = item['Qtd'] == "1";
-              return Card(
-                child: ListTile(
-                  leading: Image.memory(
-                    base64.decode(item['Imagem']),
-                    fit: BoxFit.cover,
-                    height: 50,
-                    width: 50,
-                  ),
-                  title: Text(item['Nome']),
-                  subtitle: Text(isAvailable ? "Available" : "Unavailable"),
-                  trailing: isAvailable
-                      ? cartItems.any((cartItem) => cartItem.name == item['Nome'])
-                          ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  onPressed: () {
-                                    // Pass the item name instead of CartItem
-                                    removeFromCart(item['Nome']);
-                                  },
-                                  icon: Icon(Icons.remove),
-                                ),
-                                Text(cartItems
-                                    .where((element) => element.name == item['Nome'])
-                                    .length
-                                    .toString()),
-                                IconButton(
-                                  onPressed: () {
-                                    addToCart(item);
-                                  },
-                                  icon: Icon(Icons.add),
-                                ),
-                              ],
-                            )
-                          : ElevatedButton(
-                              onPressed: () {
-                                addToCart(item);
-                              },
-                              child: Text('Add to Cart'),
-                            )
-                      : SizedBox.shrink(), // Do not show button if unavailable
-                ),
+void _sortItems(String sortOrder) {
+  setState(() {
+    if (sortOrder == 'ascending') {
+      items.sort((a, b) => a["Preco"].compareTo(b["Preco"]));
+    } else if (sortOrder == 'descending') {
+      items.sort((a, b) => b["Preco"].compareTo(a["Preco"]));
+    }
+    // After sorting, update filteredItems as well
+    filteredItems = List.from(items);
+    _streamController.add(filteredItems);
+  });
+}
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ShoppingCartPage()),
               );
             },
-          );
-        }
-        return Center(child: CircularProgressIndicator());
-      },
-    ),
-  ),
-),
+            icon: Icon(Icons.shopping_cart),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      labelText: 'Procurar...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                 PopupMenuButton<String>(
+                  icon: Icon(Icons.filter_list),
+                  onSelected: (String value) {
+                    _sortItems(value); // Call the sort function on selection
+                  },
+                  itemBuilder: (BuildContext context) {
+                    return [
+                      PopupMenuItem<String>(
+                        value: 'ascending',
+                        child: Text('Preço Ascendente'),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'descending',
+                        child: Text('Preço Descendente'),
+                      ),
+                    ];
+                  },
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              child: StreamBuilder<List<dynamic>>(
+                stream: _streamController.stream,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    List<dynamic> items = snapshot.data!;
+                    return ListView.builder(
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        final isAvailable = item['Qtd'] == "1";
+                        return Card(
+                          child: ListTile(
+                            leading: Image.memory(
+                              base64.decode(item['Imagem']),
+                              fit: BoxFit.cover,
+                              height: 50,
+                              width: 50,
+                            ),
+                            title: Text(item['Nome']),
+                            subtitle: Text(
+                                "${double.parse(item['Preco'].toString()).toStringAsFixed(2).replaceAll('.', ',')}€"),
 
-      ],
-    ),
-  );
+                            // Text(isAvailable ? "Available" : "Unavailable"),
+                            trailing: isAvailable
+                                ? cartItems.any((cartItem) =>
+                                        cartItem.name == item['Nome'])
+                                    ? Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          /*IconButton(
+                                            onPressed: () {
+                                              // Pass the item name instead of CartItem
+                                              removeFromCart(item['Nome']);
+                                            },
+                                            icon: Icon(Icons.remove),
+                                          ),*/
+                                          Text(cartItems
+                                              .where((element) =>
+                                                  element.name == item['Nome'])
+                                              .length
+                                              .toString()),
+                                          IconButton(
+                                            onPressed: () {
+                                              addToCart(item);
+                                            },
+                                            icon: Icon(Icons.add),
+                                          ),
+                                        ],
+                                      )
+                                    : ElevatedButton(
+                                        onPressed: () {
+                                          addToCart(item);
+                                        },
+                                        child: Text('Comprar'),
+                                      )
+                                : SizedBox
+                                    .shrink(), // Do not show button if unavailable
+                          ),
+                        );
+                      },
+                    );
+                  }
+                  return Center(child: CircularProgressIndicator());
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
-}
-
-
 
 //Monte
 
@@ -1197,4 +1241,3 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
     );
   }
 }
-
