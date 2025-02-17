@@ -60,7 +60,7 @@ class HomeAluno extends StatefulWidget {
 }
 
 class _HomeAlunoState extends State<HomeAluno> {
-    final DatabaseHelper dbHelper = DatabaseHelper();
+  final DatabaseHelper dbHelper = DatabaseHelper();
 
   List<dynamic> recentBuys = [];
   dynamic checkquantidade;
@@ -154,7 +154,7 @@ class _HomeAlunoState extends State<HomeAluno> {
       if (userr != null) {
         for (var userData in userr) {
           var user = userData['Email'];
-         
+
           var response = await http.post(
             Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
             body: {
@@ -490,37 +490,37 @@ class _HomeAlunoState extends State<HomeAluno> {
   }
 
   void addToCart(String imagePath, String title, String price) {
-  // Verifica se os parâmetros necessários não são nulos
-  if (imagePath != null && title != null && price != null) {
-    // Cria um CartItem a partir dos parâmetros
-    final cartItem = CartItem(
-      name: title.replaceAll('"', ''), // Remove double quotes from the title
-      image: imagePath,
-      price: double.parse(price), // Convert price to double
-      quantity: 1, // Set the initial quantity to 1
-    );
+    // Verifica se os parâmetros necessários não são nulos
+    if (imagePath != null && title != null && price != null) {
+      // Cria um CartItem a partir dos parâmetros
+      final cartItem = CartItem(
+        name: title.replaceAll('"', ''), // Remove double quotes from the title
+        image: imagePath,
+        price: double.parse(price), // Convert price to double
+        quantity: "1", // Set the initial quantity to 1
+      );
 
-    // Atualiza a interface do usuário e adiciona o item ao carrinho
-    setState(() {
-      cartItems.add(cartItem);
-      dbHelper.insertCartItem(cartItem); // Insert into SQLite database
-    });
+      // Atualiza a interface do usuário e adiciona o item ao carrinho
+      setState(() {
+        //cartItems.add(cartItem);
+        dbHelper.insertCartItem(cartItem); // Insert into SQLite database
+      });
 
-    // Exibe um snackbar para informar ao usuário que o item foi adicionado ao carrinho
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Item adicionado ao carrinho com sucesso!'),
-      ),
-    );
-  } else {
-    // Exibe uma mensagem de erro se algum dos parâmetros for nulo
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Erro: Não foi possível adicionar o item ao carrinho.'),
-      ),
-    );
+      // Exibe um snackbar para informar ao usuário que o item foi adicionado ao carrinho
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Item adicionado ao carrinho com sucesso!'),
+        ),
+      );
+    } else {
+      // Exibe uma mensagem de erro se algum dos parâmetros for nulo
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro: Não foi possível adicionar o item ao carrinho.'),
+        ),
+      );
+    }
   }
-}
 
   Widget buildCategoryCard({
     required String title,
@@ -658,10 +658,11 @@ class _CategoryPageState extends State<CategoryPage> {
 
   void addToCart(Map<String, dynamic> item) {
     final cartItem = CartItem(
+      id: int.parse(item['Id']),
       name: item['Nome'],
       image: item['Imagem'],
       price: double.parse(item['Preco']),
-      quantity: item['Qtd'],
+      quantity: item['Qtd'].toString(),
     );
     setState(() {
       cartItems.add(cartItem);
@@ -669,40 +670,38 @@ class _CategoryPageState extends State<CategoryPage> {
     });
   }
 
-  void removeFromCart(String itemName) {
-    setState(() {
-      // Find the first matching item
-      final cartItem = cartItems.firstWhere(
-        (cartItem) => cartItem.name == itemName,
-      );
+  void removeFromCart(String itemName) async {
+    // Find the CartItem object that matches the item name
+    final cartItem = cartItems.firstWhere(
+      (item) => item.name == itemName,
+    );
 
-      if (cartItem != null) {
-        // Remove from cart list
+    // If the item is found and has a valid ID, remove it from the cart
+    if (cartItem != null && cartItem.id != null) {
+      setState(() {
         cartItems.remove(cartItem);
-
-        // Remove from database
-        dbHelper.removeCartItem(int.parse(cartItem.id.toString()));
-      }
-    });
+      });
+      await dbHelper.removeCartItem(cartItem.id!); // Remove from database
+    } else {
+      print('Cart item not found or has no ID');
+    }
   }
 
   Future<void> _onRefresh() async {
     await fetchData(widget.title);
   }
 
-void _sortItems(String sortOrder) {
-  setState(() {
-    if (sortOrder == 'ascending') {
-      items.sort((a, b) => a["Preco"].compareTo(b["Preco"]));
-    } else if (sortOrder == 'descending') {
-      items.sort((a, b) => b["Preco"].compareTo(a["Preco"]));
-    }
-    // After sorting, update filteredItems as well
-    filteredItems = List.from(items);
-    _streamController.add(filteredItems);
-  });
-}
-
+  void _sortItems(String sortOrder) {
+    setState(() {
+      if (sortOrder == 'ascending') {
+        items.sort((a, b) => a["Preco"].compareTo(b["Preco"]));
+      } else if (sortOrder == 'descending') {
+        items.sort((a, b) => b["Preco"].compareTo(a["Preco"]));
+      }
+      filteredItems = List.from(items);
+      _streamController.add(filteredItems);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -737,10 +736,10 @@ void _sortItems(String sortOrder) {
                     ),
                   ),
                 ),
-                 PopupMenuButton<String>(
+                PopupMenuButton<String>(
                   icon: Icon(Icons.filter_list),
                   onSelected: (String value) {
-                    _sortItems(value); // Call the sort function on selection
+                    _sortItems(value);
                   },
                   itemBuilder: (BuildContext context) {
                     return [
@@ -782,21 +781,18 @@ void _sortItems(String sortOrder) {
                             title: Text(item['Nome']),
                             subtitle: Text(
                                 "${double.parse(item['Preco'].toString()).toStringAsFixed(2).replaceAll('.', ',')}€"),
-
-                            // Text(isAvailable ? "Available" : "Unavailable"),
                             trailing: isAvailable
                                 ? cartItems.any((cartItem) =>
                                         cartItem.name == item['Nome'])
                                     ? Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          /*IconButton(
+                                          IconButton(
                                             onPressed: () {
-                                              // Pass the item name instead of CartItem
                                               removeFromCart(item['Nome']);
                                             },
                                             icon: Icon(Icons.remove),
-                                          ),*/
+                                          ),
                                           Text(cartItems
                                               .where((element) =>
                                                   element.name == item['Nome'])
@@ -816,8 +812,7 @@ void _sortItems(String sortOrder) {
                                         },
                                         child: Text('Comprar'),
                                       )
-                                : SizedBox
-                                    .shrink(), // Do not show button if unavailable
+                                : SizedBox.shrink(),
                           ),
                         );
                       },

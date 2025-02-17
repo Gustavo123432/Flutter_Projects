@@ -19,7 +19,11 @@ class DatabaseHelper {
   // Initialize database
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'cart.db');
-    return await openDatabase(path, version: 1, onCreate: _onCreate);
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _onCreate,
+    );
   }
 
   // Create tables
@@ -38,22 +42,48 @@ class DatabaseHelper {
   // Insert cart item
   Future<void> insertCartItem(CartItem cartItem) async {
     final db = await database;
-    await db.insert('cart', cartItem.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace);
+    try {
+      await db.insert(
+        'cart',
+        cartItem.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e) {
+      print('Error inserting cart item: $e');
+    }
   }
 
   // Fetch all cart items
   Future<List<CartItem>> fetchCartItems() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('cart');
-    return List.generate(maps.length, (i) {
-      return CartItem.fromMap(maps[i]);
-    });
+    try {
+      final List<Map<String, dynamic>> maps = await db.query('cart');
+      return List.generate(maps.length, (i) {
+        return CartItem.fromMap(maps[i]);
+      });
+    } catch (e) {
+      print('Error fetching cart items: $e');
+      return [];
+    }
   }
 
   // Remove cart item
   Future<void> removeCartItem(int id) async {
     final db = await database;
-    await db.delete('cart', where: 'id = ?', whereArgs: [id]);
+    try {
+      await db.delete(
+        'cart',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e) {
+      print('Error removing cart item: $e');
+    }
+  }
+
+  // Close the database (optional, for cleanup)
+  Future<void> close() async {
+    final db = await database;
+    await db.close();
   }
 }

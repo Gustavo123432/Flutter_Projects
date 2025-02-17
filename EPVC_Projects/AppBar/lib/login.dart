@@ -447,7 +447,7 @@ void verifylogin(context) async {
         );
 
         // Aguarda um pequeno atraso para permitir que a mensagem seja exibida
-        Future.delayed(Duration(seconds: 2), () {
+        Future.delayed(Duration(seconds: 1), () {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => HomeAlunoMain()),
