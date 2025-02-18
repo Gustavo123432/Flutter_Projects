@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Admin/produtoPage.dart';
-import 'package:my_flutter_project/Aluno/cartshopping.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
 import 'package:my_flutter_project/Aluno/pedidosPageAluno.dart';
 import 'package:my_flutter_project/login.dart';
