@@ -74,7 +74,8 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
           isLoading = false;
         });
       } else {
-        throw Exception('Failed to load products');
+        throw Exception(
+            'Erro ao carregar o produto\nPor favor contacte o responsável!');
       }
     } catch (e) {
       setState(() {
@@ -164,7 +165,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
         }
       });
     } else {
-      print('Failed to update product');
+      print('Erro ao atualizar o produto\nPor favor contacte o responsável!');
     }
   }
 
@@ -267,17 +268,20 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
                   ],
                 ),
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: filteredProducts.length,
-                    itemBuilder: (context, index) {
-                      return ProductCard(
-                        product: filteredProducts[index],
-                        onUpdate: (newAvailability) {
-                          updateProduct(
-                              filteredProducts[index].id, newAvailability);
-                        },
-                      );
-                    },
+                  child: RefreshIndicator(
+                    onRefresh: _onRefresh,
+                    child: ListView.builder(
+                      itemCount: filteredProducts.length,
+                      itemBuilder: (context, index) {
+                        return ProductCard(
+                          product: filteredProducts[index],
+                          onUpdate: (newAvailability) {
+                            updateProduct(
+                                filteredProducts[index].id, newAvailability);
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],

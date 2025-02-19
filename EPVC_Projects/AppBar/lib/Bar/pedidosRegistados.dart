@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
+import 'package:my_flutter_project/Bar/drawerBar.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -103,8 +104,10 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
         setState(() {
           selectedDate = date;
           selectedTime = time;
-          formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-          formattedTime = '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
+          formattedDate =
+              '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+          formattedTime =
+              '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
         });
         fetchPurchaseOrders();
       }
@@ -113,7 +116,8 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
 
   Future<void> fetchPurchaseOrders() async {
     final response = await http.get(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=19&horaPretendida=$formattedTime&dataPretendida=$formattedDate'),
+      Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=19&horaPretendida=$formattedTime&dataPretendida=$formattedDate'),
     );
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
@@ -122,7 +126,7 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
         purchaseOrderStream = Stream.value(pedidos);
       });
     } else {
-      throw Exception('Failed to load purchase orders');
+      throw Exception('Erro ao carregar os pedidos\nPor favor contacte o responsável!');
     }
   }
 
@@ -136,7 +140,8 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
         builder: (BuildContext context) {
           return AlertDialog(
             title: Text('Permissão Necessária'),
-            content: Text('Por favor, conceda permissão de armazenamento para gerar PDF.'),
+            content: Text(
+                'Por favor, conceda permissão de armazenamento para gerar PDF.'),
             actions: <Widget>[
               TextButton(
                 onPressed: () {
@@ -155,7 +160,8 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
     final pdf = pw.Document();
     double totalGeral = 0.0;
 
-    final fontData = await rootBundle.load('lib/assets/fonts/Roboto-Regular.ttf');
+    final fontData =
+        await rootBundle.load('lib/assets/fonts/Roboto-Regular.ttf');
     final ttf = pw.Font.ttf(fontData);
 
     pdf.addPage(
@@ -164,7 +170,8 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('Lista de Pedidos', style: pw.TextStyle(fontSize: 20, font: ttf)),
+              pw.Text('Lista de Pedidos',
+                  style: pw.TextStyle(fontSize: 20, font: ttf)),
               pw.SizedBox(height: 20),
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -173,20 +180,32 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
                   return pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('Nº Pedido: ${pedido.number}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Quem pediu: ${pedido.requester}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Turma: ${pedido.group}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Descrição: ${pedido.description.replaceAll("[", "").replaceAll("]", "")}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Data: ${pedido.data}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Hora: ${pedido.hora}', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Total: ${pedido.total.replaceAll(".", ",")}€', style: pw.TextStyle(font: ttf)),
-                      pw.Text('Estado: ${pedido.status == '0' ? 'Por Fazer' : 'Concluído'}', style: pw.TextStyle(font: ttf)),
+                      pw.Text('Nº Pedido: ${pedido.number}',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text('Quem pediu: ${pedido.requester}',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text('Turma: ${pedido.group}',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text(
+                          'Descrição: ${pedido.description.replaceAll("[", "").replaceAll("]", "")}',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text('Data: ${pedido.data}',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text('Hora: ${pedido.hora}',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text('Total: ${pedido.total.replaceAll(".", ",")}€',
+                          style: pw.TextStyle(font: ttf)),
+                      pw.Text(
+                          'Estado: ${pedido.status == '0' ? 'Por Fazer' : 'Concluído'}',
+                          style: pw.TextStyle(font: ttf)),
                       pw.Divider(),
                     ],
                   );
                 }).toList(),
               ),
-              pw.Text('Total Geral: ${totalGeral.toString().replaceAll(".", ",")}€', style: pw.TextStyle(font: ttf)),
+              pw.Text(
+                  'Total Geral: ${totalGeral.toString().replaceAll(".", ",")}€',
+                  style: pw.TextStyle(font: ttf)),
             ],
           );
         },
@@ -195,7 +214,8 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
 
     final bytes = await pdf.save();
     final directory = await getExternalStorageDirectory();
-    final file = File('${directory!.path}/pedido_registado_$horaPretendida.pdf');
+    final file =
+        File('${directory!.path}/pedido_registado_$horaPretendida.pdf');
     await file.writeAsBytes(bytes);
 
     OpenFile.open(file.path);
@@ -203,7 +223,7 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
     return bytes;
   }
 
- /* Future<void> _printBluetooth(Uint8List pdfBytes) async {
+  /* Future<void> _printBluetooth(Uint8List pdfBytes) async {
     bool isConnected = await PrintBluetoothThermal.connectionStatus;
     if (!isConnected) {
       await PrintBluetoothThermal.startScan(timeout: Duration(seconds: 5));
@@ -240,27 +260,37 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Color.fromARGB(255, 246, 141, 45),
         title: Text('Pedidos Registados'),
       ),
       floatingActionButton: SpeedDial(
         animatedIcon: AnimatedIcons.menu_close,
+        iconTheme: IconThemeData(color: Colors.white),
+        backgroundColor: Color.fromARGB(255, 130, 201, 189),
         children: [
           SpeedDialChild(
             child: Icon(Icons.picture_as_pdf),
             label: 'Gerar PDF',
             onTap: () => generatePdf(horaPretendidaController.text),
           ),
+          SpeedDialChild(
+            child: Icon(Icons.calendar_month),
+            label: 'Data',
+            onTap: () =>       _showDateTimePicker()
+,
+          ),
         ],
       ),
+      drawer: DrawerBar(),
       body: StreamBuilder<List<PurchaseOrder>>(
         stream: purchaseOrderStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            return Center(child: Text('Error loading purchase orders.'));
+            return Center(child: Text('Erro ao ver os pedidos\nPor favor contacte o responsável!'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No purchase orders found.'));
+            return Center(child: Text('Sem Pedidos'));
           } else {
             final orders = snapshot.data!;
             return ListView.builder(

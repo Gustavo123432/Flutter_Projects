@@ -122,6 +122,102 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     return purchaseOrderController.stream;
   }
 
+  // Function to prepare an order and check for matching products
+  void _prepareOrder(PurchaseOrder currentOrder, List<PurchaseOrder> allOrders) {
+    // Get the products in the current order
+    List<String> currentProducts = currentOrder.description
+        .split(',')
+        .map((product) => product.trim())
+        .toList();
+
+    // Find other orders with the same products
+    List<PurchaseOrder> matchingOrders = allOrders.where((order) {
+      List<String> orderProducts = order.description
+          .split(',')
+          .map((product) => product.trim())
+          .toList();
+      return orderProducts.any((product) => currentProducts.contains(product));
+    }).toList();
+
+    // Remove the current order from the matching list (if present)
+    matchingOrders.removeWhere((order) => order.number == currentOrder.number);
+
+    // Show a dialog with the matching orders
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Pedidos com Produtos Semelhantes'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Você está preparando o pedido ${currentOrder.number}.'),
+              SizedBox(height: 10),
+              if (matchingOrders.isNotEmpty)
+                Text('Os seguintes pedidos contêm produtos semelhantes:'),
+              ...matchingOrders.map((order) {
+                return ListTile(
+                  title: Text('Pedido ${order.number} - ${order.requester}'),
+                  subtitle: Text('Produtos: ${order.description}'),
+                );
+              }).toList(),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Preparar Apenas Este'),
+              onPressed: () {
+                // Prepare only the current order
+                _markOrderAsPrepared(currentOrder);
+                Navigator.of(context).pop();
+              },
+            ),
+            if (matchingOrders.isNotEmpty)
+              TextButton(
+                child: Text('Preparar Todos'),
+                onPressed: () {
+                  // Prepare all matching orders
+                  _markOrderAsPrepared(currentOrder);
+                  matchingOrders.forEach((order) {
+                    _markOrderAsPrepared(order);
+                  });
+                  Navigator.of(context).pop();
+                },
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Function to mark an order as prepared
+  void _markOrderAsPrepared(PurchaseOrder order) async {
+    // Call your API to mark the order as prepared
+    final response = await http.get(Uri.parse(
+        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}'));
+
+    if (response.statusCode == 200) {
+      // Remove the order from the list
+      setState(() {
+        currentOrders.removeWhere((item) => item.number == order.number);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pedido ${order.number} marcado como preparado.'),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao marcar o pedido como preparado.'),
+        ),
+      );
+    }
+  }
+
+
   void checkPedido(String orderNumber, String orderRequester) async {
     final response = await http.get(Uri.parse(
         'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=$orderRequester&npedido=$orderNumber'));
@@ -201,117 +297,63 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       ),
       drawer: DrawerBar(),
       body: Center(
-          child: StreamBuilder<List<PurchaseOrder>>(
-        stream: purchaseOrderStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return CircularProgressIndicator();
-          } else if (snapshot.hasError) {
-            return Text('Erro ao carregar pedidos');
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Text('Sem Pedidos');
-          }
-
-          List<PurchaseOrder> data = snapshot.data!;
-
-          // Ordenar a lista de pedidos, colocando os pedidos de professor no topo
-          data.sort((a, b) {
-            if (a.userPermission == 'Professor' &&
-                b.userPermission != 'Professor') {
-              return -1;
-            } else if (a.userPermission != 'Professor' &&
-                b.userPermission == 'Professor') {
-              return 1;
+        child: StreamBuilder<List<PurchaseOrder>>(
+          stream: purchaseOrderStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return CircularProgressIndicator();
+            } else if (snapshot.hasError) {
+              return Text('Erro ao carregar pedidos');
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Text('Sem Pedidos');
             }
-            return 0;
-          });
 
-          return ListView.builder(
-            itemCount: data.length,
-            itemBuilder: (context, index) {
-              PurchaseOrder order = data[index];
-              String formattedTotal = double.parse(order.total)
-                  .toStringAsFixed(2)
-                  .replaceAll('.', ',');
+            List<PurchaseOrder> data = snapshot.data!;
 
-              return Dismissible(
-                key: Key(order.number
-                    .replaceAll("[", "")
-                    .replaceAll("]", "")), // Unique key
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  color: Color.fromARGB(255, 130, 201, 189),
-                  alignment: Alignment.centerRight,
-                  padding: EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Icon(
-                    Icons.check,
-                    color: Colors.white,
-                  ),
-                ),
-                confirmDismiss: (direction) async {
-                  return await showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: Text('Confirmar Conclusão'),
-                        content:
-                            Text('Deseja marcar este pedido como concluído?'),
-                        actions: [
-                          TextButton(
-                            child: Text('Cancelar'),
+            return ListView.builder(
+              itemCount: data.length,
+              itemBuilder: (context, index) {
+                PurchaseOrder order = data[index];
+                String formattedTotal = double.parse(order.total)
+                    .toStringAsFixed(2)
+                    .replaceAll('.', ',');
+
+                 return Card(
+                    margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                    color: Color.fromARGB(255, 228, 225, 223),
+                    elevation: 4.0,
+                    child: ListTile(
+                      title: Text(
+                        'Pedido ${order.number} - ${order.requester}',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      subtitle: Text(
+                        '${order.group}\n${order.description.replaceAll("[", "").replaceAll("]", "")}',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      trailing: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('Total: $formattedTotal€'),
+                          Text('Troco: ${order.troco}€'),
+                          SizedBox(height: 8),
+                          ElevatedButton(
                             onPressed: () {
-                              Navigator.of(context).pop(false);
+                              _prepareOrder(order, data); // Call the prepare function
                             },
-                          ),
-                          TextButton(
-                            child: Text('Confirmar'),
-                            onPressed: () {
-                              checkPedido(order.number, order.requester);
-                              Navigator.of(context)
-                                  .pop(true); // Dismiss the dialog
-                            },
+                            child: Text('Preparar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
                           ),
                         ],
-                      );
-                    },
-                  );
-                },
-                onDismissed: (direction) {
-                  setState(() {
-                    // Remove the order from the list after confirmation
-                    data.removeWhere((item) =>
-                        item.number == order.number); // Update the list
-                  });
-
-                  // Show a snackbar or some feedback if needed
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text("Pedido ${order.number} foi concluído.")),
-                  );
-                },
-                child: Card(
-                  margin:
-                      EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
-                  color: Color.fromARGB(255, 228, 225, 223),
-                  elevation: 4.0,
-                  child: ListTile(
-                    title: Text(
-                      'Pedido ${order.number} - ${order.requester}',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18,),
-                    ),
-                    subtitle: Text(
-                      '${order.group}\n${order.description.replaceAll("[", "").replaceAll("]", "")}',style: TextStyle(fontSize: 16),
-                    ),
-                    trailing: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('Total: $formattedTotal€'),
-                        Text('Troco: ${order.troco}€'),
-                      ],
-                    ),
+                      ),
                     onTap: () {
+                                                    _prepareOrder(order, data); // Call the prepare function
+
                       // Código para exibir detalhes do pedido
-                      showDialog(
+                     /* showDialog(
                         context: context,
                         builder: (BuildContext context) {
                           return AlertDialog(
@@ -346,10 +388,10 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                             ],
                           );
                         },
-                      );
+                      );*/
                     },
                   ),
-                ),
+                
               );
             },
           );
