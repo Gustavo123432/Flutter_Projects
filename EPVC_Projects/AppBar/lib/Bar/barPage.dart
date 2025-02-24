@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Bar/drawerBar.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
@@ -68,7 +69,8 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   Future<void> _fetchInitialPurchaseOrders() async {
     try {
       final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=10'),
+        Uri.parse(
+            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=10'),
       );
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
@@ -123,7 +125,8 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   }
 
   // Function to prepare an order and check for matching products
-  void _prepareOrder(PurchaseOrder currentOrder, List<PurchaseOrder> allOrders) {
+  void _prepareOrder(
+      PurchaseOrder currentOrder, List<PurchaseOrder> allOrders) {
     // Get the products in the current order
     List<String> currentProducts = currentOrder.description
         .split(',')
@@ -159,7 +162,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
               ...matchingOrders.map((order) {
                 return ListTile(
                   title: Text('Pedido ${order.number} - ${order.requester}'),
-                  subtitle: Text('Produtos: ${order.description}'),
+                  subtitle: Text('Produtos: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
                 );
               }).toList(),
             ],
@@ -200,23 +203,22 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     if (response.statusCode == 200) {
       // Remove the order from the list
       setState(() {
-        currentOrders.removeWhere((item) => item.number == order.number);
+        //currentOrders.removeWhere((item) => item.number == order.number);
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Pedido ${order.number} marcado como preparado.'),
+          content: Text('Pedido ${order.number} em preparação.'),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao marcar o pedido como preparado.'),
+          content: Text('Erro ao colocar o pedido em preparação.\n Contacte o Administrador'),
         ),
       );
     }
   }
-
 
   void checkPedido(String orderNumber, String orderRequester) async {
     final response = await http.get(Uri.parse(
@@ -280,23 +282,25 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 246, 141, 45),
-        title: Text('Pedidos'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              logout(context);
-            },
-            icon: Icon(Icons.logout),
-          ),
-        ],
-      ),
-      drawer: DrawerBar(),
-      body: Center(
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      backgroundColor: Color.fromARGB(255, 246, 141, 45),
+      title: Text('Pedidos'),
+      actions: [
+        IconButton(
+          onPressed: () {
+            logout(context);
+          },
+          icon: Icon(Icons.logout),
+        ),
+      ],
+    ),
+    drawer: DrawerBar(),
+    body: SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: Center(
         child: StreamBuilder<List<PurchaseOrder>>(
           stream: purchaseOrderStream,
           builder: (context, snapshot) {
@@ -310,7 +314,16 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
 
             List<PurchaseOrder> data = snapshot.data!;
 
-            return ListView.builder(
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.all(8.0),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4, // 4 cards per row
+                crossAxisSpacing: 8, // Horizontal spacing between cards
+                mainAxisSpacing: 8, // Vertical spacing between cards
+                childAspectRatio: 1.0, // Width/height ratio of the cards
+              ),
               itemCount: data.length,
               itemBuilder: (context, index) {
                 PurchaseOrder order = data[index];
@@ -318,87 +331,147 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                     .toStringAsFixed(2)
                     .replaceAll('.', ',');
 
-                 return Card(
-                    margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                // Determine button color based on status
+                Color buttonColor;
+                switch (int.parse(order.status)) {
+                  case 1:
+                    buttonColor = Colors.yellow; // Status 1 - Yellow
+                    break;
+                  case 2:
+                    buttonColor = Colors.green; // Status 2 - Green
+                    break;
+                  default:
+                    buttonColor = Color.fromARGB(255, 175, 175, 175); // Default - Gray
+                }
+
+                return GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Detalhes do Pedido ${order.number}'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Requisitante: ${order.requester}'),
+                              Text('Turma: ${order.group}'),
+                              Text(
+                                  'Descrição: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
+                              Text('Total: $formattedTotal€'),
+                              Text('Troco: ${order.troco}€'),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              child: Text('Fechar'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                            TextButton(
+                              child: Text('Eliminar Pedido'),
+                              onPressed: () {
+                                apagarpedido(order.number, order.requester);
+                                data.removeWhere(
+                                    (item) => item.number == order.number);
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  child: Card(
                     color: Color.fromARGB(255, 228, 225, 223),
                     elevation: 4.0,
-                    child: ListTile(
-                      title: Text(
-                        'Pedido ${order.number} - ${order.requester}',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                      subtitle: Text(
-                        '${order.group}\n${order.description.replaceAll("[", "").replaceAll("]", "")}',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      trailing: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Total: $formattedTotal€'),
-                          Text('Troco: ${order.troco}€'),
-                          SizedBox(height: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pedido ${order.number}',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 14),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                '${order.requester}',
+                                style: TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                '${order.group}',
+                                style: TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                '${order.description.replaceAll("[", "").replaceAll("]", "")}',
+                                style: TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
+                              ),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Total: $formattedTotal€',
+                                style: TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                              Text(
+                                'Troco: ${order.troco}€',
+                                style: TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ],
+                          ),
                           ElevatedButton(
                             onPressed: () {
-                              _prepareOrder(order, data); // Call the prepare function
+                              _prepareOrder(order, data);
                             },
-                            child: Text('Preparar'),
+                            child: Text(
+                              'Preparar',
+                              style: TextStyle(fontSize: 12),
+                            ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: buttonColor,
                               foregroundColor: Colors.white,
+                              minimumSize: Size(double.infinity, 30),
+                              padding: EdgeInsets.symmetric(horizontal: 8),
                             ),
                           ),
                         ],
                       ),
-                    onTap: () {
-                                                    _prepareOrder(order, data); // Call the prepare function
-
-                      // Código para exibir detalhes do pedido
-                     /* showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text('Detalhes do Pedido ${order.number}'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Requisitante: ${order.requester}'),
-                                Text('Turma: ${order.group}'),
-                                Text('Descrição: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
-                                Text('Total: $formattedTotal€'),
-                                Text('Troco: ${order.troco}€'),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                child: Text('Fechar'),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                              TextButton(
-                                child: Text('Eliminar Pedido'),
-                                onPressed: () {
-                                  apagarpedido(order.number, order.requester);
-                                  data.removeWhere(
-                                      (item) => item.number == order.number);
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                            ],
-                          );
-                        },
-                      );*/
-                    },
+                    ),
                   ),
-                
-              );
-            },
-          );
-        },
-      )),
-    );
-  }
+                );
+              },
+            );
+          },
+        ),
+      ),
+    ),
+  );
+}
+
 
   @override
   void dispose() {
