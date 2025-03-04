@@ -40,7 +40,7 @@ class PurchaseOrder {
           : json['Descricao']?.toString() ?? 'Sem descrição',
       total: json['Total']?.toString() ?? '0.00',
       troco: json['Troco']?.toString() ?? '0.00',
-      status: json['concluido']?.toString() ?? '0',
+      status: json['Estado']?.toString() ?? '0',
       userPermission: json['Permissao'] ?? 'Sem permissão',
     );
   }
@@ -74,10 +74,8 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       );
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
-        List<PurchaseOrder> orders = data
-            .map((json) => PurchaseOrder.fromJson(json))
-            .where((order) => order.status == '0') // Filter where `status` is 0
-            .toList();
+        List<PurchaseOrder> orders =
+            data.map((json) => PurchaseOrder.fromJson(json)).toList();
 
         currentOrders = orders;
         purchaseOrderController.add(currentOrders);
@@ -124,7 +122,6 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     return purchaseOrderController.stream;
   }
 
-  // Function to prepare an order and check for matching products
   void _prepareOrder(
       PurchaseOrder currentOrder, List<PurchaseOrder> allOrders) {
     // Get the products in the current order
@@ -157,12 +154,27 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
             children: [
               Text('Você está preparando o pedido ${currentOrder.number}.'),
               SizedBox(height: 10),
+              Text.rich(
+                TextSpan(
+                  children: currentOrder.description
+                      .replaceAll('[', '')
+                      .replaceAll(']', '')
+                      .split(',')
+                      .map((item) => TextSpan(
+                            text:
+                                '\t\t\t• ${item.trim()}\n', // Adiciona tab antes do marcador
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ))
+                      .toList(),
+                ),
+              ),
               if (matchingOrders.isNotEmpty)
                 Text('Os seguintes pedidos contêm produtos semelhantes:'),
               ...matchingOrders.map((order) {
                 return ListTile(
                   title: Text('Pedido ${order.number} - ${order.requester}'),
-                  subtitle: Text('Produtos: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
+                  subtitle: Text(
+                      'Produtos: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
                 );
               }).toList(),
             ],
@@ -198,23 +210,24 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   void _markOrderAsPrepared(PurchaseOrder order) async {
     // Call your API to mark the order as prepared
     final response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}'));
+        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}&op=1'));
 
     if (response.statusCode == 200) {
       // Remove the order from the list
-      setState(() {
-        //currentOrders.removeWhere((item) => item.number == order.number);
-      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Pedido ${order.number} em preparação.'),
         ),
       );
+      setState(() {
+        _fetchInitialPurchaseOrders();
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao colocar o pedido em preparação.\n Contacte o Administrador'),
+          content: Text(
+              'Erro ao colocar o pedido em preparação.\n Contacte o Administrador'),
         ),
       );
     }
@@ -222,13 +235,16 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
 
   void checkPedido(String orderNumber, String orderRequester) async {
     final response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=$orderRequester&npedido=$orderNumber'));
+        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=$orderRequester&npedido=$orderNumber&op=2'));
     if (response.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Pedido Concluído'),
         ),
       );
+      setState(() {
+        _fetchInitialPurchaseOrders();
+      });
     } else {
       throw Exception('Erro ao verificar pedido. Verifique a Internet.');
     }
@@ -282,196 +298,221 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     );
   }
 
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      backgroundColor: Color.fromARGB(255, 246, 141, 45),
-      title: Text('Pedidos'),
-      actions: [
-        IconButton(
-          onPressed: () {
-            logout(context);
-          },
-          icon: Icon(Icons.logout),
-        ),
-      ],
-    ),
-    drawer: DrawerBar(),
-    body: SingleChildScrollView(
-      scrollDirection: Axis.vertical,
-      child: Center(
-        child: StreamBuilder<List<PurchaseOrder>>(
-          stream: purchaseOrderStream,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return CircularProgressIndicator();
-            } else if (snapshot.hasError) {
-              return Text('Erro ao carregar pedidos');
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return Text('Sem Pedidos');
-            }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Color.fromARGB(255, 246, 141, 45),
+        title: Text('Pedidos'),
+        actions: [
+          IconButton(
+            onPressed: () {
+              logout(context);
+            },
+            icon: Icon(Icons.logout),
+          ),
+        ],
+      ),
+      drawer: DrawerBar(),
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Center(
+          child: StreamBuilder<List<PurchaseOrder>>(
+            stream: purchaseOrderStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircularProgressIndicator();
+              } else if (snapshot.hasError) {
+                return Text('Erro ao carregar pedidos');
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Text('Sem Pedidos');
+              }
 
-            List<PurchaseOrder> data = snapshot.data!;
+              List<PurchaseOrder> data = snapshot.data!;
 
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.all(8.0),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4, // 4 cards per row
-                crossAxisSpacing: 8, // Horizontal spacing between cards
-                mainAxisSpacing: 8, // Vertical spacing between cards
-                childAspectRatio: 1.0, // Width/height ratio of the cards
-              ),
-              itemCount: data.length,
-              itemBuilder: (context, index) {
-                PurchaseOrder order = data[index];
-                String formattedTotal = double.parse(order.total)
-                    .toStringAsFixed(2)
-                    .replaceAll('.', ',');
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.all(8.0),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4, // 4 cards per row
+                  crossAxisSpacing: 8, // Horizontal spacing between cards
+                  mainAxisSpacing: 8, // Vertical spacing between cards
+                  childAspectRatio: 1.0, // Width/height ratio of the cards
+                ),
+                itemCount: data.length,
+                itemBuilder: (context, index) {
+                  PurchaseOrder order = data[index];
+                  String formattedTotal = double.parse(order.total)
+                      .toStringAsFixed(2)
+                      .replaceAll('.', ',');
 
-                // Determine button color based on status
-                Color buttonColor;
-                switch (int.parse(order.status)) {
-                  case 1:
-                    buttonColor = Colors.yellow; // Status 1 - Yellow
-                    break;
-                  case 2:
-                    buttonColor = Colors.green; // Status 2 - Green
-                    break;
-                  default:
-                    buttonColor = Color.fromARGB(255, 175, 175, 175); // Default - Gray
-                }
+                  // Determine button color based on status
+                  Color buttonColor;
+                  String? buttonText;
+                  switch (int.parse(order.status)) {
+                    case 1:
+                      buttonColor = const Color.fromARGB(
+                          255, 221, 163, 2); // Status 1 - Yellow
+                      buttonText = "Concluir";
 
-                return GestureDetector(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text('Detalhes do Pedido ${order.number}'),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Requisitante: ${order.requester}'),
-                              Text('Turma: ${order.group}'),
-                              Text(
-                                  'Descrição: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
-                              Text('Total: $formattedTotal€'),
-                              Text('Troco: ${order.troco}€'),
-                            ],
-                          ),
-                          actions: [
-                            TextButton(
-                              child: Text('Fechar'),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
+                      break;
+
+                    default:
+                      buttonColor =
+                          Color.fromARGB(255, 175, 175, 175); // Default - Gray
+                      buttonText = "Preparar";
+                  }
+
+                  return GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Detalhes do Pedido ${order.number}'),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Requisitante: ${order.requester}'),
+                                Text('Turma: ${order.group}'),
+                                Text('Descrição: \n'),
+                                Text.rich(
+                                  TextSpan(
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight
+                                            .bold), // Negrito para o título
+                                    children: order.description
+                                        .replaceAll('[', '')
+                                        .replaceAll(']', '')
+                                        .split(',')
+                                        .map((item) => TextSpan(
+                                              text:
+                                                  '\t\t\t\t• ${item.trim()}\n', // Adiciona tab antes do marcador
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold),
+                                            ))
+                                        .toList(),
+                                  ),
+                                ),
+                                Text('Total: $formattedTotal€'),
+                                Text('Troco: ${order.troco}€'),
+                              ],
                             ),
-                            TextButton(
-                              child: Text('Eliminar Pedido'),
+                            actions: [
+                              TextButton(
+                                child: Text('Fechar'),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                              ),
+                              TextButton(
+                                child: Text('Eliminar Pedido'),
+                                onPressed: () {
+                                  apagarpedido(order.number, order.requester);
+                                  data.removeWhere(
+                                      (item) => item.number == order.number);
+                                  Navigator.of(context).pop();
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    child: Card(
+                      color: Color.fromARGB(255, 228, 225, 223),
+                      elevation: 4.0,
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Pedido ${order.number}',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '${order.requester}',
+                                  style: TextStyle(fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '${order.group}',
+                                  style: TextStyle(fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '${order.description.replaceAll("[", "").replaceAll("]", "")}',
+                                  style: TextStyle(fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                ),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Total: $formattedTotal€',
+                                  style: TextStyle(fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                Text(
+                                  'Troco: ${order.troco}€',
+                                  style: TextStyle(fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ],
+                            ),
+                            ElevatedButton(
                               onPressed: () {
-                                apagarpedido(order.number, order.requester);
-                                data.removeWhere(
-                                    (item) => item.number == order.number);
-                                Navigator.of(context).pop();
+                                if (buttonText == "Preparar") {
+                                  _prepareOrder(order, data);
+                                } else if (buttonText == "Concluir") {
+                                  checkPedido(order.number, order.requester);
+                                }
                               },
+                              child: Text(
+                                buttonText,
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: buttonColor,
+                                foregroundColor: Colors.white,
+                                minimumSize: Size(double.infinity, 30),
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                              ),
                             ),
                           ],
-                        );
-                      },
-                    );
-                  },
-                  child: Card(
-                    color: Color.fromARGB(255, 228, 225, 223),
-                    elevation: 4.0,
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Pedido ${order.number}',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 14),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                '${order.requester}',
-                                style: TextStyle(fontSize: 12),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                '${order.group}',
-                                style: TextStyle(fontSize: 12),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                '${order.description.replaceAll("[", "").replaceAll("]", "")}',
-                                style: TextStyle(fontSize: 12),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 2,
-                              ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Total: $formattedTotal€',
-                                style: TextStyle(fontSize: 12),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                              Text(
-                                'Troco: ${order.troco}€',
-                                style: TextStyle(fontSize: 12),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ],
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              _prepareOrder(order, data);
-                            },
-                            child: Text(
-                              'Preparar',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: buttonColor,
-                              foregroundColor: Colors.white,
-                              minimumSize: Size(double.infinity, 30),
-                              padding: EdgeInsets.symmetric(horizontal: 8),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-            );
-          },
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 
   @override
   void dispose() {
