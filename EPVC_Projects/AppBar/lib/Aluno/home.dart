@@ -989,6 +989,8 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
     super.dispose();
   }
 
+  bool menu = false;
+
   Future<void> fetchData(String categoria) async {
     try {
       final response = await http.post(
@@ -1000,9 +1002,18 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
       if (response.statusCode == 200) {
         final dynamic responseData = json.decode(response.body);
         if (responseData is List<dynamic>) {
-          items = responseData.cast<Map<String, dynamic>>();
-          filteredItems = items; // Initialize filteredItems
-          _streamController.add(filteredItems);
+          if (responseData == [] || responseData == null) {
+            setState(() {
+              menu = false;
+            });
+          } else {
+            items = responseData.cast<Map<String, dynamic>>();
+            filteredItems = items; // Initialize filteredItems
+            _streamController.add(filteredItems);
+            setState(() {
+              menu = true;
+            });
+          }
         } else {
           throw Exception('Response data is not a List<dynamic>');
         }
@@ -1290,49 +1301,53 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
           ),
         ),
       ),
-      body: StreamBuilder<List<dynamic>>(
-        stream: _streamController.stream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No items found'));
-          }
+      body: menu == false
+          ? Center(
+              child: Text("Não existe Pratos no Momento"),
+            )
+          : StreamBuilder<List<dynamic>>(
+              stream: _streamController.stream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(child: Text('No items found'));
+                }
 
-          final items = snapshot.data!;
-          return ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return Card(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListTile(
-                          leading: Image.memory(
-                            base64.decode(item['imagem']),
-                            fit: BoxFit.cover,
-                            height: 50,
-                            width: 50,
-                          ),
-                          title: Text(item['nome']),
-                          trailing: Visibility(
-                            visible: item['estado'] == "1",
-                            child: ElevatedButton(
-                              onPressed: () {
-                                _showReservationDialog(item);
-                              },
-                              child: Text('Reservar'),
-                            ),
-                          ))
-                    ]),
-              );
-            },
-          );
-        },
-      ),
+                final items = snapshot.data!;
+                return ListView.builder(
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return Card(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ListTile(
+                                leading: Image.memory(
+                                  base64.decode(item['imagem']),
+                                  fit: BoxFit.cover,
+                                  height: 50,
+                                  width: 50,
+                                ),
+                                title: Text(item['nome']),
+                                trailing: Visibility(
+                                  visible: item['estado'] == "1",
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      _showReservationDialog(item);
+                                    },
+                                    child: Text('Reservar'),
+                                  ),
+                                ))
+                          ]),
+                    );
+                  },
+                );
+              },
+            ),
     );
   }
 }

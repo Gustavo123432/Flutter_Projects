@@ -58,35 +58,48 @@ class _RestaurantePageState extends State<RestaurantePage> {
   }
 
   bool? state = false;
-  Future<void> fetchMenuItems() async {
-    try {
-      final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
-        body: {
-          'query_param': '4', // Adjust this according to your API
-        },
-      );
+Future<void> fetchMenuItems() async {
+  try {
+    final response = await http.post(
+      Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {'query_param': '4'},
+    );
 
-      if (response.statusCode == 200) {
-        final responseBody = json.decode(response.body);
+    if (response.statusCode == 200) {
+      final responseBody = json.decode(response.body);
+
+      if (mounted) {
         setState(() {
-          if (responseBody.containsKey('message') &&
-              responseBody['message'] == "Não existem pratos.") {
-            // Handle case when there are no menu items
+          if (responseBody is List) {
+            // Normal case: API returned a list of menu items
+            if (responseBody.isEmpty) {
+              menuItems = [];
+              state = true; // No items available
+            } else {
+              menuItems = responseBody;
+              state = false; // Items found
+            }
+          } else if (responseBody is Map && responseBody.containsKey('message')) {
+            // API returned a message instead of a list
             menuItems = [];
-            state = true; // You can set this flag to indicate no items
+            state = true;
           } else {
-            menuItems = responseBody; // Normal case, load menu items
-            state = false;
+            // Fallback case: unexpected format
+            menuItems = [];
+            state = true;
           }
         });
-      } else {
-        throw Exception('Failed to load menu items');
       }
-    } catch (e) {
-      print('Error fetching menu items: $e');
+    } else {
+      throw Exception('Failed to load menu items');
     }
+  } catch (e) {
+    print('Error fetching menu items: $e');
   }
+}
+
+//falta imagem
 
   Future<void> addMenuItem() async {
     try {
@@ -370,10 +383,114 @@ Future<void> updateReservationState(String id, String newState) async {
         child: reservas == false
             ? Column(
                 children: [
+                   Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('Reservas',
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold)),
+                  ),
                   Text("Sem Reservas."),
                   SizedBox(
                     height: 32,
-                  )
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('Pratos',
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold)),
+                  ),
+                  state == true
+                      ? Column(
+                          children: [
+                            Text("\t\t\tSem Pratos. Adicione um prato"),
+                            SizedBox(
+                              height: 32,
+                            )
+                          ],
+                        ) // Shows the message when no items
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 4,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                            childAspectRatio: 1.0,
+                          ),
+                          itemCount: menuItems.length,
+                          itemBuilder: (context, index) {
+                            final item = menuItems[index];
+                            Uint8List imageBytes = base64Decode(item['imagem']);
+                            bool isEnabled = item['estado'] ==
+                                "1"; // Convert from string if needed
+
+                            return GestureDetector(
+                              onTap: () => showConfirmationDialog(
+                                  context, item['id'], isEnabled),
+                              child: Card(
+                                color: isEnabled
+                                    ? Colors.green
+                                    : Colors.white, // Change color when enabled
+                                elevation: 4,
+                                margin: const EdgeInsets.all(8),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.vertical(
+                                              top: Radius.circular(8)),
+                                          child: Image.memory(
+                                            imageBytes,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        '${item['nome']}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: isEnabled
+                                              ? Colors.white
+                                              : Colors
+                                                  .black, // Change text color
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        '${item['ingredientes']}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: isEnabled
+                                              ? Colors.white70
+                                              : Colors.grey[600],
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        '${double.parse(item['preco']).toStringAsFixed(2)}€',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: isEnabled
+                                              ? Colors.white
+                                              : Colors.orange,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ],
               ) // Shows the message when no items
             : Column(
@@ -455,7 +572,7 @@ Future<void> updateReservationState(String id, String newState) async {
                         style: TextStyle(
                             fontSize: 24, fontWeight: FontWeight.bold)),
                   ),
-                  state == false
+                  state == true
                       ? Column(
                           children: [
                             Text("Sem Pratos. Adicione um prato"),
@@ -552,7 +669,7 @@ Future<void> updateReservationState(String id, String newState) async {
       ),
       floatingActionButton: SpeedDial(
         animatedIcon: AnimatedIcons.menu_close,
-        backgroundColor: Colors.blue,
+        backgroundColor: Color.fromARGB(255, 246, 141, 45),
         children: [
           SpeedDialChild(
             child: Icon(Icons.add),
