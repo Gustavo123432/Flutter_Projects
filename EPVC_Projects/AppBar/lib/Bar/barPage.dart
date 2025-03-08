@@ -89,34 +89,40 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   }
 
   // WebSocket connection and message handling
-  void _connectToWebSocket() {
-    final channel = WebSocketChannel.connect(
-      Uri.parse('ws://192.168.24.95'),
-    );
+List<PurchaseOrder> processedOrders = []; // Track processed orders to avoid duplication
 
-    channel.stream.listen(
-      (message) {
-        if (message != null && message.isNotEmpty) {
-          try {
-            Map<String, dynamic> data = jsonDecode(message);
-            PurchaseOrder order = PurchaseOrder.fromJson(data);
+void _connectToWebSocket() {
+  final channel = WebSocketChannel.connect(
+    Uri.parse('ws://192.168.25.94:2536'), // Your WebSocket server address
+  );
 
-            // Add only orders with `concluido = 0`
-            if (order.status == '0') {
-              setState(() {
-                currentOrders.add(order);
-                purchaseOrderController.add(currentOrders);
-              });
-            }
-          } catch (e) {
-            print('Erro ao processar a mensagem: $e');
+  channel.stream.listen(
+    (message) {
+      if (message != null && message.isNotEmpty) {
+        try {
+          Map<String, dynamic> data = jsonDecode(message);
+          PurchaseOrder order = PurchaseOrder.fromJson(data);
+
+          // Check if the order has already been processed (based on NPedido)
+          if (order.status == '0' && !processedOrders.any((processedOrder) => processedOrder.number == order.number)) {
+            setState(() {
+              currentOrders.add(order); // Add the new order to the list
+              purchaseOrderController.add(currentOrders);
+              processedOrders.add(order); // Mark this order as processed
+            });
+          } else {
+            print('Duplicate order detected: ${order.number}'); // Optionally log the duplicate order
           }
+        } catch (e) {
+          print('Erro ao processar a mensagem: $e');
         }
-      },
-      onError: (error) => print('Erro WebSocket: $error'),
-      onDone: () => channel.sink.close(),
-    );
-  }
+      }
+    },
+    onError: (error) => print('Erro WebSocket: $error'),
+    onDone: () => channel.sink.close(),
+  );
+}
+
 
   Stream<List<PurchaseOrder>> getPurchaseOrdersStream() {
     return purchaseOrderController.stream;

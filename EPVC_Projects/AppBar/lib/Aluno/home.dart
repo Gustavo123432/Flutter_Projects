@@ -178,16 +178,27 @@ class _HomeAlunoState extends State<HomeAluno> {
   }
 
   void _getAllProducts() async {
-    final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-      body: {
-        'query_param': '4',
-      },
-    );
-    if (response.statusCode == 200) {
-      allProducts = json.decode(response.body);
-    } else {
-      throw Exception('Failed to load products');
+    try {
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        body: {
+          'query_param': '4',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> jsonData = json.decode(response.body);
+
+        // Explicitly cast each item to Map<String, dynamic>
+        allProducts =
+            jsonData.map((item) => item as Map<String, dynamic>).toList();
+
+        setState(() {}); // Trigger UI update
+      } else {
+        throw Exception('Failed to load products');
+      }
+    } catch (e) {
+      print("Erro ao enviar pedidos para a API: $e");
     }
   }
 
@@ -629,7 +640,7 @@ class _CategoryPageState extends State<CategoryPage> {
         throw Exception('Failed to load data');
       }
     } catch (e) {
-      print('Error fetching data: $e');
+      print('Erro ao carregar data: $e');
     }
   }
 
@@ -989,8 +1000,6 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
     super.dispose();
   }
 
-  bool menu = false;
-
   Future<void> fetchData(String categoria) async {
     try {
       final response = await http.post(
@@ -1002,23 +1011,14 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
       if (response.statusCode == 200) {
         final dynamic responseData = json.decode(response.body);
         if (responseData is List<dynamic>) {
-          if (responseData == [] || responseData == null) {
-            setState(() {
-              menu = false;
-            });
-          } else {
-            items = responseData.cast<Map<String, dynamic>>();
-            filteredItems = items; // Initialize filteredItems
-            _streamController.add(filteredItems);
-            setState(() {
-              menu = true;
-            });
-          }
+          items = responseData.cast<Map<String, dynamic>>();
+          filteredItems = items; // Initialize filteredItems
+          _streamController.add(filteredItems);
         } else {
-          throw Exception('Response data is not a List<dynamic>');
+          throw Exception('Error 03 - NOT IS DYNAMIC LIST. Contacte o Administrador');
         }
       } else {
-        throw Exception('Failed to load data');
+        throw Exception('Erro ao carregar dados');
       }
     } catch (e) {
       print('Error fetching data: $e');
@@ -1044,7 +1044,7 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
     // Validate inputs
     if (selectedTime.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please select a time.')),
+        SnackBar(content: Text('Por favor, selecione as horas.')),
       );
       return;
     }
@@ -1063,7 +1063,7 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
 
     // Show loading indicator
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Making reservation...')),
+      SnackBar(content: Text('A Reservar...')),
     );
 
     try {
@@ -1145,7 +1145,7 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
               ),
               SizedBox(height: 20),
               // Display the selected time
-              if (_selectedTime != null) Text('Selected Time: $_selectedTime'),
+              if (_selectedTime != null) Text('Horas Selecionadas: $_selectedTime'),
             ],
           ),
           actions: [
@@ -1153,7 +1153,7 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
               onPressed: () {
                 Navigator.of(context).pop(); // Close the dialog
               },
-              child: Text('Cancel'),
+              child: Text('Cancelar'),
             ),
             TextButton(
               onPressed: () {
@@ -1197,7 +1197,7 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Confirm Reservation'),
+          title: Text('Confirmar Reserva'),
           content: Text.rich(
             TextSpan(
               children: [
@@ -1206,12 +1206,16 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
                   style: TextStyle(fontWeight: FontWeight.normal),
                 ),
                 TextSpan(
-                  text: formattedDate, // Bold date
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  text: DateFormat('dd/MM/yyyy').format(date), // Bold date
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                 ),
                 TextSpan(
-                  text: ' às $formattedTime.',
+                  text: ' às ',
                   style: TextStyle(fontWeight: FontWeight.normal),
+                ),
+                TextSpan(
+                  text: '$formattedTime.',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
               ],
             ),
@@ -1222,7 +1226,7 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
                 Navigator.of(context).pop(); // Close the dialog
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
+              child: Text('Cancelar'),
             ),
             TextButton(
               onPressed: () {
@@ -1231,7 +1235,7 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
                 Navigator.of(context).pop(); // Close the confirmation dialog
                 Navigator.of(context).pop();
               },
-              child: Text('Confirm'),
+              child: Text('Confirmar'),
             ),
           ],
         );
@@ -1244,10 +1248,10 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Select Time'),
+          title: Text('Selecione as Horas'),
           content: DropdownButton<String>(
             isExpanded: true,
-            hint: Text('Select a time'),
+            hint: Text('Selecione as Horas'),
             value: _selectedTime,
             items: _getValidTimes().map((String time) {
               return DropdownMenuItem<String>(
@@ -1294,60 +1298,56 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search...',
+                hintText: 'Procurar...',
                 border: OutlineInputBorder(),
               ),
             ),
           ),
         ),
       ),
-      body: menu == false
-          ? Center(
-              child: Text("Não existe Pratos no Momento"),
-            )
-          : StreamBuilder<List<dynamic>>(
-              stream: _streamController.stream,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(child: Text('No items found'));
-                }
+      body: StreamBuilder<List<dynamic>>(
+        stream: _streamController.stream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(child: Text('Pratos não Encontrados'));
+          }
 
-                final items = snapshot.data!;
-                return ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    return Card(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ListTile(
-                                leading: Image.memory(
-                                  base64.decode(item['imagem']),
-                                  fit: BoxFit.cover,
-                                  height: 50,
-                                  width: 50,
-                                ),
-                                title: Text(item['nome']),
-                                trailing: Visibility(
-                                  visible: item['estado'] == "1",
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      _showReservationDialog(item);
-                                    },
-                                    child: Text('Reservar'),
-                                  ),
-                                ))
-                          ]),
-                    );
-                  },
-                );
-              },
-            ),
+          final items = snapshot.data!;
+          return ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return Card(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ListTile(
+                          leading: Image.memory(
+                            base64.decode(item['imagem']),
+                            fit: BoxFit.cover,
+                            height: 50,
+                            width: 50,
+                          ),
+                          title: Text(item['nome']),
+                          trailing: Visibility(
+                            visible: item['estado'] == "1",
+                            child: ElevatedButton(
+                              onPressed: () {
+                                _showReservationDialog(item);
+                              },
+                              child: Text('Reservar'),
+                            ),
+                          ))
+                    ]),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
@@ -1447,83 +1447,80 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  void sendOrderToWebSocket(
-      List<Map<String, dynamic>> cartItems, String total) async {
-    int orderNumber = generateRandomNumber(1000, 9999);
+  void sendOrderToWebSocket(List<Map<String, dynamic>> cartItems, String total) async {
+  int orderNumber = generateRandomNumber(1000, 9999);
 
-    try {
-      // Check if cartItems is not empty
-      print('Cart items: $cartItems'); // Debugging
+  try {
+    // Check if cartItems is not empty
+    print('Cart items: $cartItems'); // Debugging
 
-      // Extract item names or any other needed data
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
-      print('Item names: $itemNames'); // Debugging
+    // Extract item names or any other needed data
+    List<String> itemNames = cartItems.map((item) => item['Nome'] as String).toList();
+    print('Item names: $itemNames'); // Debugging
 
-      var turma = users[0]['Turma'];
-      var nome = users[0]['Nome'];
-      var apelido = users[0]['Apelido'];
-      var permissao = users[0]['Permissao'];
+    var turma = users[0]['Turma'];
+    var nome = users[0]['Nome'];
+    var apelido = users[0]['Apelido'];
+    var permissao = users[0]['Permissao'];
 
-      final channel = WebSocketChannel.connect(
-        Uri.parse('ws://websocket.appbar.epvc.pt'),
-      );
+    final channel = WebSocketChannel.connect(
+      Uri.parse('ws://websocket.appbar.epvc.pt'),
+    );
 
-      // Send all necessary cart data
-      Map<String, dynamic> orderData = {
-        'QPediu': nome,
-        'NPedido': orderNumber,
-        'Troco': dinheiroAtual,
-        'Turma': turma,
-        'Permissao': permissao,
-        'Descricao': itemNames, // Cart item names
-        'Total': total,
-      };
+    // Send all necessary cart data
+    Map<String, dynamic> orderData = {
+      'QPediu': nome,
+      'NPedido': orderNumber,
+      'Troco': dinheiroAtual,
+      'Turma': turma,
+      'Permissao': permissao,
+      'Estado': 0,
+      'Descricao': itemNames, // Cart item names
+      'Total': total,
+    };
 
-      print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
+    print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
 
-      channel.sink.add(json.encode(orderData));
+    // Send the order to the server
+    channel.sink.add(json.encode(orderData));
 
-      channel.stream.listen(
-        (message) {
-          var serverResponse = json.decode(message);
-          if (serverResponse['status'] == 'success') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Pedido enviado com sucesso! Pedido Nº' +
-                    orderNumber.toString()),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
-              ),
-            );
-          }
-          channel.sink.close(status.normalClosure);
-        },
-        onError: (error) {
-          print('Erro ao fazer a requisição WebSocket: $error');
+    channel.stream.listen(
+      (message) {
+        var serverResponse = json.decode(message);
+        if (serverResponse['status'] == 'success') {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                  'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+              content: Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
             ),
           );
-        },
-      );
-    } catch (e) {
-      print('Erro ao estabelecer conexão WebSocket: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-        ),
-      );
-    }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
+            ),
+          );
+        }
+        channel.sink.close();
+      },
+      onError: (error) {
+        print('Erro ao fazer a requisição WebSocket: $error');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+          ),
+        );
+      },
+    );
+  } catch (e) {
+    print('Erro ao estabelecer conexão WebSocket: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+      ),
+    );
   }
+}
+
 
   void updateItemCountMap() {
     itemCountMap.clear();
@@ -1555,13 +1552,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Future<void> sendRecentOrderToApi(
       List<Map<String, dynamic>> recentOrders) async {
     try {
-      // Obter informações do usuário do primeiro usuário na lista de usuários
-      var nome = users[0]['Nome'];
-      var apelido = users[0]['Apelido'];
 
       for (var order in recentOrders) {
         // Concatenar informações do usuário para formar o identificador do usuário
-        var user = nome + " " + apelido;
+        var user = users[0]['Email'];
         var localData = getLocalDate();
 
         // Extrair a imagem se não for nula, caso contrário, use uma string vazia
@@ -1671,6 +1665,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   @override
   Widget build(BuildContext context) {
     double total = calculateTotal();
+    final rootContext = context;
     return Scaffold(
       appBar: AppBar(
         title: Text('Carrinho de Compras'),
@@ -1789,17 +1784,18 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                         actions: [
                                           TextButton(
                                             onPressed: () {
-                                              ScaffoldMessenger.of(context)
+                                              Navigator.of(context)
+                                                  .pop(); // Close dialog
+                                              // Use root context to avoid assertion error
+                                              ScaffoldMessenger.of(rootContext)
                                                   .showSnackBar(
                                                 SnackBar(
                                                   content: Text(
-                                                      'Confirmação de Pedido com Sucesso'),
+                                                      'Pedido Confirmado com Sucesso'),
                                                 ),
                                               );
                                               checkAvailabilityBeforeOrder(
                                                   total);
-
-                                              Navigator.of(context).pop();
                                             },
                                             child: Text('Sim'),
                                           ),
