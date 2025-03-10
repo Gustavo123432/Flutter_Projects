@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
@@ -18,6 +19,7 @@ class PurchaseOrder {
   final String troco;
   final String status;
   final String userPermission;
+  final String imagem;
 
   PurchaseOrder({
     required this.number,
@@ -28,7 +30,9 @@ class PurchaseOrder {
     required this.troco,
     required this.status,
     required this.userPermission,
+    required this.imagem,
   });
+
   factory PurchaseOrder.fromJson(Map<String, dynamic> json) {
     return PurchaseOrder(
       number: json['NPedido']?.toString() ?? 'N/A',
@@ -41,6 +45,7 @@ class PurchaseOrder {
       total: json['Total']?.toString() ?? '0.00',
       troco: json['Troco']?.toString() ?? '0.00',
       status: json['Estado']?.toString() ?? '0',
+      imagem: json['Imagem'] ?? '',
       userPermission: json['Permissao'] ?? 'Sem permissão',
     );
   }
@@ -65,7 +70,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     _fetchInitialPurchaseOrders();
   }
 
-  // Fetch orders from API and filter only those with `concluido = 0`
+  // Fetch orders from API and filter only those with concluido = 0
   Future<void> _fetchInitialPurchaseOrders() async {
     try {
       final response = await http.get(
@@ -79,6 +84,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
 
         currentOrders = orders;
         purchaseOrderController.add(currentOrders);
+
         _connectToWebSocket(); // Connect to WebSocket after initial fetch
       } else {
         throw Exception('Erro ao carregar pedidos. Verifique a Internet.');
@@ -89,44 +95,66 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   }
 
   // WebSocket connection and message handling
-List<PurchaseOrder> processedOrders = []; // Track processed orders to avoid duplication
+  List<PurchaseOrder> processedOrders =
+      []; // Track processed orders to avoid duplication
 
-void _connectToWebSocket() {
-  final channel = WebSocketChannel.connect(
-    Uri.parse('ws://192.168.25.94:2536'), // Your WebSocket server address
-  );
+  void _connectToWebSocket() {
+    final channel = WebSocketChannel.connect(
+      Uri.parse('ws://192.168.25.94:2536'), // Your WebSocket server address
+    );
 
-  channel.stream.listen(
-    (message) {
-      if (message != null && message.isNotEmpty) {
-        try {
-          Map<String, dynamic> data = jsonDecode(message);
-          PurchaseOrder order = PurchaseOrder.fromJson(data);
+    channel.stream.listen(
+      (message) {
+        if (message != null && message.isNotEmpty) {
+          try {
+            Map<String, dynamic> data = jsonDecode(message);
+            PurchaseOrder order = PurchaseOrder.fromJson(data);
 
-          // Check if the order has already been processed (based on NPedido)
-          if (order.status == '0' && !processedOrders.any((processedOrder) => processedOrder.number == order.number)) {
-            setState(() {
-              currentOrders.add(order); // Add the new order to the list
-              purchaseOrderController.add(currentOrders);
-              processedOrders.add(order); // Mark this order as processed
-            });
-          } else {
-            print('Duplicate order detected: ${order.number}'); // Optionally log the duplicate order
+            // Check if the order has already been processed (based on NPedido)
+            if (order.status == '0' &&
+                !processedOrders.any((processedOrder) =>
+                    processedOrder.number == order.number)) {
+              setState(() {
+                currentOrders.add(order); // Add the new order to the list
+                purchaseOrderController.add(currentOrders);
+                processedOrders.add(order); // Mark this order as processed
+              });
+            } else {
+              print(
+                  'Duplicate order detected: ${order.number}'); // Optionally log the duplicate order
+            }
+          } catch (e) {
+            print('Erro ao processar a mensagem: $e');
           }
-        } catch (e) {
-          print('Erro ao processar a mensagem: $e');
         }
-      }
-    },
-    onError: (error) => print('Erro WebSocket: $error'),
-    onDone: () => channel.sink.close(),
-  );
-}
-
+      },
+      onError: (error) => print('Erro WebSocket: $error'),
+      onDone: () => channel.sink.close(),
+    );
+  }
 
   Stream<List<PurchaseOrder>> getPurchaseOrdersStream() {
     return purchaseOrderController.stream;
   }
+
+  Uint8List safeBase64Decode(String base64String) {
+    try {
+      // Ensure correct padding
+      while (base64String.length % 4 != 0) {
+        base64String += '=';
+      }
+      return base64Decode(base64String);
+    } catch (e) {
+      print("Base64 decoding error: $e");
+      return Uint8List(0); // Return empty Uint8List if there's an error
+    }
+  }
+
+  String cleanBase64(String input) {
+    return input.replaceAll(RegExp(r'[^A-Za-z0-9+/=]'), '');
+  }
+
+// Usage
 
   void _prepareOrder(
       PurchaseOrder currentOrder, List<PurchaseOrder> allOrders) {
@@ -352,6 +380,10 @@ void _connectToWebSocket() {
                   String formattedTotal = double.parse(order.total)
                       .toStringAsFixed(2)
                       .replaceAll('.', ',');
+                  print(order.imagem);
+                  String base64String = order.imagem.toString();
+                  String cleanedBase64 = cleanBase64(base64String);
+                  Uint8List decodedBytes = safeBase64Decode(cleanedBase64);
 
                   // Determine button color based on status
                   Color buttonColor;
@@ -361,7 +393,6 @@ void _connectToWebSocket() {
                       buttonColor = const Color.fromARGB(
                           255, 221, 163, 2); // Status 1 - Yellow
                       buttonText = "Concluir";
-
                       break;
 
                     default:
@@ -376,45 +407,130 @@ void _connectToWebSocket() {
                         context: context,
                         builder: (BuildContext context) {
                           return AlertDialog(
-                            title: Text('Detalhes do Pedido ${order.number}'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Requisitante: ${order.requester}'),
-                                Text('Turma: ${order.group}'),
-                                Text('Descrição: \n'),
-                                Text.rich(
-                                  TextSpan(
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight
-                                            .bold), // Negrito para o título
-                                    children: order.description
-                                        .replaceAll('[', '')
-                                        .replaceAll(']', '')
-                                        .split(',')
-                                        .map((item) => TextSpan(
-                                              text:
-                                                  '\t\t\t\t• ${item.trim()}\n', // Adiciona tab antes do marcador
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.bold),
-                                            ))
-                                        .toList(),
+                            title: Text(
+                              'Detalhes do Pedido ${order.number}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            content: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Requisitante: ${order.requester}',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
                                   ),
-                                ),
-                                Text('Total: $formattedTotal€'),
-                                Text('Troco: ${order.troco}€'),
-                              ],
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Turma: ${order.group}',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Descrição:',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text.rich(
+                                    TextSpan(
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                      children: order.description
+                                          .replaceAll('[', '')
+                                          .replaceAll(']', '')
+                                          .split(',')
+                                          .map((item) => TextSpan(
+                                                text: '• ${item.trim()}\n',
+                                                style: TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ))
+                                          .toList(),
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Total: $formattedTotal€',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Troco: ${order.troco}€',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  SizedBox(height: 12),
+                                  // Card para a imagem
+                                  Card(
+                                    elevation: 4,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.memory(
+                                        decodedBytes,
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                          return Container(
+                                            width: 100,
+                                            height: 100,
+                                            color: Colors.grey[300],
+                                            child: Icon(
+                                              Icons.error,
+                                              color: Colors.red,
+                                              size: 40,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             actions: [
                               TextButton(
-                                child: Text('Fechar'),
+                                child: Text(
+                                  'Fechar',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.blue,
+                                  ),
+                                ),
                                 onPressed: () {
                                   Navigator.of(context).pop();
                                 },
                               ),
                               TextButton(
-                                child: Text('Eliminar Pedido'),
+                                child: Text(
+                                  'Eliminar Pedido',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.red,
+                                  ),
+                                ),
                                 onPressed: () {
                                   apagarpedido(order.number, order.requester);
                                   data.removeWhere(
@@ -428,65 +544,122 @@ void _connectToWebSocket() {
                       );
                     },
                     child: Card(
-                      color: Color.fromARGB(255, 228, 225, 223),
-                      elevation: 4.0,
+                      color: Color.fromARGB(
+                          255, 228, 225, 223), // Cor de fundo do Card
+                      elevation: 4.0, // Sombra do Card
                       child: Padding(
-                        padding: EdgeInsets.all(8.0),
+                        padding: EdgeInsets.all(12.0), // Espaçamento interno
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            // Linha com os detalhes do pedido e a imagem
+                            Row(
                               children: [
-                                Text(
-                                  'Pedido ${order.number}',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
+                                // Coluna com os detalhes do pedido
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Pedido ${order.number}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Colors.black87,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                      SizedBox(height: 6),
+                                      Text(
+                                        'Nome: ${order.requester}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[800],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'Turma: ${order.group}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[800],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'Descrição: ${order.description.replaceAll("[", "").replaceAll("]", "")}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[800],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 2,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                SizedBox(height: 4),
-                                Text(
-                                  '${order.requester}',
-                                  style: TextStyle(fontSize: 12),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  '${order.group}',
-                                  style: TextStyle(fontSize: 12),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  '${order.description.replaceAll("[", "").replaceAll("]", "")}',
-                                  style: TextStyle(fontSize: 12),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
+                                SizedBox(
+                                    width:
+                                        12), // Espaçamento entre a coluna de texto e a imagem
+                                // Imagem do pedido
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(
+                                      8), // Bordas arredondadas na imagem
+                                  child: Image.memory(
+                                    decodedBytes,
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 100,
+                                        height: 100,
+                                        color: Colors.grey[300],
+                                        child: Icon(
+                                          Icons.error,
+                                          color: Colors.red,
+                                          size: 40,
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ],
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            SizedBox(
+                                height:
+                                    12), // Espaçamento entre a linha e a próxima seção
+                            // Linha com o total e o troco
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   'Total: $formattedTotal€',
-                                  style: TextStyle(fontSize: 12),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[800],
+                                  ),
                                 ),
                                 Text(
                                   'Troco: ${order.troco}€',
-                                  style: TextStyle(fontSize: 12),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[800],
+                                  ),
                                 ),
                               ],
                             ),
+                            SizedBox(
+                                height:
+                                    12), // Espaçamento entre o texto e o botão
+                            // Botão de ação (Preparar/Concluir)
                             ElevatedButton(
                               onPressed: () {
                                 if (buttonText == "Preparar") {
@@ -502,8 +675,9 @@ void _connectToWebSocket() {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: buttonColor,
                                 foregroundColor: Colors.white,
-                                minimumSize: Size(double.infinity, 30),
-                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                minimumSize: Size(
+                                    double.infinity, 40), // Altura do botão
+                                padding: EdgeInsets.symmetric(horizontal: 12),
                               ),
                             ),
                           ],
