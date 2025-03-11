@@ -175,12 +175,15 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
 
     // Remove the current order from the matching list (if present)
     matchingOrders.removeWhere((order) => order.number == currentOrder.number);
+    matchingOrders.removeWhere((order) => int.parse(order.status) != 0);
 
     // Show a dialog with the matching orders
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
+        return SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: AlertDialog(
           title: Text('Pedidos com Produtos Semelhantes'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -235,7 +238,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                 },
               ),
           ],
-        );
+        ));
       },
     );
   }

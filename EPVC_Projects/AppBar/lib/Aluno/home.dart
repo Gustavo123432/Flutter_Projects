@@ -1015,7 +1015,8 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
           filteredItems = items; // Initialize filteredItems
           _streamController.add(filteredItems);
         } else {
-          throw Exception('Error 03 - NOT IS DYNAMIC LIST. Contacte o Administrador');
+          throw Exception(
+              'Error 03 - NOT IS DYNAMIC LIST. Contacte o Administrador');
         }
       } else {
         throw Exception('Erro ao carregar dados');
@@ -1145,7 +1146,8 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
               ),
               SizedBox(height: 20),
               // Display the selected time
-              if (_selectedTime != null) Text('Horas Selecionadas: $_selectedTime'),
+              if (_selectedTime != null)
+                Text('Horas Selecionadas: $_selectedTime'),
             ],
           ),
           actions: [
@@ -1396,7 +1398,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   void sendOrderToApi(
-      List<Map<String, dynamic>> cartItems, String total) async {
+    List<Map<String, dynamic>> cartItems,
+    String total,
+  ) async {
     // Generate a random order number
     int orderNumber = generateRandomNumber(1000, 9999);
 
@@ -1406,18 +1410,34 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           cartItems.map((item) => item['Nome'] as String).toList();
 
       // Extract user information
-      var turma = users[0]['Turma'];
-      var nome = users[0]['Nome'];
-      var apelido = users[0]['Apelido'];
-      var permissao = users[0]['Permissao'];
+      var turma = users[0]['Turma'] ?? '';
+      var nome = users[0]['Nome'] ?? '';
+      var apelido = users[0]['Apelido'] ?? '';
+      var permissao = users[0]['Permissao'] ?? '';
+      var imagem = users[0]['Imagem'] ?? '';
 
       // Encode cartItems to JSON string
       String cartItemsJson = json.encode(cartItems);
 
-      // Send GET request to API
-      var response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=5&nome=$nome&apelido=$apelido&orderNumber=$orderNumber&valor=$dinheiroAtual&turma=$turma&permissao=$permissao&descricao=$itemNames&total=$total',
-      ));
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        body: {
+          'query_param': '5',
+          'nome': nome,
+          'apelido': apelido,
+          'orderNumber': orderNumber.toString(),
+          'turma': turma,
+          'descricao': itemNames
+              .join(', '), // Join item names with a comma for better format
+          'permissao': permissao,
+          'total': total,
+          'valor': dinheiroAtual
+              .toString(), // Ensure 'dinheiroAtual' is properly defined
+          'imagem': imagem,
+          'cartItems':
+              cartItemsJson, // Optional: send JSON-encoded items if needed
+        },
+      );
 
       if (response.statusCode == 200) {
         // If the request is successful, show a success message
@@ -1447,80 +1467,85 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  void sendOrderToWebSocket(List<Map<String, dynamic>> cartItems, String total) async {
-  int orderNumber = generateRandomNumber(1000, 9999);
+  void sendOrderToWebSocket(
+      List<Map<String, dynamic>> cartItems, String total) async {
+    int orderNumber = generateRandomNumber(1000, 9999);
 
-  try {
-    // Check if cartItems is not empty
-    print('Cart items: $cartItems'); // Debugging
+    try {
+      // Check if cartItems is not empty
+      print('Cart items: $cartItems'); // Debugging
 
-    // Extract item names or any other needed data
-    List<String> itemNames = cartItems.map((item) => item['Nome'] as String).toList();
-    print('Item names: $itemNames'); // Debugging
+      // Extract item names or any other needed data
+      List<String> itemNames =
+          cartItems.map((item) => item['Nome'] as String).toList();
+      print('Item names: $itemNames'); // Debugging
 
-    var turma = users[0]['Turma'];
-    var nome = users[0]['Nome'];
-    var apelido = users[0]['Apelido'];
-    var permissao = users[0]['Permissao'];
+      var turma = users[0]['Turma'];
+      var nome = users[0]['Nome'];
+      var apelido = users[0]['Apelido'];
+      var permissao = users[0]['Permissao'];
 
-    final channel = WebSocketChannel.connect(
-      Uri.parse('ws://websocket.appbar.epvc.pt'),
-    );
+      final channel = WebSocketChannel.connect(
+        Uri.parse('ws://websocket.appbar.epvc.pt'),
+      );
 
-    // Send all necessary cart data
-    Map<String, dynamic> orderData = {
-      'QPediu': nome,
-      'NPedido': orderNumber,
-      'Troco': dinheiroAtual,
-      'Turma': turma,
-      'Permissao': permissao,
-      'Estado': 0,
-      'Descricao': itemNames, // Cart item names
-      'Total': total,
-    };
+      // Send all necessary cart data
+      Map<String, dynamic> orderData = {
+        'QPediu': nome,
+        'NPedido': orderNumber,
+        'Troco': dinheiroAtual,
+        'Turma': turma,
+        'Permissao': permissao,
+        'Estado': 0,
+        'Descricao': itemNames, // Cart item names
+        'Total': total,
+      };
 
-    print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
+      print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
 
-    // Send the order to the server
-    channel.sink.add(json.encode(orderData));
+      // Send the order to the server
+      channel.sink.add(json.encode(orderData));
 
-    channel.stream.listen(
-      (message) {
-        var serverResponse = json.decode(message);
-        if (serverResponse['status'] == 'success') {
+      channel.stream.listen(
+        (message) {
+          var serverResponse = json.decode(message);
+          if (serverResponse['status'] == 'success') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
+              ),
+            );
+          }
+          channel.sink.close();
+        },
+        onError: (error) {
+          print('Erro ao fazer a requisição WebSocket: $error');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
+              content: Text(
+                  'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
             ),
           );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
-            ),
-          );
-        }
-        channel.sink.close();
-      },
-      onError: (error) {
-        print('Erro ao fazer a requisição WebSocket: $error');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-          ),
-        );
-      },
-    );
-  } catch (e) {
-    print('Erro ao estabelecer conexão WebSocket: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-      ),
-    );
+        },
+      );
+    } catch (e) {
+      print('Erro ao estabelecer conexão WebSocket: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+        ),
+      );
+    }
   }
-}
-
 
   void updateItemCountMap() {
     itemCountMap.clear();
@@ -1552,7 +1577,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Future<void> sendRecentOrderToApi(
       List<Map<String, dynamic>> recentOrders) async {
     try {
-
       for (var order in recentOrders) {
         // Concatenar informações do usuário para formar o identificador do usuário
         var user = users[0]['Email'];
