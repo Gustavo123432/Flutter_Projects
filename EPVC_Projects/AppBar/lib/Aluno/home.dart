@@ -385,13 +385,20 @@ class _HomeAlunoState extends State<HomeAluno> {
                             title: 'Restaurante',
                             backgroundImagePath:
                                 'lib/assets/monteRestaurante.jpg',
+                            isAvailable: false, // Add this parameter
                             onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CategoryPageMonte(
-                                    title: 'Restaurante',
-                                  ),
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: Text('Em Desenvolvimento'),
+                                  content: Text(
+                                      'O Restaurante não está disponível no momento.'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text('OK'),
+                                    ),
+                                  ],
                                 ),
                               );
                             },
@@ -529,6 +536,8 @@ class _HomeAlunoState extends State<HomeAluno> {
     required String title,
     required String backgroundImagePath,
     required VoidCallback onTap,
+    bool isAvailable = true,
+    bool showImage = true, // Add this new parameter
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -537,40 +546,39 @@ class _HomeAlunoState extends State<HomeAluno> {
         margin: EdgeInsets.symmetric(vertical: 8.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20.0),
-          // No need for overflow property here
+          color: Colors.grey[300], // Always gray background when not available
         ),
         child: Stack(
           children: [
-            // Background image
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                image: DecorationImage(
-                  image: AssetImage(backgroundImagePath),
-                  fit: BoxFit.cover,
+            // Only show image if available AND showImage is true
+            if (isAvailable && showImage)
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  image: DecorationImage(
+                    image: AssetImage(backgroundImagePath),
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
-            ),
             // Panel to highlight the text
             Positioned(
-              bottom: 0, // Position the panel at the bottom
+              bottom: 0,
               left: 0,
               right: 0,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.black
-                      .withOpacity(0.5), // Semi-transparent black panel
-                  borderRadius: BorderRadius.vertical(
-                      bottom: Radius.circular(20.0)), // Rounded top corners
-                  border: Border.all(
-                      color: Colors.white, width: 1), // Optional: white border
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius:
+                      BorderRadius.vertical(bottom: Radius.circular(20.0)),
+                  border: Border.all(color: Colors.white, width: 1),
                 ),
-                padding: EdgeInsets.all(8.0), // Padding for the text
+                padding: EdgeInsets.all(8.0),
                 child: Center(
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 24.0, // Adjust font size as needed
+                      fontSize: 24.0,
                       color: Colors.white,
                     ),
                     textAlign: TextAlign.center,
@@ -578,6 +586,80 @@ class _HomeAlunoState extends State<HomeAluno> {
                 ),
               ),
             ),
+            // "Not Available" indicator
+          if (!isAvailable)
+  Stack(
+    children: [
+      // Background image with gray overlay
+      Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: const Color.fromARGB(33, 49, 49, 49),
+          image: DecorationImage(
+            image: AssetImage(backgroundImagePath),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              const Color.fromARGB(255, 36, 36, 36).withOpacity(0.7), // Gray overlay on image
+              BlendMode.darken,
+            ),
+          ),
+        ),
+      ),
+      // "EM DESENVOLVIMENTO" text
+      Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.construction,
+              size: 40,
+              color: Colors.white,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'EM DESENVOLVIMENTO',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    blurRadius: 10,
+                    color: Colors.black,
+                    offset: Offset(2, 2),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+// Panel to highlight the text
+Positioned(
+  bottom: 0,
+  left: 0,
+  right: 0,
+  child: Container(
+    decoration: BoxDecoration(
+      color: Colors.black.withOpacity(0.5),
+      borderRadius: BorderRadius.vertical(bottom: Radius.circular(20.0)),
+      border: Border.all(color: Colors.white, width: 1),
+    ),
+    padding: EdgeInsets.all(8.0),
+    child: Center(
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 24.0,
+          color: Colors.white,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    ),
+  ),
+),
           ],
         ),
       ),
@@ -1397,13 +1479,12 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     return min + rng.nextInt(max - min + 1);
   }
 
-  void sendOrderToApi(
+  int orderNumber = 0;
+
+  Future<void> sendOrderToApi(
     List<Map<String, dynamic>> cartItems,
     String total,
   ) async {
-    // Generate a random order number
-    int orderNumber = generateRandomNumber(1000, 9999);
-
     try {
       // Extracting names from cart items
       List<String> itemNames =
@@ -1425,30 +1506,44 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           'query_param': '5',
           'nome': nome,
           'apelido': apelido,
-          'orderNumber': orderNumber.toString(),
+          'orderNumber':
+              '0', // We don't need to generate this on client side anymore
           'turma': turma,
-          'descricao': itemNames
-              .join(', '), // Join item names with a comma for better format
+          'descricao': itemNames.join(', '),
           'permissao': permissao,
           'total': total,
-          'valor': dinheiroAtual
-              .toString(), // Ensure 'dinheiroAtual' is properly defined
+          'valor': dinheiroAtual.toString(),
           'imagem': imagem,
-          'cartItems':
-              cartItemsJson, // Optional: send JSON-encoded items if needed
+          'cartItems': cartItemsJson,
         },
       );
 
       if (response.statusCode == 200) {
-        // If the request is successful, show a success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Pedido enviado com sucesso! Pedido Nº' +
-                orderNumber.toString()),
-          ),
-        );
+        // Decode the JSON response
+        var data = jsonDecode(response.body);
+
+        if (data['status'] == 'success') {
+          // Get the server-generated order number
+          orderNumber = int.parse(data['orderNumber'].toString());
+          print(orderNumber);
+
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
+            ),
+          );
+        } else {
+          // If there's an error from the server
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro: ${data['message']}'),
+            ),
+          );
+        }
       } else {
-        // If there's an error, show an error message
+        // If there's an HTTP error
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erro ao enviar o pedido. Contacte o Administrador!'),
@@ -1457,7 +1552,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       }
     } catch (e) {
       print('Erro ao fazer a requisição GET: $e');
-      // Show error message if request fails
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -1467,10 +1561,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  void sendOrderToWebSocket(
+  Future<void> sendOrderToWebSocket(
       List<Map<String, dynamic>> cartItems, String total) async {
-    int orderNumber = generateRandomNumber(1000, 9999);
-
     try {
       // Check if cartItems is not empty
       print('Cart items: $cartItems'); // Debugging
@@ -1482,8 +1574,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
       var turma = users[0]['Turma'];
       var nome = users[0]['Nome'];
-      var apelido = users[0]['Apelido'];
       var permissao = users[0]['Permissao'];
+      var imagem = users[0]['Imagem'];
 
       final channel = WebSocketChannel.connect(
         Uri.parse('ws://websocket.appbar.epvc.pt'),
@@ -1499,6 +1591,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         'Estado': 0,
         'Descricao': itemNames, // Cart item names
         'Total': total,
+        'Imagem': imagem,
       };
 
       print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
@@ -1655,9 +1748,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
     if (cartItems.isNotEmpty) {
       if (allAvailable) {
-        sendOrderToApi(cartItems, total.toString());
-        sendRecentOrderToApi(cartItems);
-        sendOrderToWebSocket(cartItems, total.toString());
+        await sendOrderToApi(cartItems, total.toString());
+
+        await sendRecentOrderToApi(cartItems);
+        await sendOrderToWebSocket(cartItems, total.toString());
 
         setState(() {
           cartItems.clear();

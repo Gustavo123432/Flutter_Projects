@@ -182,63 +182,65 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       context: context,
       builder: (BuildContext context) {
         return SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: AlertDialog(
-          title: Text('Pedidos com Produtos Semelhantes'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Você está preparando o pedido ${currentOrder.number}.'),
-              SizedBox(height: 10),
-              Text.rich(
-                TextSpan(
-                  children: currentOrder.description
-                      .replaceAll('[', '')
-                      .replaceAll(']', '')
-                      .split(',')
-                      .map((item) => TextSpan(
-                            text:
-                                '\t\t\t• ${item.trim()}\n', // Adiciona tab antes do marcador
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ))
-                      .toList(),
+            scrollDirection: Axis.vertical,
+            child: AlertDialog(
+              title: Text('Pedidos com Produtos Semelhantes'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Você está preparando o pedido ${currentOrder.number}.'),
+                  SizedBox(height: 10),
+                  Text.rich(
+                    TextSpan(
+                      children: currentOrder.description
+                          .replaceAll('[', '')
+                          .replaceAll(']', '')
+                          .split(',')
+                          .map((item) => TextSpan(
+                                text:
+                                    '\t\t\t• ${item.trim()}\n', // Adiciona tab antes do marcador
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                  if (matchingOrders.isNotEmpty)
+                    Text('Os seguintes pedidos contêm produtos semelhantes:'),
+                  ...matchingOrders.map((order) {
+                    return ListTile(
+                      title:
+                          Text('Pedido ${order.number} - ${order.requester}'),
+                      subtitle: Text(
+                          'Produtos: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
+                    );
+                  }).toList(),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  child: Text('Preparar Apenas Este'),
+                  onPressed: () {
+                    // Prepare only the current order
+                    _markOrderAsPrepared(currentOrder);
+                    Navigator.of(context).pop();
+                  },
                 ),
-              ),
-              if (matchingOrders.isNotEmpty)
-                Text('Os seguintes pedidos contêm produtos semelhantes:'),
-              ...matchingOrders.map((order) {
-                return ListTile(
-                  title: Text('Pedido ${order.number} - ${order.requester}'),
-                  subtitle: Text(
-                      'Produtos: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
-                );
-              }).toList(),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text('Preparar Apenas Este'),
-              onPressed: () {
-                // Prepare only the current order
-                _markOrderAsPrepared(currentOrder);
-                Navigator.of(context).pop();
-              },
-            ),
-            if (matchingOrders.isNotEmpty)
-              TextButton(
-                child: Text('Preparar Todos'),
-                onPressed: () {
-                  // Prepare all matching orders
-                  _markOrderAsPrepared(currentOrder);
-                  matchingOrders.forEach((order) {
-                    _markOrderAsPrepared(order);
-                  });
-                  Navigator.of(context).pop();
-                },
-              ),
-          ],
-        ));
+                if (matchingOrders.isNotEmpty)
+                  TextButton(
+                    child: Text('Preparar Todos'),
+                    onPressed: () {
+                      // Prepare all matching orders
+                      _markOrderAsPrepared(currentOrder);
+                      matchingOrders.forEach((order) {
+                        _markOrderAsPrepared(order);
+                      });
+                      Navigator.of(context).pop();
+                    },
+                  ),
+              ],
+            ));
       },
     );
   }
@@ -338,157 +340,300 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 246, 141, 45),
-        title: Text('Pedidos'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              logout(context);
-            },
-            icon: Icon(Icons.logout),
-          ),
-        ],
-      ),
-      drawer: DrawerBar(),
-      body: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: Center(
-          child: StreamBuilder<List<PurchaseOrder>>(
-            stream: purchaseOrderStream,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return CircularProgressIndicator();
-              } else if (snapshot.hasError) {
-                return Text('Erro ao carregar pedidos');
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Text('Sem Pedidos');
-              }
-
-              List<PurchaseOrder> data = snapshot.data!;
-
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.all(8.0),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4, // 4 cards per row
-                  crossAxisSpacing: 8, // Horizontal spacing between cards
-                  mainAxisSpacing: 8, // Vertical spacing between cards
-                  childAspectRatio: 1.0, // Width/height ratio of the cards
-                ),
-                itemCount: data.length,
-                itemBuilder: (context, index) {
-                  PurchaseOrder order = data[index];
-                  String formattedTotal = double.parse(order.total)
-                      .toStringAsFixed(2)
-                      .replaceAll('.', ',');
-                  print(order.imagem);
-                  String base64String = order.imagem.toString();
-                  String cleanedBase64 = cleanBase64(base64String);
-                  Uint8List decodedBytes = safeBase64Decode(cleanedBase64);
-
-                  // Determine button color based on status
-                  Color buttonColor;
-                  String? buttonText;
-                  switch (int.parse(order.status)) {
-                    case 1:
-                      buttonColor = const Color.fromARGB(
-                          255, 221, 163, 2); // Status 1 - Yellow
-                      buttonText = "Concluir";
-                      break;
-
-                    default:
-                      buttonColor =
-                          Color.fromARGB(255, 175, 175, 175); // Default - Gray
-                      buttonText = "Preparar";
+        appBar: AppBar(
+          backgroundColor: Color.fromARGB(255, 246, 141, 45),
+          title: Text('Pedidos'),
+          actions: [
+            IconButton(
+              onPressed: () {
+                logout(context);
+              },
+              icon: Icon(Icons.logout),
+            ),
+          ],
+        ),
+        drawer: DrawerBar(),
+        body: 
+           SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Center(
+              child: StreamBuilder<List<PurchaseOrder>>(
+                stream: purchaseOrderStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return FutureBuilder(
+                      future: Future.delayed(Duration(seconds: 5)),
+                      builder: (context, futureSnapshot) {
+                        if (futureSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return Center(child:CircularProgressIndicator()); // Show a loading indicator for the first 5 seconds
+                        } else {
+                          return Center(child:Text(
+                              'Sem Pedidos')); // Show "Sem Pedidos" after 5 seconds
+                        }
+                      },
+                    );
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Erro ao carregar pedidos'));
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return Center(child: Text('Sem Pedidos'));
                   }
 
-                  return GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text(
-                              'Detalhes do Pedido ${order.number}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            content: SingleChildScrollView(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Requisitante: ${order.requester}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[800],
-                                    ),
+                  List<PurchaseOrder> data = snapshot.data!;
+
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.all(8.0),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4, // 4 cards per row
+                      crossAxisSpacing: 8, // Horizontal spacing between cards
+                      mainAxisSpacing: 8, // Vertical spacing between cards
+                      childAspectRatio: 1.0, // Width/height ratio of the cards
+                    ),
+                    itemCount: data.length,
+                    itemBuilder: (context, index) {
+                      PurchaseOrder order = data[index];
+                      String formattedTotal = double.parse(order.total)
+                          .toStringAsFixed(2)
+                          .replaceAll('.', ',');
+                      print(order.imagem);
+                      String base64String = order.imagem.toString();
+                      String cleanedBase64 = cleanBase64(base64String);
+                      Uint8List decodedBytes = safeBase64Decode(cleanedBase64);
+
+                      // Determine button color based on status
+                      Color buttonColor;
+                      String? buttonText;
+                      switch (int.parse(order.status)) {
+                        case 1:
+                          buttonColor = const Color.fromARGB(
+                              255, 221, 163, 2); // Status 1 - Yellow
+                          buttonText = "Concluir";
+                          break;
+
+                        default:
+                          buttonColor = Color.fromARGB(
+                              255, 175, 175, 175); // Default - Gray
+                          buttonText = "Preparar";
+                      }
+
+                      return GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: Text(
+                                  'Detalhes do Pedido ${order.number}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: Colors.black87,
                                   ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Turma: ${order.group}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[800],
-                                    ),
+                                ),
+                                content: SingleChildScrollView(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Requisitante: ${order.requester}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[800],
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Turma: ${order.group}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[800],
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Descrição:',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[800],
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text.rich(
+                                        TextSpan(
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                          children: order.description
+                                              .replaceAll('[', '')
+                                              .replaceAll(']', '')
+                                              .split(',')
+                                              .map((item) => TextSpan(
+                                                    text: '• ${item.trim()}\n',
+                                                    style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                                  ))
+                                              .toList(),
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Total: $formattedTotal€',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[800],
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'Troco: ${order.troco}€',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[800],
+                                        ),
+                                      ),
+                                      SizedBox(height: 12),
+                                      // Card para a imagem
+                                      Card(
+                                        elevation: 4,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          child: Image.memory(
+                                            decodedBytes,
+                                            width: 100,
+                                            height: 100,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              return Container(
+                                                width: 100,
+                                                height: 100,
+                                                color: Colors.grey[300],
+                                                child: Icon(
+                                                  Icons.error,
+                                                  color: Colors.red,
+                                                  size: 40,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Descrição:',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[800],
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text.rich(
-                                    TextSpan(
+                                ),
+                                actions: [
+                                  TextButton(
+                                    child: Text(
+                                      'Fechar',
                                       style: TextStyle(
-                                          fontWeight: FontWeight.bold),
-                                      children: order.description
-                                          .replaceAll('[', '')
-                                          .replaceAll(']', '')
-                                          .split(',')
-                                          .map((item) => TextSpan(
-                                                text: '• ${item.trim()}\n',
-                                                style: TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                              ))
-                                          .toList(),
+                                        fontSize: 14,
+                                        color: Colors.blue,
+                                      ),
                                     ),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
                                   ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Total: $formattedTotal€',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[800],
+                                  TextButton(
+                                    child: Text(
+                                      'Eliminar Pedido',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.red,
+                                      ),
                                     ),
+                                    onPressed: () {
+                                      apagarpedido(
+                                          order.number, order.requester);
+                                      data.removeWhere((item) =>
+                                          item.number == order.number);
+                                      Navigator.of(context).pop();
+                                    },
                                   ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Troco: ${order.troco}€',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[800],
+                                ],
+                              );
+                            },
+                          );
+                        },
+                        child: Card(
+                          color: Color.fromARGB(
+                              255, 228, 225, 223), // Cor de fundo do Card
+                          elevation: 4.0, // Sombra do Card
+                          child: Padding(
+                            padding:
+                                EdgeInsets.all(12.0), // Espaçamento interno
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Linha com os detalhes do pedido e a imagem
+                                Row(
+                                  children: [
+                                    // Coluna com os detalhes do pedido
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Pedido ${order.number}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: Colors.black87,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                          SizedBox(height: 6),
+                                          Text(
+                                            'Nome: ${order.requester}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[800],
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'Turma: ${order.group}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[800],
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'Descrição: ${order.description.replaceAll("[", "").replaceAll("]", "")}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[800],
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 2,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  SizedBox(height: 12),
-                                  // Card para a imagem
-                                  Card(
-                                    elevation: 4,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
+                                    SizedBox(
+                                        width:
+                                            12), // Espaçamento entre a coluna de texto e a imagem
+                                    // Imagem do pedido
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(
+                                          8), // Bordas arredondadas na imagem
                                       child: Image.memory(
                                         decodedBytes,
                                         width: 100,
@@ -509,192 +654,70 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                         },
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                child: Text(
-                                  'Fechar',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                              TextButton(
-                                child: Text(
-                                  'Eliminar Pedido',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                                onPressed: () {
-                                  apagarpedido(order.number, order.requester);
-                                  data.removeWhere(
-                                      (item) => item.number == order.number);
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                    child: Card(
-                      color: Color.fromARGB(
-                          255, 228, 225, 223), // Cor de fundo do Card
-                      elevation: 4.0, // Sombra do Card
-                      child: Padding(
-                        padding: EdgeInsets.all(12.0), // Espaçamento interno
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Linha com os detalhes do pedido e a imagem
-                            Row(
-                              children: [
-                                // Coluna com os detalhes do pedido
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Pedido ${order.number}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: Colors.black87,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                      SizedBox(height: 6),
-                                      Text(
-                                        'Nome: ${order.requester}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[800],
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        'Turma: ${order.group}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[800],
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        'Descrição: ${order.description.replaceAll("[", "").replaceAll("]", "")}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[800],
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 2,
-                                      ),
-                                    ],
-                                  ),
+                                  ],
                                 ),
                                 SizedBox(
-                                    width:
-                                        12), // Espaçamento entre a coluna de texto e a imagem
-                                // Imagem do pedido
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(
-                                      8), // Bordas arredondadas na imagem
-                                  child: Image.memory(
-                                    decodedBytes,
-                                    width: 100,
-                                    height: 100,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        width: 100,
-                                        height: 100,
-                                        color: Colors.grey[300],
-                                        child: Icon(
-                                          Icons.error,
-                                          color: Colors.red,
-                                          size: 40,
-                                        ),
-                                      );
-                                    },
+                                    height:
+                                        12), // Espaçamento entre a linha e a próxima seção
+                                // Linha com o total e o troco
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Total: $formattedTotal€',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[800],
+                                      ),
+                                    ),
+                                    Text(
+                                      'Troco: ${order.troco}€',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[800],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(
+                                    height:
+                                        12), // Espaçamento entre o texto e o botão
+                                // Botão de ação (Preparar/Concluir)
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (buttonText == "Preparar") {
+                                      _prepareOrder(order, data);
+                                    } else if (buttonText == "Concluir") {
+                                      checkPedido(
+                                          order.number, order.requester);
+                                    }
+                                  },
+                                  child: Text(
+                                    buttonText,
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: buttonColor,
+                                    foregroundColor: Colors.white,
+                                    minimumSize: Size(
+                                        double.infinity, 40), // Altura do botão
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 12),
                                   ),
                                 ),
                               ],
                             ),
-                            SizedBox(
-                                height:
-                                    12), // Espaçamento entre a linha e a próxima seção
-                            // Linha com o total e o troco
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Total: $formattedTotal€',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[800],
-                                  ),
-                                ),
-                                Text(
-                                  'Troco: ${order.troco}€',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[800],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(
-                                height:
-                                    12), // Espaçamento entre o texto e o botão
-                            // Botão de ação (Preparar/Concluir)
-                            ElevatedButton(
-                              onPressed: () {
-                                if (buttonText == "Preparar") {
-                                  _prepareOrder(order, data);
-                                } else if (buttonText == "Concluir") {
-                                  checkPedido(order.number, order.requester);
-                                }
-                              },
-                              child: Text(
-                                buttonText,
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: buttonColor,
-                                foregroundColor: Colors.white,
-                                minimumSize: Size(
-                                    double.infinity, 40), // Altura do botão
-                                padding: EdgeInsets.symmetric(horizontal: 12),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   );
                 },
-              );
-            },
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        );
   }
 
   @override
