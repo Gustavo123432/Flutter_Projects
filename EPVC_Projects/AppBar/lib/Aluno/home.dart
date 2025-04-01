@@ -568,7 +568,7 @@ class _HomeAlunoState extends State<HomeAluno> {
               right: 0,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
+                  color: const Color.fromARGB(255, 29, 29, 29).withOpacity(0.5),
                   borderRadius:
                       BorderRadius.vertical(bottom: Radius.circular(20.0)),
                   border: Border.all(color: Colors.white, width: 1),
@@ -587,79 +587,94 @@ class _HomeAlunoState extends State<HomeAluno> {
               ),
             ),
             // "Not Available" indicator
-          if (!isAvailable)
-  Stack(
-    children: [
-      // Background image with gray overlay
-      Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: const Color.fromARGB(33, 49, 49, 49),
-          image: DecorationImage(
-            image: AssetImage(backgroundImagePath),
-            fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-              const Color.fromARGB(255, 36, 36, 36).withOpacity(0.7), // Gray overlay on image
-              BlendMode.darken,
-            ),
-          ),
-        ),
-      ),
-      // "EM DESENVOLVIMENTO" text
-      Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.construction,
-              size: 40,
-              color: Colors.white,
-            ),
-            SizedBox(height: 8),
-            Text(
-              'EM DESENVOLVIMENTO',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    blurRadius: 10,
-                    color: Colors.black,
-                    offset: Offset(2, 2),
+            if (!isAvailable)
+              Stack(
+                children: [
+                  // Background image with gray overlay
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: const Color.fromARGB(33, 49, 49, 49),
+                      image: DecorationImage(
+                        image: AssetImage(backgroundImagePath),
+                        fit: BoxFit.cover,
+                        colorFilter: ColorFilter.mode(
+                          const Color.fromARGB(255, 36, 36, 36)
+                              .withOpacity(0.7), // Gray overlay on image
+                          BlendMode.darken,
+                        ),
+                      ),
+                    ),
                   ),
+                  // "EM DESENVOLVIMENTO" text
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 30),
+                      child: 
+                     Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.construction,
+                          size: 30,
+                          color: Colors.white,
+                        ),
+                        SizedBox(height: 8),
+                        Container(
+                          width:
+                              200, // Set a specific width to control wrapping
+                          child: Text(
+                            'EM DESENVOLVIMENTO',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(
+                                  blurRadius: 10,
+                                  color: Colors.black,
+                                  offset: Offset(2, 2),
+                                ),
+                              ],
+                            ),
+                            textAlign:
+                                TextAlign.center, // Optional: Center the text
+                            maxLines: 1, // Optional: Limit the number of lines
+                            overflow: TextOverflow
+                                .ellipsis, // Optional: Handle overflow
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                  )
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  ),
 // Panel to highlight the text
-Positioned(
-  bottom: 0,
-  left: 0,
-  right: 0,
-  child: Container(
-    decoration: BoxDecoration(
-      color: Colors.black.withOpacity(0.5),
-      borderRadius: BorderRadius.vertical(bottom: Radius.circular(20.0)),
-      border: Border.all(color: Colors.white, width: 1),
-    ),
-    padding: EdgeInsets.all(8.0),
-    child: Center(
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 24.0,
-          color: Colors.white,
-        ),
-        textAlign: TextAlign.center,
-      ),
-    ),
-  ),
-),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius:
+                      BorderRadius.vertical(bottom: Radius.circular(20.0)),
+                  border: Border.all(color: Colors.white, width: 1),
+                ),
+                padding: EdgeInsets.all(8.0),
+                child: Center(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 24.0,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
