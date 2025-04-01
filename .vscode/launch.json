@@ -13,6 +13,13 @@
             "request": "launch",
             "cwd": "EPVC_Projects\\AppBar",
             "program": "lib\\main.dart"
+        },
+        {
+            "name": "Flutter (lib\\main.dart)",
+            "type": "dart",
+            "request": "launch",
+            "cwd": "EPVC_Projects\\AppBar",
+            "program": "lib\\main.dart"
         }
     ]
 }

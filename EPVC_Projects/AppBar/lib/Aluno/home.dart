@@ -11,6 +11,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:intl/intl.dart';
 import 'package:diacritic/diacritic.dart'; // Import the diacritic package
+import 'package:my_flutter_project/SIBS/sibs_service.dart';
 
 void main() {
   runApp(HomeAlunoMain());
@@ -1460,12 +1461,15 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Map<String, int> itemCountMap = {};
   dynamic users;
   double dinheiroAtual = 0;
+  SibsService? _sibsService;
+  int orderNumber = 0;
 
   @override
   void initState() {
     super.initState();
     updateItemCountMap();
     UserInfo();
+    _initializeSibsService();
   }
 
   void UserInfo() async {
@@ -1486,171 +1490,119 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  int generateRandomNumber(int min, int max) {
-    // Initialize the random number generator
-    var rng = Random();
-
-    // Generate a random number between min and max (inclusive)
-    return min + rng.nextInt(max - min + 1);
-  }
-
-  int orderNumber = 0;
-
-  Future<void> sendOrderToApi(
-    List<Map<String, dynamic>> cartItems,
-    String total,
-  ) async {
+   Future<void> _initializeSibsService() async {
     try {
-      // Extracting names from cart items
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
-
-      // Extract user information
-      var turma = users[0]['Turma'] ?? '';
-      var nome = users[0]['Nome'] ?? '';
-      var apelido = users[0]['Apelido'] ?? '';
-      var permissao = users[0]['Permissao'] ?? '';
-      var imagem = users[0]['Imagem'] ?? '';
-
-      // Encode cartItems to JSON string
-      String cartItemsJson = json.encode(cartItems);
-
-      final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
-        body: {
-          'query_param': '5',
-          'nome': nome,
-          'apelido': apelido,
-          'orderNumber':
-              '0', // We don't need to generate this on client side anymore
-          'turma': turma,
-          'descricao': itemNames.join(', '),
-          'permissao': permissao,
-          'total': total,
-          'valor': dinheiroAtual.toString(),
-          'imagem': imagem,
-          'cartItems': cartItemsJson,
-        },
+      _sibsService = SibsService(
+        accessToken: '0276b80f950fb446c6addaccd121abfbbb.eyJlIjoiMjA1ODQyODEyNTE1MCIsInJvbGVzIjoiU1BHX01BTkFHRVIiLCJ0b2tlbkFwcERhdGEiOiJ7XCJtY1wiOlwiNTA2MzUwXCIsXCJ0Y1wiOlwiODIxNDRcIn0iLCJpIjoiMTc0Mjg5ODkyNTE1MCIsImlzIjoiaHR0cHM6Ly9xbHkuc2l0ZTEuc3NvLnN5cy5zaWJzLnB0L2F1dGgvcmVhbG1zL1FMWS5NRVJDSC5QT1JUMSIsInR5cCI6IkJlYXJlciIsImlkIjoiS3ExRUVzM2dLQzJmODQzYjljNGZlNjQ1MGJiZGRhMDU0ZTljZWRhZmFkIn0=.362668a74fc23ae86d72e66caccb82208f60f1fe84edbdb0085b650ca4bdfafdf41e237afc608eeb75bbaff687c67bf6acec00d53116f3564d878d648b3c3795',
+        merchantId: '506350',
+        merchantName: 'AppBar',
       );
-
-      if (response.statusCode == 200) {
-        // Decode the JSON response
-        var data = jsonDecode(response.body);
-
-        if (data['status'] == 'success') {
-          // Get the server-generated order number
-          orderNumber = int.parse(data['orderNumber'].toString());
-          print(orderNumber);
-
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
-            ),
-          );
-        } else {
-          // If there's an error from the server
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erro: ${data['message']}'),
-            ),
-          );
-        }
-      } else {
-        // If there's an HTTP error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao enviar o pedido. Contacte o Administrador!'),
-          ),
-        );
-      }
+      print('Serviço SIBS inicializado com sucesso');
     } catch (e) {
-      print('Erro ao fazer a requisição GET: $e');
+      print('Erro ao inicializar serviço SIBS: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-        ),
+        SnackBar(content: Text('Erro ao inicializar serviço de pagamento')),
       );
     }
   }
+  Future<void> _processMBWayPayment(double amount, String orderNumber) async {
+   
+      final phoneNumber = await _showPhoneNumberDialog();
+      if (phoneNumber == null) return;
 
-  Future<void> sendOrderToWebSocket(
-      List<Map<String, dynamic>> cartItems, String total) async {
-    try {
-      // Check if cartItems is not empty
-      print('Cart items: $cartItems'); // Debugging
-
-      // Extract item names or any other needed data
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
-      print('Item names: $itemNames'); // Debugging
-
-      var turma = users[0]['Turma'];
-      var nome = users[0]['Nome'];
-      var permissao = users[0]['Permissao'];
-      var imagem = users[0]['Imagem'];
-
-      final channel = WebSocketChannel.connect(
-        Uri.parse('ws://websocket.appbar.epvc.pt'),
+      final response = await _sibsService!.initiateMBWayPayment(
+        amount: amount.toString(),
+        orderNumber: orderNumber,
+        phoneNumber: phoneNumber,
       );
 
-      // Send all necessary cart data
-      Map<String, dynamic> orderData = {
-        'QPediu': nome,
-        'NPedido': orderNumber,
-        'Troco': dinheiroAtual,
-        'Turma': turma,
-        'Permissao': permissao,
-        'Estado': 0,
-        'Descricao': itemNames, // Cart item names
-        'Total': total,
-        'Imagem': imagem,
-      };
+      if (response['status'] == 'SUCCESS') {
+        // Mostrar mensagem de aguardando pagamento
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Aguardando confirmação do pagamento MBWay...'),
+            duration: Duration(seconds: 5),
+          ),
+        );
 
-      print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
+        // Iniciar verificação do status do pagamento
+        _checkPaymentStatus(response['paymentId']);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao iniciar pagamento MBWay')),
+        );
+      }
+    
+  }
 
-      // Send the order to the server
-      channel.sink.add(json.encode(orderData));
-
-      channel.stream.listen(
-        (message) {
-          var serverResponse = json.decode(message);
-          if (serverResponse['status'] == 'success') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content:
-                    Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
-              ),
-            );
-          }
-          channel.sink.close();
-        },
-        onError: (error) {
-          print('Erro ao fazer a requisição WebSocket: $error');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-            ),
-          );
-        },
-      );
-    } catch (e) {
-      print('Erro ao estabelecer conexão WebSocket: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+  Future<String?> _showPhoneNumberDialog() async {
+    final phoneController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Número de Telefone'),
+        content: TextField(
+          controller: phoneController,
+          keyboardType: TextInputType.phone,
+          decoration: InputDecoration(
+            hintText: 'Digite seu número de telefone',
+            prefixText: '+351 ',
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (phoneController.text.isNotEmpty) {
+                Navigator.pop(context, phoneController.text);
+              }
+            },
+            child: Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _checkPaymentStatus(String paymentId) async {
+    try {
+      final status = await _sibsService!.checkPaymentStatus(paymentId);
+      
+      if (status['status'] == 'SUCCESS') {
+        // Atualizar o status do pedido na API
+        final response = await http.post(
+          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+          body: {
+            'query_param': 'update_order_status',
+            'order_id': orderNumber.toString(),
+            'status': 'paid',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          // Limpar o carrinho e mostrar mensagem de sucesso
+          itemCountMap.clear();
+          setState(() {});
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Pagamento confirmado com sucesso!')),
+          );
+        }
+      } else if (status['status'] == 'CANCELLED') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pagamento cancelado')),
+        );
+      } else {
+        // Se ainda estiver pendente, continuar verificando
+        await Future.delayed(Duration(seconds: 5));
+        _checkPaymentStatus(paymentId);
+      }
+    } catch (e) {
+      print('Erro ao verificar status do pagamento: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao verificar status do pagamento')),
       );
     }
   }
@@ -1763,7 +1715,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
     if (cartItems.isNotEmpty) {
       if (allAvailable) {
-        await sendOrderToApi(cartItems, total.toString());
+        await sendOrderToApi();
 
         await sendRecentOrderToApi(cartItems);
         await sendOrderToWebSocket(cartItems, total.toString());
@@ -1792,6 +1744,222 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           },
         );
       }
+    }
+  }
+
+  Future<String?> _showPaymentMethodDialog() async {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Método de Pagamento'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, 'dinheiro');
+              },
+              child: Text('Dinheiro'),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, 'mbway');
+              },
+              child: Text('MBWay'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> sendOrderToApi() async {
+    if (itemCountMap.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('O carrinho está vazio')),
+      );
+      return;
+    }
+
+    // Mostrar diálogo de seleção de método de pagamento
+    final paymentMethod = await _showPaymentMethodDialog();
+    if (paymentMethod == null) return;
+
+    try {
+      List<String> itemNames = cartItems.map((item) => item['Nome'] as String).toList();
+
+      // Extract user information
+      var turma = users[0]['Turma'] ?? '';
+      var nome = users[0]['Nome'] ?? '';
+      var apelido = users[0]['Apelido'] ?? '';
+      var permissao = users[0]['Permissao'] ?? '';
+      var imagem = users[0]['Imagem'] ?? '';
+
+      // Encode cartItems to JSON string
+      String cartItemsJson = json.encode(cartItems);
+      double total = calculateTotal();
+
+      if (paymentMethod == 'mbway') {
+        // Se for MBWay, primeiro obter o número de telefone
+        final phoneNumber = await _showPhoneNumberDialog();
+        if (phoneNumber == null) return;
+
+        // Depois criar o pedido na API
+        final response = await http.post(
+          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+          body: {
+            'query_param': '5',
+            'nome': nome,
+            'apelido': apelido,
+            'orderNumber': '0',
+            'turma': turma,
+            'descricao': itemNames.join(', '),
+            'permissao': permissao,
+            'total': total.toString(),
+            'valor': dinheiroAtual.toString(),
+            'imagem': imagem,
+            'cartItems': cartItemsJson,
+            'payment_method': paymentMethod,
+            'phone_number': phoneNumber,
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['status'] == 'success') {
+            orderNumber = int.parse(data['orderNumber'].toString());
+            // Iniciar o processo de pagamento MBWay
+            await _processMBWayPayment(total, orderNumber.toString());
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Erro ao criar pedido: ${data['message']}')),
+            );
+          }
+        }
+      } else {
+        // Se for dinheiro, criar o pedido normalmente
+        final response = await http.post(
+          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+          body: {
+            'query_param': '5',
+            'nome': nome,
+            'apelido': apelido,
+            'orderNumber': '0',
+            'turma': turma,
+            'descricao': itemNames.join(', '),
+            'permissao': permissao,
+            'total': total.toString(),
+            'valor': dinheiroAtual.toString(),
+            'imagem': imagem,
+            'cartItems': cartItemsJson,
+            'payment_method': paymentMethod,
+            'phone_number': "",
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['status'] == 'success') {
+            orderNumber = int.parse(data['orderNumber'].toString());
+            // Enviar para o WebSocket e limpar o carrinho
+            await sendOrderToWebSocket(cartItems, total.toString());
+            itemCountMap.clear();
+            setState(() {});
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Pedido enviado com sucesso! Pedido Nº $orderNumber')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Erro ao criar pedido: ${data['message']}')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print('Erro ao enviar pedido: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao processar pedido')),
+      );
+    }
+  }
+
+  Future<void> sendOrderToWebSocket(
+      List<Map<String, dynamic>> cartItems, String total) async {
+    try {
+      // Check if cartItems is not empty
+      print('Cart items: $cartItems'); // Debugging
+
+      // Extract item names or any other needed data
+      List<String> itemNames =
+          cartItems.map((item) => item['Nome'] as String).toList();
+      print('Item names: $itemNames'); // Debugging
+
+      var turma = users[0]['Turma'];
+      var nome = users[0]['Nome'];
+      var permissao = users[0]['Permissao'];
+      var imagem = users[0]['Imagem'];
+
+      final channel = WebSocketChannel.connect(
+        Uri.parse('ws://websocket.appbar.epvc.pt'),
+      );
+
+      // Send all necessary cart data
+      Map<String, dynamic> orderData = {
+        'QPediu': nome,
+        'NPedido': orderNumber,
+        'Troco': dinheiroAtual,
+        'Turma': turma,
+        'Permissao': permissao,
+        'Estado': 0,
+        'Descricao': itemNames, // Cart item names
+        'Total': total,
+        'Imagem': imagem,
+      };
+
+      print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
+
+      // Send the order to the server
+      channel.sink.add(json.encode(orderData));
+
+      channel.stream.listen(
+        (message) {
+          var serverResponse = json.decode(message);
+          if (serverResponse['status'] == 'success') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
+              ),
+            );
+          }
+          channel.sink.close();
+        },
+        onError: (error) {
+          print('Erro ao fazer a requisição WebSocket: $error');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      print('Erro ao estabelecer conexão WebSocket: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+        ),
+      );
     }
   }
 
