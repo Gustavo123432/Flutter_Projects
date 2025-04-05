@@ -12,6 +12,7 @@ import 'package:web_socket_channel/status.dart' as status;
 import 'package:intl/intl.dart';
 import 'package:diacritic/diacritic.dart'; // Import the diacritic package
 import 'package:my_flutter_project/SIBS/sibs_service.dart';
+import '../SIBS/mbway_waiting_page.dart';
 
 void main() {
   runApp(HomeAlunoMain());
@@ -1493,7 +1494,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
    Future<void> _initializeSibsService() async {
     try {
       _sibsService = SibsService(
-        accessToken: '0276b80f950fb446c6addaccd121abfbbb.eyJlIjoiMjA1ODQyODEyNTE1MCIsInJvbGVzIjoiU1BHX01BTkFHRVIiLCJ0b2tlbkFwcERhdGEiOiJ7XCJtY1wiOlwiNTA2MzUwXCIsXCJ0Y1wiOlwiODIxNDRcIn0iLCJpIjoiMTc0Mjg5ODkyNTE1MCIsImlzIjoiaHR0cHM6Ly9xbHkuc2l0ZTEuc3NvLnN5cy5zaWJzLnB0L2F1dGgvcmVhbG1zL1FMWS5NRVJDSC5QT1JUMSIsInR5cCI6IkJlYXJlciIsImlkIjoiS3ExRUVzM2dLQzJmODQzYjljNGZlNjQ1MGJiZGRhMDU0ZTljZWRhZmFkIn0=.362668a74fc23ae86d72e66caccb82208f60f1fe84edbdb0085b650ca4bdfafdf41e237afc608eeb75bbaff687c67bf6acec00d53116f3564d878d648b3c3795',
+        accessToken: '0267adfae94c224be1b374be2ce7b298f0.eyJlIjoiMjA1NzkzODk3NTc1MSIsInJvbGVzIjoiTUFOQUdFUiIsInRva2VuQXBwRGF0YSI6IntcIm1jXCI6XCI1MDYzNTBcIixcInRjXCI6XCI4MjE0NFwifSIsImkiOiIxNzQyNDA2MTc1NzUxIiwiaXMiOiJodHRwczovL3FseS5zaXRlMS5zc28uc3lzLnNpYnMucHQvYXV0aC9yZWFsbXMvREVWLlNCTy1JTlQuUE9SVDEiLCJ0eXAiOiJCZWFyZXIiLCJpZCI6IjVXcjN5WkZCSERmNzE4MDgxMGYxYjA0YTg2OTE4OTEwZDBjYzM2ZTRiMSJ9.6a6179e2d76dbe03f41f8252510dcb8a7056d9132a034c26174a6cf5c2ce75b3b5052d85f38fdd8b8765b7dfeb42e2d8aae898dfea1893b217856ef0794ee2f1',
         merchantId: '506350',
         merchantName: 'AppBar',
       );
@@ -1506,48 +1507,144 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
   Future<void> _processMBWayPayment(double amount, String orderNumber) async {
-   
-      final phoneNumber = await _showPhoneNumberDialog();
-      if (phoneNumber == null) return;
+  try {
+    final phoneNumber = await _showPhoneNumberDialog();
+    if (phoneNumber == null) return;
 
-      final response = await _sibsService!.initiateMBWayPayment(
-        amount: amount.toString(),
-        orderNumber: orderNumber,
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Iniciando pagamento MBWay...'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    // 1. First initiate the payment to get transaction credentials
+    final paymentInitResponse = await _sibsService!.initiateMBWayPayment(
+      amount: amount,
+      orderNumber: orderNumber,
+      phoneNumber: phoneNumber,
+    );
+
+    // Debug print to see full response
+    print('Initiate Payment Response: $paymentInitResponse');
+
+    // 2. Extract the transaction ID and signature
+    if (paymentInitResponse.containsKey('transactionID') && 
+        paymentInitResponse.containsKey('transactionSignature')) {
+      
+      final transactionId = paymentInitResponse['transactionID'].toString(); // Ensure string
+      final transactionSignature = paymentInitResponse['transactionSignature'].toString();
+
+      print('Transaction ID: $transactionId');
+      print('Transaction Signature: $transactionSignature');
+
+      // 3. Now create the MBWay payment with these credentials
+      final createResponse = await _sibsService!.createMBWayPayment(
+        transactionId: transactionId.toString(),
+        transactionSignature: transactionSignature,
         phoneNumber: phoneNumber,
       );
 
-      if (response['status'] == 'SUCCESS') {
-        // Mostrar mensagem de aguardando pagamento
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Aguardando confirmação do pagamento MBWay...'),
-            duration: Duration(seconds: 5),
+      // Debug print to see create response
+      print('Create Payment Response: $createResponse');
+
+      // 4. Handle the create response
+      if (createResponse.containsKey('transactionID') || 
+          createResponse.containsKey('statusCode') == "000") {
+        final paymentId = transactionId;
+        
+        // Navegar para a página de espera do MB WAY
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MBWayPaymentWaitingPage(
+              amount: amount,
+              transactionId: paymentId,
+              phoneNumber: phoneNumber,
+              accessToken: _sibsService!.accessToken,
+              merchantId: _sibsService!.merchantId,
+              merchantName: _sibsService!.merchantName,
+              onPaymentResult: (success, message) async {
+                Navigator.pop(context); // Fechar a página de espera
+                
+                if (success) {
+                  // Atualizar o status do pedido na API
+                  await _updateOrderStatusInAPI(orderNumber.toString(), 'paid');
+                  
+                  // Limpar o carrinho e mostrar mensagem de sucesso
+                  setState(() {
+                    cartItems.clear();
+                    updateItemCountMap();
+                  });
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Pagamento confirmado com sucesso!')),
+                  );
+                  
+                  // Navegar para a página inicial
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => HomeAlunoMain()),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(message),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
           ),
         );
-
-        // Iniciar verificação do status do pagamento
-        _checkPaymentStatus(response['paymentId']);
+        
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao iniciar pagamento MBWay')),
-        );
+        throw Exception('Resposta de criação de pagamento inválida: $createResponse');
       }
-    
+    } else {
+      throw Exception('Credenciais de transação ausentes na resposta. Resposta recebida: $paymentInitResponse');
+    }
+  } catch (e) {
+    print('Erro ao processar pagamento MBWay: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Erro ao processar pagamento: ${e.toString().replaceAll(RegExp(r'^Exception: '), '')}'),
+        duration: Duration(seconds: 5),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
 
   Future<String?> _showPhoneNumberDialog() async {
     final phoneController = TextEditingController();
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Número de Telefone'),
-        content: TextField(
-          controller: phoneController,
-          keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            hintText: 'Digite seu número de telefone',
-            prefixText: '+351 ',
-          ),
+        title: Text('Número de Telefone MBWay'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Digite seu número de telefone associado ao MBWay'),
+            SizedBox(height: 10),
+            TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                hintText: '9XXXXXXXX',
+                prefixIcon: Container(
+                  padding: EdgeInsets.all(8),
+                  child: Text(
+                    '+351',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                border: OutlineInputBorder(),
+              ),
+              maxLength: 9,
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -1556,8 +1653,15 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           ),
           TextButton(
             onPressed: () {
-              if (phoneController.text.isNotEmpty) {
-                Navigator.pop(context, phoneController.text);
+              String phoneNumber = phoneController.text.trim();
+              // Validar: deve ser um número português válido
+              if (phoneNumber.length == 9 && 
+                  (phoneNumber.startsWith('9') || phoneNumber.startsWith('2') || phoneNumber.startsWith('3'))) {
+                Navigator.pop(context, phoneNumber);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Por favor, digite um número de telefone válido')),
+                );
               }
             },
             child: Text('Confirmar'),
@@ -1567,43 +1671,25 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     );
   }
 
-  Future<void> _checkPaymentStatus(String paymentId) async {
+  Future<void> _updateOrderStatusInAPI(String orderId, String status) async {
     try {
-      final status = await _sibsService!.checkPaymentStatus(paymentId);
-      
-      if (status['status'] == 'SUCCESS') {
-        // Atualizar o status do pedido na API
-        final response = await http.post(
-          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
-          body: {
-            'query_param': 'update_order_status',
-            'order_id': orderNumber.toString(),
-            'status': 'paid',
-          },
-        );
-
-        if (response.statusCode == 200) {
-          // Limpar o carrinho e mostrar mensagem de sucesso
-          itemCountMap.clear();
-          setState(() {});
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Pagamento confirmado com sucesso!')),
-          );
-        }
-      } else if (status['status'] == 'CANCELLED') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Pagamento cancelado')),
-        );
-      } else {
-        // Se ainda estiver pendente, continuar verificando
-        await Future.delayed(Duration(seconds: 5));
-        _checkPaymentStatus(paymentId);
-      }
-    } catch (e) {
-      print('Erro ao verificar status do pagamento: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao verificar status do pagamento')),
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        body: {
+          'query_param': 'update_order_status',
+          'order_id': orderId,
+          'status': status,
+        },
       );
+
+      if (response.statusCode != 200) {
+        throw Exception('Falha ao atualizar status do pedido na API');
+      }
+      
+      print('Status do pedido atualizado com sucesso: $status');
+    } catch (e) {
+      print('Erro ao atualizar status do pedido: $e');
+      throw e;
     }
   }
 
@@ -1759,17 +1845,103 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               onPressed: () {
                 Navigator.pop(context, 'dinheiro');
               },
-              child: Text('Dinheiro'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, 50), // width, height
+                backgroundColor: Colors.green[700],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.attach_money, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text('Dinheiro', style: TextStyle(fontSize: 16, color: Colors.white)),
+                ],
+              ),
             ),
-            SizedBox(height: 10),
+            SizedBox(height: 15),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context, 'mbway');
               },
-              child: Text('MBWay'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, 50), // width, height
+                backgroundColor: Colors.purple,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.phone_android, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text('MBWay', style: TextStyle(fontSize: 16, color: Colors.white)),
+                ],
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<bool> _showNeedsChangeDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Troco'),
+        content: Text('Precisa de troco?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Não'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Sim'),
+          ),
+        ],
+      ),
+    ) ?? false; // Se o usuário fechar o diálogo sem escolher, assume false
+  }
+
+  Future<double?> _showMoneyAmountDialog(double total) async {
+    final moneyController = TextEditingController();
+    return showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Valor Entregue'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Total a pagar: ${total.toStringAsFixed(2).replaceAll('.', ',')}€'),
+            SizedBox(height: 10),
+            TextField(
+              controller: moneyController,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                hintText: 'Digite o valor que será entregue',
+                suffixText: '€',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              double? amount = double.tryParse(moneyController.text.replaceAll(',', '.'));
+              if (amount != null && amount >= total) {
+                Navigator.pop(context, amount);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Valor inválido ou menor que o total')),
+                );
+              }
+            },
+            child: Text('Confirmar'),
+          ),
+        ],
       ),
     );
   }
@@ -1801,11 +1973,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       double total = calculateTotal();
 
       if (paymentMethod == 'mbway') {
-        // Se for MBWay, primeiro obter o número de telefone
-        final phoneNumber = await _showPhoneNumberDialog();
-        if (phoneNumber == null) return;
-
-        // Depois criar o pedido na API
+        // Para MB WAY, primeiro criamos o pedido com os dados disponíveis
+        // (sem solicitar telefone aqui, isso será feito em _processMBWayPayment)
         final response = await http.post(
           Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
           body: {
@@ -1817,11 +1986,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             'descricao': itemNames.join(', '),
             'permissao': permissao,
             'total': total.toString(),
-            'valor': dinheiroAtual.toString(),
+            'valor': total.toString(), // Valor entregue é o mesmo do total para MB WAY
             'imagem': imagem,
             'cartItems': cartItemsJson,
             'payment_method': paymentMethod,
-            'phone_number': phoneNumber,
           },
         );
 
@@ -1829,16 +1997,27 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           final data = json.decode(response.body);
           if (data['status'] == 'success') {
             orderNumber = int.parse(data['orderNumber'].toString());
-            // Iniciar o processo de pagamento MBWay
+            // Agora processamos o pagamento MB WAY, que vai pedir o número de telefone
             await _processMBWayPayment(total, orderNumber.toString());
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Erro ao criar pedido: ${data['message']}')),
+              SnackBar(content: Text('Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
             );
           }
         }
-      } else {
-        // Se for dinheiro, criar o pedido normalmente
+      } else if (paymentMethod == 'dinheiro') {
+        // Se for dinheiro, perguntar sobre o troco
+        bool needsChange = await _showNeedsChangeDialog();
+        
+        if (needsChange) {
+          // Se precisar de troco, perguntar o valor entregue
+          dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
+        } else {
+          // Se não precisar de troco, o valor entregue é o mesmo do total
+          dinheiroAtual = total;
+        }
+        
+        // Criar o pedido com as informações de pagamento em dinheiro
         final response = await http.post(
           Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
           body: {
@@ -1854,7 +2033,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             'imagem': imagem,
             'cartItems': cartItemsJson,
             'payment_method': paymentMethod,
-            'phone_number': "",
+            'needs_change': needsChange.toString(),
           },
         );
 
@@ -1864,14 +2043,29 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             orderNumber = int.parse(data['orderNumber'].toString());
             // Enviar para o WebSocket e limpar o carrinho
             await sendOrderToWebSocket(cartItems, total.toString());
-            itemCountMap.clear();
-            setState(() {});
+            
+            setState(() {
+              cartItems.clear();
+              updateItemCountMap();
+            });
+            
+            double change = dinheiroAtual - total;
+            String changeMsg = change > 0 
+                ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
+                : '';
+                
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Pedido enviado com sucesso! Pedido Nº $orderNumber')),
+              SnackBar(content: Text('Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
+            );
+            
+            // Navegar para a página inicial
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeAlunoMain()),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Erro ao criar pedido: ${data['message']}')),
+              SnackBar(content: Text('Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
             );
           }
         }
@@ -1879,7 +2073,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     } catch (e) {
       print('Erro ao enviar pedido: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao processar pedido')),
+        SnackBar(content: Text('Erro ao processar pedido: $e')),
       );
     }
   }
