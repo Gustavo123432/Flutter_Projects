@@ -13,6 +13,8 @@ import 'package:intl/intl.dart';
 import 'package:diacritic/diacritic.dart'; // Import the diacritic package
 import 'package:my_flutter_project/SIBS/sibs_service.dart';
 import '../SIBS/mbway_waiting_page.dart';
+import '../SIBS/order_confirmation_page.dart';
+import '../SIBS/mbway_phone_page.dart';
 
 void main() {
   runApp(HomeAlunoMain());
@@ -612,43 +614,43 @@ class _HomeAlunoState extends State<HomeAluno> {
                   Center(
                     child: Padding(
                       padding: EdgeInsets.only(top: 30),
-                      child: 
-                     Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.construction,
-                          size: 30,
-                          color: Colors.white,
-                        ),
-                        SizedBox(height: 8),
-                        Container(
-                          width:
-                              200, // Set a specific width to control wrapping
-                          child: Text(
-                            'EM DESENVOLVIMENTO',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  blurRadius: 10,
-                                  color: Colors.black,
-                                  offset: Offset(2, 2),
-                                ),
-                              ],
-                            ),
-                            textAlign:
-                                TextAlign.center, // Optional: Center the text
-                            maxLines: 1, // Optional: Limit the number of lines
-                            overflow: TextOverflow
-                                .ellipsis, // Optional: Handle overflow
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.construction,
+                            size: 30,
+                            color: Colors.white,
                           ),
-                        )
-                      ],
+                          SizedBox(height: 8),
+                          Container(
+                            width:
+                                200, // Set a specific width to control wrapping
+                            child: Text(
+                              'EM DESENVOLVIMENTO',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                shadows: [
+                                  Shadow(
+                                    blurRadius: 10,
+                                    color: Colors.black,
+                                    offset: Offset(2, 2),
+                                  ),
+                                ],
+                              ),
+                              textAlign:
+                                  TextAlign.center, // Optional: Center the text
+                              maxLines:
+                                  1, // Optional: Limit the number of lines
+                              overflow: TextOverflow
+                                  .ellipsis, // Optional: Handle overflow
+                            ),
+                          )
+                        ],
+                      ),
                     ),
-                  ),
                   )
                 ],
               ),
@@ -1491,10 +1493,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-   Future<void> _initializeSibsService() async {
+  Future<void> _initializeSibsService() async {
     try {
       _sibsService = SibsService(
-        accessToken: '0267adfae94c224be1b374be2ce7b298f0.eyJlIjoiMjA1NzkzODk3NTc1MSIsInJvbGVzIjoiTUFOQUdFUiIsInRva2VuQXBwRGF0YSI6IntcIm1jXCI6XCI1MDYzNTBcIixcInRjXCI6XCI4MjE0NFwifSIsImkiOiIxNzQyNDA2MTc1NzUxIiwiaXMiOiJodHRwczovL3FseS5zaXRlMS5zc28uc3lzLnNpYnMucHQvYXV0aC9yZWFsbXMvREVWLlNCTy1JTlQuUE9SVDEiLCJ0eXAiOiJCZWFyZXIiLCJpZCI6IjVXcjN5WkZCSERmNzE4MDgxMGYxYjA0YTg2OTE4OTEwZDBjYzM2ZTRiMSJ9.6a6179e2d76dbe03f41f8252510dcb8a7056d9132a034c26174a6cf5c2ce75b3b5052d85f38fdd8b8765b7dfeb42e2d8aae898dfea1893b217856ef0794ee2f1',
+        accessToken:
+            '0267adfae94c224be1b374be2ce7b298f0.eyJlIjoiMjA1NzkzODk3NTc1MSIsInJvbGVzIjoiTUFOQUdFUiIsInRva2VuQXBwRGF0YSI6IntcIm1jXCI6XCI1MDYzNTBcIixcInRjXCI6XCI4MjE0NFwifSIsImkiOiIxNzQyNDA2MTc1NzUxIiwiaXMiOiJodHRwczovL3FseS5zaXRlMS5zc28uc3lzLnNpYnMucHQvYXV0aC9yZWFsbXMvREVWLlNCTy1JTlQuUE9SVDEiLCJ0eXAiOiJCZWFyZXIiLCJpZCI6IjVXcjN5WkZCSERmNzE4MDgxMGYxYjA0YTg2OTE4OTEwZDBjYzM2ZTRiMSJ9.6a6179e2d76dbe03f41f8252510dcb8a7056d9132a034c26174a6cf5c2ce75b3b5052d85f38fdd8b8765b7dfeb42e2d8aae898dfea1893b217856ef0794ee2f1',
         merchantId: '506350',
         merchantName: 'AppBar',
       );
@@ -1506,143 +1509,265 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       );
     }
   }
-  Future<void> _processMBWayPayment(double amount, String orderNumber) async {
-  try {
-    final phoneNumber = await _showPhoneNumberDialog();
-    if (phoneNumber == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Iniciando pagamento MBWay...'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-
-    // 1. First initiate the payment to get transaction credentials
-    final paymentInitResponse = await _sibsService!.initiateMBWayPayment(
-      amount: amount,
-      orderNumber: orderNumber,
-      phoneNumber: phoneNumber,
-    );
-
-    // Debug print to see full response
-    print('Initiate Payment Response: $paymentInitResponse');
-
-    // 2. Extract the transaction ID and signature
-    if (paymentInitResponse.containsKey('transactionID') && 
-        paymentInitResponse.containsKey('transactionSignature')) {
-      
-      final transactionId = paymentInitResponse['transactionID'].toString(); // Ensure string
-      final transactionSignature = paymentInitResponse['transactionSignature'].toString();
-
-      print('Transaction ID: $transactionId');
-      print('Transaction Signature: $transactionSignature');
-
-      // 3. Now create the MBWay payment with these credentials
-      final createResponse = await _sibsService!.createMBWayPayment(
-        transactionId: transactionId.toString(),
-        transactionSignature: transactionSignature,
-        phoneNumber: phoneNumber,
+  Future<void> sendOrderToApi() async {
+    if (itemCountMap.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('O carrinho está vazio')),
       );
+      return;
+    }
 
-      // Debug print to see create response
-      print('Create Payment Response: $createResponse');
+    // Mostrar diálogo de seleção de método de pagamento
+    final paymentMethod = await _showPaymentMethodDialog();
+    if (paymentMethod == null) return;
 
-      // 4. Handle the create response
-      if (createResponse.containsKey('transactionID') || 
-          createResponse.containsKey('statusCode') == "000") {
-        final paymentId = transactionId;
+    try {
+      List<String> itemNames =
+          cartItems.map((item) => item['Nome'] as String).toList();
+
+      // Extract user information
+      var turma = users[0]['Turma'] ?? '';
+      var nome = users[0]['Nome'] ?? '';
+      var apelido = users[0]['Apelido'] ?? '';
+      var permissao = users[0]['Permissao'] ?? '';
+      var imagem = users[0]['Imagem'] ?? '';
+
+      // Encode cartItems to JSON string
+      String cartItemsJson = json.encode(cartItems);
+      double total = calculateTotal();
+
+      if (paymentMethod == 'mbway') {
+        // Usar a nova página MBWayPhoneNumberPage que contém a lógica de pagamento
+        double total = calculateTotal();
         
-        // Navegar para a página de espera do MB WAY
-        final result = await Navigator.push(
+        // Preparar os dados do pedido
+        Map<String, dynamic> orderData = {
+          'nome': nome,
+          'apelido': apelido,
+          'turma': turma,
+          'descricao': itemNames.join(', '),
+          'permissao': permissao,
+          'imagem': imagem,
+          'cartItems': cartItemsJson,
+        };
+        
+        // Ir para a página de telefone MBWay com a lógica de pagamento
+        await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => MBWayPaymentWaitingPage(
-              amount: amount,
-              transactionId: paymentId,
-              phoneNumber: phoneNumber,
-              accessToken: _sibsService!.accessToken,
-              merchantId: _sibsService!.merchantId,
-              merchantName: _sibsService!.merchantName,
-              onPaymentResult: (success, message) async {
-                Navigator.pop(context); // Fechar a página de espera
-                
+            builder: (context) => MBWayPhoneNumberPage(
+              amount: total,
+              orderData: orderData,
+              sibsService: _sibsService!,
+              onResult: (success, newOrderNumber) {
                 if (success) {
-                  // Atualizar o status do pedido na API
-                  await _updateOrderStatusInAPI(orderNumber.toString(), 'paid');
-                  
-                  // Limpar o carrinho e mostrar mensagem de sucesso
+                  // Pagamento bem-sucedido, limpar carrinho
                   setState(() {
                     cartItems.clear();
                     updateItemCountMap();
+                    orderNumber = newOrderNumber;
                   });
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Pagamento confirmado com sucesso!')),
-                  );
-                  
-                  // Navegar para a página inicial
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => HomeAlunoMain()),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(message),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
                 }
+              },
+              onCancel: () {
+                Navigator.pop(context); // Voltar para a página do carrinho
               },
             ),
           ),
         );
-        
-      } else {
-        throw Exception('Resposta de criação de pagamento inválida: $createResponse');
-      }
-    } else {
-      throw Exception('Credenciais de transação ausentes na resposta. Resposta recebida: $paymentInitResponse');
-    }
-  } catch (e) {
-    print('Erro ao processar pagamento MBWay: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Erro ao processar pagamento: ${e.toString().replaceAll(RegExp(r'^Exception: '), '')}'),
-        duration: Duration(seconds: 5),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-}
+      } else if (paymentMethod == 'dinheiro') {
+        // Se for dinheiro, perguntar sobre o troco
+        bool needsChange = await _showNeedsChangeDialog();
 
-  Future<String?> _showPhoneNumberDialog() async {
-    final phoneController = TextEditingController();
+        if (needsChange) {
+          // Se precisar de troco, perguntar o valor entregue
+          dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
+        } else {
+          // Se não precisar de troco, o valor entregue é o mesmo do total
+          dinheiroAtual = total;
+        }
+
+        // Criar o pedido com as informações de pagamento em dinheiro
+        final response = await http.post(
+          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+          body: {
+            'query_param': '5',
+            'nome': nome,
+            'apelido': apelido,
+            'orderNumber': '0',
+            'turma': turma,
+            'descricao': itemNames.join(', '),
+            'permissao': permissao,
+            'total': total.toString(),
+            'valor': dinheiroAtual.toString(),
+            'imagem': imagem,
+            'cartItems': cartItemsJson,
+            'payment_method': paymentMethod,
+          },
+        );
+
+        print('Response status: ${response.statusCode}');
+        print('Response body: ${response.body}');
+
+        if (response.statusCode == 200) {
+          if (response.body.isEmpty) {
+            throw Exception('Empty response from server');
+          }
+
+          try {
+            final data = json.decode(response.body);
+
+            if (data['status'] == 'success') {
+              orderNumber = int.parse(data['orderNumber'].toString());
+              // Enviar para o WebSocket e limpar o carrinho
+              await sendOrderToWebSocket(cartItems, total.toString());
+
+              setState(() {
+                cartItems.clear();
+                updateItemCountMap();
+              });
+
+              double change = dinheiroAtual - total;
+              String changeMsg = change > 0
+                  ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
+                  : '';
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(
+                        'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
+              );
+
+              // Navegar para a página de confirmação de pedido
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OrderConfirmationPage(
+                    orderNumber: orderNumber,
+                    amount: total,
+                  ),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(
+                        'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
+              );
+            }
+          } catch (e) {
+            print('JSON decode error: $e');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text('Erro ao processar resposta do servidor')),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Erro ao enviar pedido: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao processar pedido: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<String?> _showPaymentMethodDialog() async {
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Número de Telefone MBWay'),
+        title: Text('Método de Pagamento'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Digite seu número de telefone associado ao MBWay'),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, 'dinheiro');
+              },
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, 50), // width, height
+                backgroundColor: Colors.green[700],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.attach_money, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text('Dinheiro',
+                      style: TextStyle(fontSize: 16, color: Colors.white)),
+                ],
+              ),
+            ),
+            SizedBox(height: 15),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, 'mbway');
+              },
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, 50), // width, height
+                backgroundColor: Colors.purple,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.phone_android, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text('MBWay',
+                      style: TextStyle(fontSize: 16, color: Colors.white)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _showNeedsChangeDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Troco'),
+            content: Text('Precisa de troco?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('Não'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('Sim'),
+              ),
+            ],
+          ),
+        ) ??
+        false; // Se o usuário fechar o diálogo sem escolher, assume false
+  }
+
+  Future<double?> _showMoneyAmountDialog(double total) async {
+    final moneyController = TextEditingController();
+    return showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Valor Entregue'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+                'Total a pagar: ${total.toStringAsFixed(2).replaceAll('.', ',')}€'),
             SizedBox(height: 10),
             TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.phone,
+              controller: moneyController,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                hintText: '9XXXXXXXX',
-                prefixIcon: Container(
-                  padding: EdgeInsets.all(8),
-                  child: Text(
-                    '+351',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                border: OutlineInputBorder(),
+                hintText: 'Digite o valor que será entregue',
+                suffixText: '€',
               ),
-              maxLength: 9,
             ),
           ],
         ),
@@ -1653,14 +1778,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           ),
           TextButton(
             onPressed: () {
-              String phoneNumber = phoneController.text.trim();
-              // Validar: deve ser um número português válido
-              if (phoneNumber.length == 9 && 
-                  (phoneNumber.startsWith('9') || phoneNumber.startsWith('2') || phoneNumber.startsWith('3'))) {
-                Navigator.pop(context, phoneNumber);
+              double? amount =
+                  double.tryParse(moneyController.text.replaceAll(',', '.'));
+              if (amount != null && amount >= total) {
+                Navigator.pop(context, amount);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Por favor, digite um número de telefone válido')),
+                  SnackBar(
+                      content: Text('Valor inválido ou menor que o total')),
                 );
               }
             },
@@ -1671,25 +1796,82 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     );
   }
 
-  Future<void> _updateOrderStatusInAPI(String orderId, String status) async {
+  Future<void> sendOrderToWebSocket(
+      List<Map<String, dynamic>> cartItems, String total) async {
     try {
-      final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
-        body: {
-          'query_param': 'update_order_status',
-          'order_id': orderId,
-          'status': status,
-        },
+      // Check if cartItems is not empty
+      print('Cart items: $cartItems'); // Debugging
+
+      // Extract item names or any other needed data
+      List<String> itemNames =
+          cartItems.map((item) => item['Nome'] as String).toList();
+      print('Item names: $itemNames'); // Debugging
+
+      var turma = users[0]['Turma'];
+      var nome = users[0]['Nome'];
+      var permissao = users[0]['Permissao'];
+      var imagem = users[0]['Imagem'];
+
+      final channel = WebSocketChannel.connect(
+        Uri.parse('ws://websocket.appbar.epvc.pt'),
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('Falha ao atualizar status do pedido na API');
-      }
-      
-      print('Status do pedido atualizado com sucesso: $status');
+      // Send all necessary cart data
+      Map<String, dynamic> orderData = {
+        'QPediu': nome,
+        'NPedido': orderNumber,
+        'Troco': dinheiroAtual,
+        'Turma': turma,
+        'Permissao': permissao,
+        'Estado': 0,
+        'Descricao': itemNames, // Cart item names
+        'Total': total,
+        'Imagem': imagem,
+      };
+
+      print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
+
+      // Send the order to the server
+      channel.sink.add(json.encode(orderData));
+
+      channel.stream.listen(
+        (message) {
+          var serverResponse = json.decode(message);
+          if (serverResponse['status'] == 'success') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
+              ),
+            );
+          }
+          channel.sink.close();
+        },
+        onError: (error) {
+          print('Erro ao fazer a requisição WebSocket: $error');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+            ),
+          );
+        },
+      );
     } catch (e) {
-      print('Erro ao atualizar status do pedido: $e');
-      throw e;
+      print('Erro ao estabelecer conexão WebSocket: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+        ),
+      );
     }
   }
 
@@ -1801,15 +1983,17 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
     if (cartItems.isNotEmpty) {
       if (allAvailable) {
-        await sendOrderToApi();
-
-        await sendRecentOrderToApi(cartItems);
-        await sendOrderToWebSocket(cartItems, total.toString());
-
-        setState(() {
-          cartItems.clear();
-          updateItemCountMap();
-        });
+        // Em vez de enviar diretamente para a API, abrir o diálogo de seleção de método de pagamento
+        final paymentMethod = await _showPaymentMethodDialog();
+        if (paymentMethod == null) return;
+        
+        if (paymentMethod == 'mbway') {
+          // Para MBWay, apenas abrir a página de telefone sem enviar para a API ainda
+          await _handleMBWayPayment(total);
+        } else if (paymentMethod == 'dinheiro') {
+          // Para pagamento em dinheiro, seguir o fluxo normal
+          await _handleCashPayment(total);
+        }
       } else {
         showDialog(
           context: context,
@@ -1833,133 +2017,70 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  Future<String?> _showPaymentMethodDialog() async {
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Método de Pagamento'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, 'dinheiro');
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, 50), // width, height
-                backgroundColor: Colors.green[700],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.attach_money, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text('Dinheiro', style: TextStyle(fontSize: 16, color: Colors.white)),
-                ],
-              ),
-            ),
-            SizedBox(height: 15),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, 'mbway');
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, 50), // width, height
-                backgroundColor: Colors.purple,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.phone_android, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text('MBWay', style: TextStyle(fontSize: 16, color: Colors.white)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Método para lidar com pagamento MBWay
+  Future<void> _handleMBWayPayment(double total) async {
+    try {
+      List<String> itemNames =
+          cartItems.map((item) => item['Nome'] as String).toList();
 
-  Future<bool> _showNeedsChangeDialog() async {
-    return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Troco'),
-        content: Text('Precisa de troco?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Não'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Sim'),
-          ),
-        ],
-      ),
-    ) ?? false; // Se o usuário fechar o diálogo sem escolher, assume false
-  }
-
-  Future<double?> _showMoneyAmountDialog(double total) async {
-    final moneyController = TextEditingController();
-    return showDialog<double>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Valor Entregue'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Total a pagar: ${total.toStringAsFixed(2).replaceAll('.', ',')}€'),
-            SizedBox(height: 10),
-            TextField(
-              controller: moneyController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                hintText: 'Digite o valor que será entregue',
-                suffixText: '€',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              double? amount = double.tryParse(moneyController.text.replaceAll(',', '.'));
-              if (amount != null && amount >= total) {
-                Navigator.pop(context, amount);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Valor inválido ou menor que o total')),
-                );
+      // Extract user information
+      var turma = users[0]['Turma'] ?? '';
+      var nome = users[0]['Nome'] ?? '';
+      var apelido = users[0]['Apelido'] ?? '';
+      var permissao = users[0]['Permissao'] ?? '';
+      var imagem = users[0]['Imagem'] ?? '';
+      
+      // Encode cartItems to JSON string
+      String cartItemsJson = json.encode(cartItems);
+      
+      // Preparar os dados do pedido
+      Map<String, dynamic> orderData = {
+        'nome': nome,
+        'apelido': apelido,
+        'turma': turma,
+        'descricao': itemNames.join(', '),
+        'permissao': permissao,
+        'imagem': imagem,
+        'cartItems': cartItemsJson,
+      };
+      
+      // Ir para a página de telefone MBWay com a lógica de pagamento
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MBWayPhoneNumberPage(
+            amount: total,
+            orderData: orderData,
+            sibsService: _sibsService!,
+            onResult: (success, newOrderNumber) {
+              if (success) {
+                // Pagamento bem-sucedido, limpar carrinho
+                setState(() {
+                  cartItems.clear();
+                  updateItemCountMap();
+                  orderNumber = newOrderNumber;
+                });
               }
             },
-            child: Text('Confirmar'),
+            onCancel: () {
+              Navigator.pop(context); // Voltar para a página do carrinho
+            },
           ),
-        ],
-      ),
-    );
+        ),
+      );
+    } catch (e) {
+      print('Erro ao processar pagamento MBWay: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
+      );
+    }
   }
 
-  Future<void> sendOrderToApi() async {
-    if (itemCountMap.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('O carrinho está vazio')),
-      );
-      return;
-    }
-
-    // Mostrar diálogo de seleção de método de pagamento
-    final paymentMethod = await _showPaymentMethodDialog();
-    if (paymentMethod == null) return;
-
+  // Método para lidar com pagamento em dinheiro
+  Future<void> _handleCashPayment(double total) async {
     try {
-      List<String> itemNames = cartItems.map((item) => item['Nome'] as String).toList();
+      List<String> itemNames =
+          cartItems.map((item) => item['Nome'] as String).toList();
 
       // Extract user information
       var turma = users[0]['Turma'] ?? '';
@@ -1970,189 +2091,103 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
       // Encode cartItems to JSON string
       String cartItemsJson = json.encode(cartItems);
-      double total = calculateTotal();
+      
+      // Se for dinheiro, perguntar sobre o troco
+      bool needsChange = await _showNeedsChangeDialog();
 
-      if (paymentMethod == 'mbway') {
-        // Para MB WAY, primeiro criamos o pedido com os dados disponíveis
-        // (sem solicitar telefone aqui, isso será feito em _processMBWayPayment)
-        final response = await http.post(
-          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
-          body: {
-            'query_param': '5',
-            'nome': nome,
-            'apelido': apelido,
-            'orderNumber': '0',
-            'turma': turma,
-            'descricao': itemNames.join(', '),
-            'permissao': permissao,
-            'total': total.toString(),
-            'valor': total.toString(), // Valor entregue é o mesmo do total para MB WAY
-            'imagem': imagem,
-            'cartItems': cartItemsJson,
-            'payment_method': paymentMethod,
-          },
-        );
+      if (needsChange) {
+        // Se precisar de troco, perguntar o valor entregue
+        dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
+      } else {
+        // Se não precisar de troco, o valor entregue é o mesmo do total
+        dinheiroAtual = total;
+      }
 
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          if (data['status'] == 'success') {
-            orderNumber = int.parse(data['orderNumber'].toString());
-            // Agora processamos o pagamento MB WAY, que vai pedir o número de telefone
-            await _processMBWayPayment(total, orderNumber.toString());
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
-            );
-          }
+      // Criar o pedido com as informações de pagamento em dinheiro
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        body: {
+          'query_param': '5',
+          'nome': nome,
+          'apelido': apelido,
+          'orderNumber': '0',
+          'turma': turma,
+          'descricao': itemNames.join(', '),
+          'permissao': permissao,
+          'total': total.toString(),
+          'valor': dinheiroAtual.toString(),
+          'imagem': imagem,
+          'cartItems': cartItemsJson,
+          'payment_method': 'dinheiro',
+        },
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        if (response.body.isEmpty) {
+          throw Exception('Empty response from server');
         }
-      } else if (paymentMethod == 'dinheiro') {
-        // Se for dinheiro, perguntar sobre o troco
-        bool needsChange = await _showNeedsChangeDialog();
-        
-        if (needsChange) {
-          // Se precisar de troco, perguntar o valor entregue
-          dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
-        } else {
-          // Se não precisar de troco, o valor entregue é o mesmo do total
-          dinheiroAtual = total;
-        }
-        
-        // Criar o pedido com as informações de pagamento em dinheiro
-        final response = await http.post(
-          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
-          body: {
-            'query_param': '5',
-            'nome': nome,
-            'apelido': apelido,
-            'orderNumber': '0',
-            'turma': turma,
-            'descricao': itemNames.join(', '),
-            'permissao': permissao,
-            'total': total.toString(),
-            'valor': dinheiroAtual.toString(),
-            'imagem': imagem,
-            'cartItems': cartItemsJson,
-            'payment_method': paymentMethod,
-            'needs_change': needsChange.toString(),
-          },
-        );
 
-        if (response.statusCode == 200) {
+        try {
           final data = json.decode(response.body);
+
           if (data['status'] == 'success') {
             orderNumber = int.parse(data['orderNumber'].toString());
             // Enviar para o WebSocket e limpar o carrinho
             await sendOrderToWebSocket(cartItems, total.toString());
-            
+            await sendRecentOrderToApi(cartItems);
+
             setState(() {
               cartItems.clear();
               updateItemCountMap();
             });
-            
+
             double change = dinheiroAtual - total;
-            String changeMsg = change > 0 
+            String changeMsg = change > 0
                 ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
                 : '';
-                
+
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
-            );
-            
-            // Navegar para a página inicial
+              SnackBar(
+                  content: Text(
+                      'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
+              );
+
+            // Navegar para a página de confirmação de pedido
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => HomeAlunoMain()),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
-            );
-          }
-        }
-      }
-    } catch (e) {
-      print('Erro ao enviar pedido: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao processar pedido: $e')),
-      );
-    }
-  }
-
-  Future<void> sendOrderToWebSocket(
-      List<Map<String, dynamic>> cartItems, String total) async {
-    try {
-      // Check if cartItems is not empty
-      print('Cart items: $cartItems'); // Debugging
-
-      // Extract item names or any other needed data
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
-      print('Item names: $itemNames'); // Debugging
-
-      var turma = users[0]['Turma'];
-      var nome = users[0]['Nome'];
-      var permissao = users[0]['Permissao'];
-      var imagem = users[0]['Imagem'];
-
-      final channel = WebSocketChannel.connect(
-        Uri.parse('ws://websocket.appbar.epvc.pt'),
-      );
-
-      // Send all necessary cart data
-      Map<String, dynamic> orderData = {
-        'QPediu': nome,
-        'NPedido': orderNumber,
-        'Troco': dinheiroAtual,
-        'Turma': turma,
-        'Permissao': permissao,
-        'Estado': 0,
-        'Descricao': itemNames, // Cart item names
-        'Total': total,
-        'Imagem': imagem,
-      };
-
-      print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
-
-      // Send the order to the server
-      channel.sink.add(json.encode(orderData));
-
-      channel.stream.listen(
-        (message) {
-          var serverResponse = json.decode(message);
-          if (serverResponse['status'] == 'success') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content:
-                    Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
+              MaterialPageRoute(
+                builder: (context) => OrderConfirmationPage(
+                  orderNumber: orderNumber,
+                  amount: total,
+                ),
               ),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                    'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
-              ),
-            );
+                  content: Text(
+                      'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
+              );
           }
-          channel.sink.close();
-        },
-        onError: (error) {
-          print('Erro ao fazer a requisição WebSocket: $error');
+        } catch (e) {
+          print('JSON decode error: $e');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                  'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-            ),
-          );
-        },
-      );
+                content: Text('Erro ao processar resposta do servidor')),
+              );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
+        );
+      }
     } catch (e) {
-      print('Erro ao estabelecer conexão WebSocket: $e');
+      print('Erro ao processar pagamento em dinheiro: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-        ),
+        SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
       );
     }
   }
@@ -2266,89 +2301,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                               TextButton(
                                 onPressed: () {
                                   Navigator.of(context).pop();
-                                  showDialog(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return AlertDialog(
-                                        title: Text("Confirmação de Pedido"),
-                                        content: Text("Você tem o dinheiro (" +
-                                            total
-                                                .toStringAsFixed(2)
-                                                .replaceAll('.', ',') +
-                                            "€) EXATO ?"),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.of(context)
-                                                  .pop(); // Close dialog
-                                              // Use root context to avoid assertion error
-                                              ScaffoldMessenger.of(rootContext)
-                                                  .showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                      'Pedido Confirmado com Sucesso'),
-                                                ),
-                                              );
-                                              checkAvailabilityBeforeOrder(
-                                                  total);
-                                            },
-                                            child: Text('Sim'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.of(context).pop();
-                                              showDialog(
-                                                context: context,
-                                                builder:
-                                                    (BuildContext context) {
-                                                  dinheiroAtual =
-                                                      0.0; // Valor padrão
-                                                  return AlertDialog(
-                                                    title: Text(
-                                                        "Insira a quantidade de dinheiro irá entregar:"),
-                                                    content: TextField(
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      onChanged: (value) {
-                                                        dinheiroAtual =
-                                                            double.tryParse(
-                                                                    value) ??
-                                                                0.0;
-                                                      },
-                                                    ),
-                                                    actions: [
-                                                      TextButton(
-                                                        onPressed: () {
-                                                          Navigator.of(context)
-                                                              .pop();
-                                                          ScaffoldMessenger.of(
-                                                                  context)
-                                                              .showSnackBar(
-                                                            SnackBar(
-                                                              content: Text(
-                                                                  'Confirmação de Pedido com Sucesso'),
-                                                            ),
-                                                          );
-                                                          // Aqui você pode chamar a função para verificar a disponibilidade antes do pedido
-                                                          checkAvailabilityBeforeOrder(
-                                                              total);
-                                                          Navigator.of(context)
-                                                              .pop();
-                                                        },
-                                                        child:
-                                                            Text('Confirmar'),
-                                                      ),
-                                                    ],
-                                                  );
-                                                },
-                                              );
-                                            },
-                                            child: Text('Não'),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
+                                  checkAvailabilityBeforeOrder(total);
                                 },
                                 child: Text('Confirmar'),
                               ),
