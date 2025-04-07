@@ -163,9 +163,8 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
             elevation: 0,
             automaticallyImplyLeading: false, // This removes the back button
           ),
-          body: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: Container(
+          body: 
+            Container(
               color: Colors.white,
               child: Column(
                 children: [
@@ -337,7 +336,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
             ),
           ),
         ),
-      ),
+      
     );
   }
 }

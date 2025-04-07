@@ -1554,14 +1554,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         
         // Ir para a página de telefone MBWay com a lógica de pagamento
         await Navigator.push(
-          context,
-          MaterialPageRoute(
+            context,
+            MaterialPageRoute(
             builder: (context) => MBWayPhoneNumberPage(
               amount: total,
               orderData: orderData,
               sibsService: _sibsService!,
               onResult: (success, newOrderNumber) {
-                if (success) {
+                  if (success) {
                   // Pagamento bem-sucedido, limpar carrinho
                   setState(() {
                     cartItems.clear();
@@ -1623,35 +1623,35 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               // Enviar para o WebSocket e limpar o carrinho
               await sendOrderToWebSocket(cartItems, total.toString());
 
-              setState(() {
-                cartItems.clear();
-                updateItemCountMap();
-              });
+                    setState(() {
+                      cartItems.clear();
+                      updateItemCountMap();
+                    });
 
               double change = dinheiroAtual - total;
               String changeMsg = change > 0
                   ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
                   : '';
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
                     content: Text(
                         'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
-              );
+                    );
 
               // Navegar para a página de confirmação de pedido
-              Navigator.pushReplacement(
-                context,
+                    Navigator.pushReplacement(
+                      context,
                 MaterialPageRoute(
                   builder: (context) => OrderConfirmationPage(
                     orderNumber: orderNumber,
                     amount: total,
                   ),
                 ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
                     content: Text(
                         'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
               );
@@ -1662,8 +1662,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               SnackBar(
                   content: Text('Erro ao processar resposta do servidor')),
             );
-          }
-        } else {
+        }
+      } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
           );
@@ -2029,19 +2029,19 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       var apelido = users[0]['Apelido'] ?? '';
       var permissao = users[0]['Permissao'] ?? '';
       var imagem = users[0]['Imagem'] ?? '';
-      
+
       // Encode cartItems to JSON string
       String cartItemsJson = json.encode(cartItems);
       
       // Preparar os dados do pedido
       Map<String, dynamic> orderData = {
-        'nome': nome,
-        'apelido': apelido,
-        'turma': turma,
-        'descricao': itemNames.join(', '),
-        'permissao': permissao,
-        'imagem': imagem,
-        'cartItems': cartItemsJson,
+            'nome': nome,
+            'apelido': apelido,
+            'turma': turma,
+            'descricao': itemNames.join(', '),
+            'permissao': permissao,
+            'imagem': imagem,
+            'cartItems': cartItemsJson,
       };
       
       // Ir para a página de telefone MBWay com a lógica de pagamento
@@ -2070,7 +2070,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       );
     } catch (e) {
       print('Erro ao processar pagamento MBWay: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
+            ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
       );
     }
@@ -2092,97 +2092,97 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       // Encode cartItems to JSON string
       String cartItemsJson = json.encode(cartItems);
       
-      // Se for dinheiro, perguntar sobre o troco
-      bool needsChange = await _showNeedsChangeDialog();
+          // Se for dinheiro, perguntar sobre o troco
+          bool needsChange = await _showNeedsChangeDialog();
 
-      if (needsChange) {
-        // Se precisar de troco, perguntar o valor entregue
-        dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
-      } else {
-        // Se não precisar de troco, o valor entregue é o mesmo do total
-        dinheiroAtual = total;
-      }
-
-      // Criar o pedido com as informações de pagamento em dinheiro
-      final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
-        body: {
-          'query_param': '5',
-          'nome': nome,
-          'apelido': apelido,
-          'orderNumber': '0',
-          'turma': turma,
-          'descricao': itemNames.join(', '),
-          'permissao': permissao,
-          'total': total.toString(),
-          'valor': dinheiroAtual.toString(),
-          'imagem': imagem,
-          'cartItems': cartItemsJson,
+          if (needsChange) {
+            // Se precisar de troco, perguntar o valor entregue
+            dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
+          } else {
+            // Se não precisar de troco, o valor entregue é o mesmo do total
+            dinheiroAtual = total;
+          }
+      
+            // Criar o pedido com as informações de pagamento em dinheiro
+            final response = await http.post(
+              Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+              body: {
+                'query_param': '5',
+                'nome': nome,
+                'apelido': apelido,
+                'orderNumber': '0',
+                'turma': turma,
+                'descricao': itemNames.join(', '),
+                'permissao': permissao,
+                'total': total.toString(),
+                'valor': dinheiroAtual.toString(),
+                'imagem': imagem,
+                'cartItems': cartItemsJson,
           'payment_method': 'dinheiro',
-        },
-      );
+              },
+            );
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+            print('Response status: ${response.statusCode}');
+            print('Response body: ${response.body}');
 
-      if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          throw Exception('Empty response from server');
-        }
+            if (response.statusCode == 200) {
+              if (response.body.isEmpty) {
+                throw Exception('Empty response from server');
+              }
 
-        try {
-          final data = json.decode(response.body);
+              try {
+                final data = json.decode(response.body);
 
-          if (data['status'] == 'success') {
-            orderNumber = int.parse(data['orderNumber'].toString());
-            // Enviar para o WebSocket e limpar o carrinho
-            await sendOrderToWebSocket(cartItems, total.toString());
+                if (data['status'] == 'success') {
+                  orderNumber = int.parse(data['orderNumber'].toString());
+                  // Enviar para o WebSocket e limpar o carrinho
+                  await sendOrderToWebSocket(cartItems, total.toString());
             await sendRecentOrderToApi(cartItems);
 
-            setState(() {
-              cartItems.clear();
-              updateItemCountMap();
-            });
+                  setState(() {
+                    cartItems.clear();
+                    updateItemCountMap();
+                  });
 
-            double change = dinheiroAtual - total;
-            String changeMsg = change > 0
-                ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
-                : '';
+                  double change = dinheiroAtual - total;
+                  String changeMsg = change > 0
+                      ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
+                      : '';
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text(
-                      'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
-              );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(
+                            'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
+                  );
 
             // Navegar para a página de confirmação de pedido
-            Navigator.pushReplacement(
-              context,
+                  Navigator.pushReplacement(
+                    context,
               MaterialPageRoute(
                 builder: (context) => OrderConfirmationPage(
                   orderNumber: orderNumber,
                   amount: total,
                 ),
               ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text(
-                      'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(
+                            'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
+                  );
+                }
+              } catch (e) {
+                print('JSON decode error: $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text('Erro ao processar resposta do servidor')),
+                );
+              }
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
               );
-          }
-        } catch (e) {
-          print('JSON decode error: $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Erro ao processar resposta do servidor')),
-              );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
-        );
       }
     } catch (e) {
       print('Erro ao processar pagamento em dinheiro: $e');
@@ -2301,7 +2301,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                               TextButton(
                                 onPressed: () {
                                   Navigator.of(context).pop();
-                                  checkAvailabilityBeforeOrder(total);
+                                                            checkAvailabilityBeforeOrder(total);
                                 },
                                 child: Text('Confirmar'),
                               ),
