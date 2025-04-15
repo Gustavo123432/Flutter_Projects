@@ -1,0 +1,733 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:my_flutter_project/Bar/drawerBar.dart';
+import 'package:my_flutter_project/login.dart';
+
+class PurchaseOrder {
+  final String number;
+  final String requester;
+  final String group;
+  final String description;
+  final String total;
+  final String troco;
+  final String status;
+  final String userPermission;
+  final String imagem;
+
+  PurchaseOrder({
+    required this.number,
+    required this.requester,
+    required this.group,
+    required this.description,
+    required this.total,
+    required this.troco,
+    required this.status,
+    required this.userPermission,
+    required this.imagem,
+  });
+
+  factory PurchaseOrder.fromJson(Map<String, dynamic> json) {
+    return PurchaseOrder(
+      number: json['NPedido']?.toString() ?? 'N/A',
+      requester: json['QPediu'] ?? 'Desconhecido',
+      group: json['Turma'] ?? 'Sem turma',
+      description: (json['Descricao'] is List)
+          ? (json['Descricao'] as List).join(', ')
+          : json['Descricao']?.toString() ?? 'Sem descrição',
+      total: json['Total']?.toString() ?? '0.00',
+      troco: json['Troco']?.toString() ?? '0.00',
+      status: json['Estado']?.toString() ?? '0',
+      imagem: json['Imagem'] ?? '',
+      userPermission: json['Permissao'] ?? 'Sem permissão',
+    );
+  }
+}
+
+class BarPagePedidos extends StatefulWidget {
+  @override
+  _BarPagePedidosState createState() => _BarPagePedidosState();
+}
+
+class _BarPagePedidosState extends State<BarPagePedidos> {
+  late Stream<List<PurchaseOrder>> purchaseOrderStream;
+  final StreamController<List<PurchaseOrder>> purchaseOrderController =
+      StreamController.broadcast();
+  List<PurchaseOrder> currentOrders = [];
+  WebSocketChannel? _channel;
+
+  @override
+  void initState() {
+    super.initState();
+    purchaseOrderStream = getPurchaseOrdersStream();
+    _fetchInitialPurchaseOrders();
+    _connectToWebSocket();
+  }
+
+  Future<void> _fetchInitialPurchaseOrders() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=10'),
+      );
+      if (response.statusCode == 200) {
+        List<dynamic> data = jsonDecode(response.body);
+        List<PurchaseOrder> orders =
+            data.map((json) => PurchaseOrder.fromJson(json)).toList();
+
+        setState(() {
+          currentOrders = orders.where((order) => order.status != '2').toList();
+          purchaseOrderController.add(currentOrders);
+        });
+      } else {
+        throw Exception('Erro ao carregar pedidos. Verifique a Internet.');
+      }
+    } catch (e) {
+      print('Erro ao buscar pedidos: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao carregar pedidos: ${e.toString()}')),
+      );
+    }
+  }
+
+  void _connectToWebSocket() {
+    _channel = WebSocketChannel.connect(
+      Uri.parse('ws://192.168.25.94:2536'),
+    );
+
+    _channel!.stream.listen(
+      (message) {
+        if (message != null && message.isNotEmpty) {
+          try {
+            Map<String, dynamic> data = jsonDecode(message);
+            PurchaseOrder order = PurchaseOrder.fromJson(data);
+
+            setState(() {
+              // Remove completed orders (status 2)
+              if (order.status == '2') {
+                currentOrders.removeWhere((o) => o.number == order.number);
+              } 
+              // Update existing orders
+              else {
+                int index = currentOrders.indexWhere((o) => o.number == order.number);
+                if (index >= 0) {
+                  currentOrders[index] = order;
+                } else if (order.status == '0') {
+                  currentOrders.add(order);
+                }
+              }
+              purchaseOrderController.add(currentOrders);
+            });
+          } catch (e) {
+            print('Erro ao processar a mensagem: $e');
+          }
+        }
+      },
+      onError: (error) {
+        print('Erro WebSocket: $error');
+        Future.delayed(Duration(seconds: 5), _connectToWebSocket);
+      },
+    );
+  }
+
+  Stream<List<PurchaseOrder>> getPurchaseOrdersStream() {
+    return purchaseOrderController.stream.distinct();
+  }
+
+  Uint8List safeBase64Decode(String base64String) {
+    try {
+      String cleaned = base64String.replaceAll(RegExp(r'[^A-Za-z0-9+/=]'), '');
+      while (cleaned.length % 4 != 0) {
+        cleaned += '=';
+      }
+      return base64Decode(cleaned);
+    } catch (e) {
+      return Uint8List(0);
+    }
+  }
+
+  String cleanBase64(String input) {
+    return input.replaceAll(RegExp(r'[^A-Za-z0-9+/=]'), '');
+  }
+
+  void _prepareOrder(PurchaseOrder currentOrder, List<PurchaseOrder> allOrders) {
+    List<String> currentProducts = currentOrder.description
+        .split(',')
+        .map((product) => product.trim())
+        .toList();
+
+    List<PurchaseOrder> matchingOrders = allOrders.where((order) {
+      List<String> orderProducts = order.description
+          .split(',')
+          .map((product) => product.trim())
+          .toList();
+      return orderProducts.any((product) => currentProducts.contains(product));
+    }).toList();
+
+    matchingOrders.removeWhere((order) => order.number == currentOrder.number);
+    matchingOrders.removeWhere((order) => int.parse(order.status) != 0);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: AlertDialog(
+            title: Text('Pedidos com Produtos Semelhantes'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Você está preparando o pedido ${currentOrder.number}.'),
+                SizedBox(height: 10),
+                Text.rich(
+                  TextSpan(
+                    children: currentOrder.description
+                        .replaceAll('[', '')
+                        .replaceAll(']', '')
+                        .split(',')
+                        .map((item) => TextSpan(
+                              text: '\t\t\t• ${item.trim()}\n',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ))
+                        .toList(),
+                  ),
+                ),
+                if (matchingOrders.isNotEmpty)
+                  Text('Os seguintes pedidos contêm produtos semelhantes:'),
+                ...matchingOrders.map((order) {
+                  return ListTile(
+                    title: Text('Pedido ${order.number} - ${order.requester}'),
+                    subtitle: Text(
+                        'Produtos: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
+                  );
+                }).toList(),
+              ],
+            ),
+            actions: [
+              TextButton(
+                child: Text('Preparar Apenas Este'),
+                onPressed: () {
+                  _markOrderAsPrepared(currentOrder);
+                  Navigator.of(context).pop();
+                },
+              ),
+              if (matchingOrders.isNotEmpty)
+                TextButton(
+                  child: Text('Preparar Todos'),
+                  onPressed: () {
+                    _markOrderAsPrepared(currentOrder);
+                    matchingOrders.forEach((order) {
+                      _markOrderAsPrepared(order);
+                    });
+                    Navigator.of(context).pop();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _markOrderAsPrepared(PurchaseOrder order) async {
+    try {
+      final response = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}&op=1'));
+
+      if (response.statusCode == 200) {
+        setState(() {
+          int index = currentOrders.indexWhere((o) => o.number == order.number);
+          if (index >= 0) {
+            currentOrders[index] = PurchaseOrder(
+              number: order.number,
+              requester: order.requester,
+              group: order.group,
+              description: order.description,
+              total: order.total,
+              troco: order.troco,
+              status: '1', // Set status to 1 (Preparar)
+              userPermission: order.userPermission,
+              imagem: order.imagem,
+            );
+            purchaseOrderController.add(currentOrders);
+          }
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pedido ${order.number} em preparação.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao preparar pedido. Código: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao preparar pedido: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _markOrderAsCompleted(PurchaseOrder order) async {
+    try {
+      final response = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}&op=2'));
+
+      if (response.statusCode == 200) {
+        setState(() {
+          currentOrders.removeWhere((o) => o.number == order.number);
+          purchaseOrderController.add(currentOrders);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pedido ${order.number} concluído.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao concluir pedido. Código: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao concluir pedido: ${e.toString()}')),
+      );
+    }
+  }
+
+  void _showDeleteDialog(PurchaseOrder order) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Eliminar Pedido"),
+        content: Text("Deseja eliminar este pedido?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancelar"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _deleteOrder(order);
+            },
+            child: Text("Eliminar", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteOrder(PurchaseOrder order) async {
+    try {
+      final response = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=24&nome=${order.requester}&ids=${order.number}'));
+
+      if (response.statusCode == 200) {
+        setState(() {
+          currentOrders.removeWhere((o) => o.number == order.number);
+          purchaseOrderController.add(currentOrders);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pedido eliminado com sucesso.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao eliminar pedido. Código: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao eliminar pedido: ${e.toString()}')),
+      );
+    }
+  }
+
+  void logout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Log Out'),
+          content: const Text('Pretende fazer Log Out?'),
+          actions: [
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: const Text('Confirmar'),
+              onPressed: () async {
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                await prefs.clear();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (ctx) => LoginForm()),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Color.fromARGB(255, 246, 141, 45),
+        title: Text('Pedidos'),
+        actions: [
+          IconButton(
+            onPressed: () {
+              logout(context);
+            },
+            icon: Icon(Icons.logout),
+          ),
+        ],
+      ),
+      drawer: DrawerBar(),
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Center(
+          child: StreamBuilder<List<PurchaseOrder>>(
+            stream: purchaseOrderStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return FutureBuilder(
+                  future: Future.delayed(Duration(seconds: 5)),
+                  builder: (context, futureSnapshot) {
+                    if (futureSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return Center(
+                          child:
+                              CircularProgressIndicator());
+                    } else {
+                      return Center(
+                          child: Text(
+                              'Sem Pedidos'));
+                    }
+                  },
+                );
+              } else if (snapshot.hasError) {
+                return Center(child: Text('Erro ao carregar pedidos'));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Center(child: Text('Sem Pedidos'));
+              }
+
+              List<PurchaseOrder> data = snapshot.data!;
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.all(8.0),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 1.0,
+                ),
+                itemCount: data.length,
+                itemBuilder: (context, index) {
+                  PurchaseOrder order = data[index];
+                  String formattedTotal = double.parse(order.total)
+                      .toStringAsFixed(2)
+                      .replaceAll('.', ',');
+                  String base64String = order.imagem.toString();
+                  String cleanedBase64 = cleanBase64(base64String);
+                  Uint8List decodedBytes = safeBase64Decode(cleanedBase64);
+
+                  Color buttonColor;
+                  String? buttonText;
+                  switch (int.parse(order.status)) {
+                    case 1:
+                      buttonColor = const Color.fromARGB(255, 221, 163, 2);
+                      buttonText = "Concluir";
+                      break;
+                    default:
+                      buttonColor = Color.fromARGB(255, 175, 175, 175);
+                      buttonText = "Preparar";
+                  }
+
+                  return GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text(
+                              'Detalhes do Pedido ${order.number}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            content: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Requisitante: ${order.requester}',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Turma: ${order.group}',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Descrição:',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text.rich(
+                                    TextSpan(
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                      children: order.description
+                                          .replaceAll('[', '')
+                                          .replaceAll(']', '')
+                                          .split(',')
+                                          .map((item) => TextSpan(
+                                                text: '• ${item.trim()}\n',
+                                                style: TextStyle(fontWeight: FontWeight.bold),
+                                              ))
+                                          .toList(),
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Total: $formattedTotal€',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Troco: ${order.troco}€',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  SizedBox(height: 12),
+                                  Card(
+                                    elevation: 4,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.memory(
+                                        decodedBytes,
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            width: 100,
+                                            height: 100,
+                                            color: Colors.grey[300],
+                                            child: Icon(
+                                              Icons.error,
+                                              color: Colors.red,
+                                              size: 40,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                child: Text(
+                                  'Fechar',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                              ),
+                              TextButton(
+                                child: Text(
+                                  'Eliminar Pedido',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  _showDeleteDialog(order);
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    child: Card(
+                      color: Color.fromARGB(255, 228, 225, 223),
+                      elevation: 4.0,
+                      child: Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Pedido ${order.number}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Colors.black87,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                      SizedBox(height: 6),
+                                      Text(
+                                        'Nome: ${order.requester}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[800],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'Turma: ${order.group}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[800],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'Descrição: ${order.description.replaceAll("[", "").replaceAll("]", "")}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[800],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 2,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(width: 12),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.memory(
+                                    decodedBytes,
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 100,
+                                        height: 100,
+                                        color: Colors.grey[300],
+                                        child: Icon(
+                                          Icons.error,
+                                          color: Colors.red,
+                                          size: 40,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Total: $formattedTotal€',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                                Text(
+                                  'Troco: ${order.troco}€',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 12),
+                            ElevatedButton(
+                              onPressed: () {
+                                if (buttonText == "Preparar") {
+                                  _prepareOrder(order, data);
+                                } else if (buttonText == "Concluir") {
+                                  _markOrderAsCompleted(order);
+                                }
+                              },
+                              child: Text(
+                                buttonText!,
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: buttonColor,
+                                foregroundColor: Colors.white,
+                                minimumSize: Size(double.infinity, 40),
+                                padding: EdgeInsets.symmetric(horizontal: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _channel?.sink.close();
+    purchaseOrderController.close();
+    super.dispose();
+  }
+} 
