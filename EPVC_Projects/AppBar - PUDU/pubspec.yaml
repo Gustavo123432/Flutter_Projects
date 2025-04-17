@@ -62,6 +62,8 @@ dependencies:
   diacritic: ^0.1.6
   flutter_dotenv: ^5.1.0
   #url_launcher: ^6.2.5
+  sqflite: ^2.3.2
+  path: ^1.8.3
 
 
 dev_dependencies:
@@ -96,6 +98,7 @@ flutter:
     - lib/assets/fonts/Roboto-Regular.ttf
     - lib/assets/monteRestaurante.jpg
     - lib/assets/mbway_logo.png
+    - lib/assets/robo.png
     #- lib/assets/fonts/Helvetica.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see

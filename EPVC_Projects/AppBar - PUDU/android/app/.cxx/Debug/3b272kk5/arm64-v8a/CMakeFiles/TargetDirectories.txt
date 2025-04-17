@@ -1,0 +1,2 @@
+C:/Users/gusfe/OneDrive/Ambiente de Trabalho/FlutterProjects/EPVC_Projects/AppBar - PUDU/android/app/.cxx/Debug/3b272kk5/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/gusfe/OneDrive/Ambiente de Trabalho/FlutterProjects/EPVC_Projects/AppBar - PUDU/android/app/.cxx/Debug/3b272kk5/arm64-v8a/CMakeFiles/rebuild_cache.dir
