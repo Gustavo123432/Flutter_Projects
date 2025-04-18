@@ -19,13 +19,13 @@ class PuduRobot {
 
   factory PuduRobot.fromMap(Map<String, dynamic> map) {
     return PuduRobot(
-      id: map['id'],
-      ip: map['ip'] ?? '',
-      idDevice: map['idDevice'] ?? '',
-      name: map['name'] ?? '',
-      secretDevice: map['secretDevice'] ?? '',
-      region: map['region'] ?? '',
-      type: map['type'] ?? '',
+      id: map['id'] as int?,
+      ip: map['ip'] as String,
+      idDevice: map['idDevice'] as String,
+      name: map['name'] as String,
+      secretDevice: map['secretDevice'] as String,
+      region: map['region'] as String,
+      type: map['type'] as String,
     );
   }
 

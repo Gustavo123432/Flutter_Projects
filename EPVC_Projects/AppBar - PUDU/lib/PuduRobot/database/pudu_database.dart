@@ -39,20 +39,34 @@ class PuduDatabase {
     ''');
   }
 
-  Future<PuduRobot> insertPuduRobot(PuduRobot robot) async {
+  Future<PuduRobot> create(PuduRobot robot) async {
     final db = await database;
     final id = await db.insert('pudurobotinfo', robot.toMap());
     return robot.copyWith(id: id);
   }
 
-  Future<List<PuduRobot>> getAllPuduRobots() async {
+  Future<List<PuduRobot>> getAllRobots() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('pudurobotinfo');
     
     return List.generate(maps.length, (i) => PuduRobot.fromMap(maps[i]));
   }
 
-  Future<int> updatePuduRobot(PuduRobot robot) async {
+  Future<PuduRobot?> getRobot(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'pudurobotinfo',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isNotEmpty) {
+      return PuduRobot.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<int> update(PuduRobot robot) async {
     final db = await database;
     return db.update(
       'pudurobotinfo',
@@ -62,12 +76,17 @@ class PuduDatabase {
     );
   }
 
-  Future<int> deletePuduRobot(int id) async {
+  Future<int> delete(int id) async {
     final db = await database;
     return await db.delete(
       'pudurobotinfo',
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<void> close() async {
+    final db = await database;
+    db.close();
   }
 } 
