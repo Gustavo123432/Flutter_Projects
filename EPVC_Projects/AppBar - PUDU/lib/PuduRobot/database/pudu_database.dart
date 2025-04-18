@@ -20,8 +20,9 @@ class PuduDatabase {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -34,15 +35,43 @@ class PuduDatabase {
         name TEXT NOT NULL,
         secretDevice TEXT NOT NULL,
         region TEXT NOT NULL,
-        type TEXT NOT NULL
+        type TEXT NOT NULL,
+        idGroup TEXT NOT NULL,
+        groupName TEXT NOT NULL,
+        shopName TEXT NOT NULL,
+        robotIdd TEXT NOT NULL,
+        nameRobot TEXT NOT NULL
       )
     ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE pudurobotinfo ADD COLUMN idGroup TEXT DEFAULT ""');
+      await db.execute('ALTER TABLE pudurobotinfo ADD COLUMN groupName TEXT DEFAULT ""');
+      await db.execute('ALTER TABLE pudurobotinfo ADD COLUMN shopName TEXT DEFAULT ""');
+      await db.execute('ALTER TABLE pudurobotinfo ADD COLUMN robotIdd TEXT DEFAULT ""');
+      await db.execute('ALTER TABLE pudurobotinfo ADD COLUMN nameRobot TEXT DEFAULT ""');
+    }
   }
 
   Future<PuduRobot> create(PuduRobot robot) async {
     final db = await database;
     final id = await db.insert('pudurobotinfo', robot.toMap());
-    return robot.copyWith(id: id);
+    return PuduRobot(
+      id: id,
+      ip: robot.ip,
+      idDevice: robot.idDevice,
+      name: robot.name,
+      secretDevice: robot.secretDevice,
+      region: robot.region,
+      type: robot.type,
+      idGroup: robot.idGroup,
+      groupName: robot.groupName,
+      shopName: robot.shopName,
+      robotIdd: robot.robotIdd,
+      nameRobot: robot.nameRobot,
+    );
   }
 
   Future<List<PuduRobot>> getAllRobots() async {

@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../database/pudu_database.dart';
 import '../models/pudu_robot_model.dart';
 
@@ -16,8 +19,13 @@ class _RegisterPuduState extends State<RegisterPudu> {
   final _nameController = TextEditingController();
   final _secretDeviceController = TextEditingController();
   final _regionController = TextEditingController();
-  String _selectedType = 'KettyBot';
+  String _selectedType = 'BellaBot';
   bool _isLoading = false;
+  String? idGroup;
+  String? idRobot;
+  String? shopName;
+  String? groupName;
+  String? robotName;
 
   final List<String> _robotTypes = [
     'KettyBot',
@@ -37,6 +45,154 @@ class _RegisterPuduState extends State<RegisterPudu> {
     super.dispose();
   }
 
+  Future<void> getRobotGroup() async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'http://${_ipController.text}:5000/api/robot/groups?device=${_idDeviceController.text}',
+        ),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Timeout ao conectar com o servidor');
+        },
+      );
+
+                print(response.body);
+
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        if (json['data'] != null && json['data']['robotGroups'] is List) {
+          final List<dynamic> data = json['data']['robotGroups'];
+          if (data.isNotEmpty) {
+            setState(() {
+              idGroup = data[0]['id']?.toString();
+              groupName = data[0]['name']?.toString();
+              shopName = data[0]['shop_name']?.toString();
+            });
+            await getRobotInterface();
+          } else {
+            throw Exception('Nenhum grupo de robô encontrado');
+          }
+        } else {
+          throw Exception('Dados inválidos recebidos do servidor');
+        }
+      } else {
+        throw Exception('Erro ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> getRobotInterface() async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'http://${_ipController.text}:5000/api/robots?device=${_idDeviceController.text}&group_id=${idGroup}',
+        ),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Timeout ao conectar com o servidor');
+        },
+      );
+          print(response.body);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        if (json['data'] != null && json['data']['robots'] is List) {
+          final List<dynamic> robots = json['data']['robots'];
+          if (robots.isNotEmpty) {
+            setState(() {
+              idRobot = robots[0]['id']?.toString();
+              robotName = robots[0]['name']?.toString();
+              shopName = robots[0]['shop_name']?.toString();
+            });
+            await _submitForm();
+          } else {
+            throw Exception('Nenhum robô encontrado');
+          }
+        } else {
+          throw Exception('Dados inválidos recebidos do servidor');
+        }
+      } else {
+        throw Exception('Erro ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> addRobot() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://${_ipController.text}:5000/api/add/device'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'deviceName': _nameController.text,
+          'deviceId': _idDeviceController.text,
+          'deviceSecret': _secretDeviceController.text,
+          'region': _regionController.text,
+        }),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Timeout ao conectar com o servidor');
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        if (responseBody['code'] == 0 && responseBody['data']['success'] == true) {
+          await getRobotGroup();
+        } else {
+          throw Exception('Falha ao adicionar o robô: ${responseBody['msg'] ?? 'Erro desconhecido'}');
+        }
+      } else {
+        throw Exception('Erro ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
@@ -49,9 +205,15 @@ class _RegisterPuduState extends State<RegisterPudu> {
           secretDevice: _secretDeviceController.text,
           region: _regionController.text,
           type: _selectedType,
+          groupName: groupName ?? "",
+          idGroup: idGroup ?? "",
+          nameRobot: robotName ?? "",
+          robotIdd: idRobot ?? "",
+          shopName: shopName ?? "",
         );
 
-        await PuduDatabase.instance.create(robot);
+        final savedRobot = await PuduDatabase.instance.create(robot);
+        print('Robot saved with ID: ${savedRobot.id}');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -149,7 +311,8 @@ class _RegisterPuduState extends State<RegisterPudu> {
                           decoration: const InputDecoration(
                             labelText: 'Robot Name',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.precision_manufacturing_outlined),
+                            prefixIcon:
+                                Icon(Icons.precision_manufacturing_outlined),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -216,13 +379,15 @@ class _RegisterPuduState extends State<RegisterPudu> {
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: _isLoading ? null : _submitForm,
+                            onPressed: _isLoading ? null : addRobot,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color.fromARGB(255, 246, 141, 45),
+                              backgroundColor:
+                                  const Color.fromARGB(255, 246, 141, 45),
                               foregroundColor: Colors.white,
                             ),
                             child: _isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white)
                                 : const Text(
                                     'Register Robot',
                                     style: TextStyle(fontSize: 18),
@@ -240,4 +405,4 @@ class _RegisterPuduState extends State<RegisterPudu> {
       ),
     );
   }
-} 
+}
