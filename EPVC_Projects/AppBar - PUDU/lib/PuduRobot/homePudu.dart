@@ -36,6 +36,7 @@ class _HomePuduState extends State<HomePudu> {
   Future<void> _fetchRobots() async {
     try {
       final robots = await dbHelper.getAllRobots();
+      print('Fetched robots: ${robots.map((r) => r.toMap()).toList()}');
       setState(() {
         currentRobots = robots;
         robotController.add(robots);
@@ -107,19 +108,17 @@ class _HomePuduState extends State<HomePudu> {
                 ),
               ),
               Expanded(
-                child: 
-                
-                ListView(
+                child: ListView(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   children: [
-                        ListTile(
+                    ListTile(
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: const Color.fromARGB(255, 193, 221, 224),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(Icons.menu, color: const Color.fromARGB(255, 18, 192, 183)),
+                        child: const Icon(Icons.menu, color: Color.fromARGB(255, 18, 192, 183)),
                       ),
                       title: const Text('Menu Robot'),
                       subtitle: const Text('Menu Robot'),
@@ -275,10 +274,12 @@ class _HomePuduState extends State<HomePudu> {
                 style: TextStyle(color: Colors.red),
               ),
               onPressed: () async {
-                await dbHelper.delete(robot.id!);
-                if (mounted) {
-                  Navigator.of(context).pop();
-                  _fetchRobots();
+                if (robot.id != null) {
+                  await dbHelper.delete(robot.id!);
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    _fetchRobots();
+                  }
                 }
               },
             ),

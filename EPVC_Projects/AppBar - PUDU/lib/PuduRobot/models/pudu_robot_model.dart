@@ -1,128 +1,151 @@
 class PuduRobot {
-  final int id;
+  // Basic information
+  final int? id;
+  final String name;
+  final String type;
+
+  // Device information
   final String ip;
   final String idDevice;
-  final String name;
   final String secretDevice;
   final String region;
-  final String type;
+
+  // Group information
   final String idGroup;
   final String groupName;
   final String shopName;
+
+  // Robot specific information
   final String robotIdd;
   final String nameRobot;
 
-  PuduRobot._({
-    required this.id,
+  // Constructor
+  const PuduRobot({
+    this.id,
+    required this.name,
+    required this.type,
     required this.ip,
     required this.idDevice,
-    required this.name,
     required this.secretDevice,
     required this.region,
-    required this.type,
-    required this.idGroup,
-    required this.groupName,
-    required this.shopName,
-    required this.robotIdd,
-    required this.nameRobot,
+    this.idGroup = '',
+    this.groupName = '',
+    this.shopName = '',
+    this.robotIdd = '',
+    this.nameRobot = '',
   });
 
-  factory PuduRobot({
-    int? id,
-    required String ip,
-    required String idDevice,
-    required String name,
-    required String secretDevice,
-    required String region,
-    required String type,
-    required String idGroup,
-    required String groupName,
-    required String shopName,
-    required String robotIdd,
-    required String nameRobot,
-  }) {
-    return PuduRobot._(
-      id: id ?? -1,
-      ip: ip,
-      idDevice: idDevice,
-      name: name,
-      secretDevice: secretDevice,
-      region: region,
-      type: type,
-      idGroup: idGroup,
-      groupName: groupName,
-      shopName: shopName,
-      robotIdd: robotIdd,
-      nameRobot: nameRobot,
-    );
-  }
-
+  // Create from Map
   factory PuduRobot.fromMap(Map<String, dynamic> map) {
-    return PuduRobot._(
-      id: (map['id'] is String) ? int.parse(map['id']) : map['id'] as int,
+    return PuduRobot(
+      id: map['id'] != null 
+          ? (map['id'] is String 
+              ? int.parse(map['id']) 
+              : map['id'] as int)
+          : null,
+      name: map['name'] as String,
+      type: map['type'] as String,
       ip: map['ip'] as String,
       idDevice: map['idDevice'] as String,
-      name: map['name'] as String,
       secretDevice: map['secretDevice'] as String,
       region: map['region'] as String,
-      type: map['type'] as String,
-      idGroup: map['idGroup'] as String,
-      groupName: map['groupName'] as String,
-      shopName: map['shopName'] as String,
-      robotIdd: map['robotIdd'] as String,
-      nameRobot: map['nameRobot'] as String,
+      idGroup: (map['idGroup'] as String?) ?? '',
+      groupName: (map['groupName'] as String?) ?? '',
+      shopName: (map['shopName'] as String?) ?? '',
+      robotIdd: (map['robotIdd'] as String?) ?? '',
+      nameRobot: (map['nameRobot'] as String?) ?? '',
     );
   }
 
+  // Convert to Map
   Map<String, dynamic> toMap() {
-    final map = {
+    return {
+      if (id != null) 'id': id.toString(),
+      'name': name,
+      'type': type,
       'ip': ip,
       'idDevice': idDevice,
-      'name': name,
       'secretDevice': secretDevice,
       'region': region,
-      'type': type,
       'idGroup': idGroup,
       'groupName': groupName,
       'shopName': shopName,
       'robotIdd': robotIdd,
       'nameRobot': nameRobot,
     };
-    
-    if (id != -1) {
-      map['id'] = id.toString();
-      }
-    
-    return map;
   }
 
+  // Copy with
   PuduRobot copyWith({
     int? id,
+    String? name,
+    String? type,
     String? ip,
     String? idDevice,
-    String? name,
     String? secretDevice,
     String? region,
-    String? type,
     String? idGroup,
     String? groupName,
     String? shopName,
     String? robotIdd,
     String? nameRobot,
   }) {
-    return PuduRobot._(
+    return PuduRobot(
       id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
       ip: ip ?? this.ip,
       idDevice: idDevice ?? this.idDevice,
-      name: name ?? this.name,
       secretDevice: secretDevice ?? this.secretDevice,
       region: region ?? this.region,
-      type: type ?? this.type,
       idGroup: idGroup ?? this.idGroup,
       groupName: groupName ?? this.groupName,
       shopName: shopName ?? this.shopName,
       robotIdd: robotIdd ?? this.robotIdd,
       nameRobot: nameRobot ?? this.nameRobot,
+    );
+  }
+
+  // String representation
+  @override
+  String toString() {
+    return 'PuduRobot(name: $name, type: $type, ip: $ip)';
+  }
+
+  // Equality
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is PuduRobot &&
+        other.id == id &&
+        other.name == name &&
+        other.type == type &&
+        other.ip == ip &&
+        other.idDevice == idDevice &&
+        other.secretDevice == secretDevice &&
+        other.region == region &&
+        other.idGroup == idGroup &&
+        other.groupName == groupName &&
+        other.shopName == shopName &&
+        other.robotIdd == robotIdd &&
+        other.nameRobot == nameRobot;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      name,
+      type,
+      ip,
+      idDevice,
+      secretDevice,
+      region,
+      idGroup,
+      groupName,
+      shopName,
+      robotIdd,
+      nameRobot,
     );
   }
 } 

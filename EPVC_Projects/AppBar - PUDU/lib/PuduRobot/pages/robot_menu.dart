@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../models/pudu_robot_model.dart';
 
 class Destination {
@@ -41,6 +44,43 @@ class _RobotMenuState extends State<RobotMenu> {
   void initState() {
     super.initState();
     _fetchDestinations();
+  }
+
+   Future<void> addRobot() async {
+   
+    try {
+      // First, add the device to the server
+      final response = await http.get(
+        Uri.parse('http://${widget.robot.ip}:5000/api/destinations?device=${widget.robot.idDevice}&robot_id=${widget.robot.robotIdd}&page_size=200&page_index=1'),
+     
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Timeout ao conectar com o servidor');
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        if (responseBody['code'] == 0 && responseBody['data']['success'] == true) {
+          // If device is added successfully, get the robot group
+        } else {
+          throw Exception('Falha ao adicionar o robô: ${responseBody['msg'] ?? 'Erro desconhecido'}');
+        }
+      } else {
+        throw Exception('Erro ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _fetchDestinations() async {
@@ -286,7 +326,7 @@ class _RobotMenuState extends State<RobotMenu> {
                                   'ID do Grupo:',
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                                Text(widget.robot.idGroup),
+                                Text(widget.robot.idGroup.isEmpty ? 'N/A' : widget.robot.idGroup),
                               ],
                             ),
                           ),
@@ -298,7 +338,7 @@ class _RobotMenuState extends State<RobotMenu> {
                                   'Nome do Grupo:',
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                                Text(widget.robot.groupName),
+                                Text(widget.robot.groupName.isEmpty ? 'N/A' : widget.robot.groupName),
                               ],
                             ),
                           ),
@@ -315,7 +355,7 @@ class _RobotMenuState extends State<RobotMenu> {
                                   'Nome da Loja:',
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                                Text(widget.robot.shopName),
+                                Text(widget.robot.shopName.isEmpty ? 'N/A' : widget.robot.shopName),
                               ],
                             ),
                           ),
@@ -327,7 +367,7 @@ class _RobotMenuState extends State<RobotMenu> {
                                   'Robot ID:',
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                                Text(widget.robot.robotIdd),
+                                Text(widget.robot.robotIdd.isEmpty ? 'N/A' : widget.robot.robotIdd),
                               ],
                             ),
                           ),
@@ -344,7 +384,7 @@ class _RobotMenuState extends State<RobotMenu> {
                                   'Nome do Robot:',
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                                Text(widget.robot.nameRobot),
+                                Text(widget.robot.nameRobot.isEmpty ? 'N/A' : widget.robot.nameRobot),
                               ],
                             ),
                           ),

@@ -58,18 +58,15 @@ class _RegisterPuduState extends State<RegisterPudu> {
         },
       );
 
-                print(response.body);
-
-
       if (response.statusCode == 200) {
         final Map<String, dynamic> json = jsonDecode(response.body);
         if (json['data'] != null && json['data']['robotGroups'] is List) {
           final List<dynamic> data = json['data']['robotGroups'];
           if (data.isNotEmpty) {
             setState(() {
-              idGroup = data[0]['id']?.toString();
-              groupName = data[0]['name']?.toString();
-              shopName = data[0]['shop_name']?.toString();
+              idGroup = data[0]['id']?.toString() ?? '';
+              groupName = data[0]['name']?.toString() ?? '';
+              shopName = data[0]['shop_name']?.toString() ?? '';
             });
             await getRobotInterface();
           } else {
@@ -107,7 +104,6 @@ class _RegisterPuduState extends State<RegisterPudu> {
           throw Exception('Timeout ao conectar com o servidor');
         },
       );
-          print(response.body);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json = jsonDecode(response.body);
@@ -115,9 +111,9 @@ class _RegisterPuduState extends State<RegisterPudu> {
           final List<dynamic> robots = json['data']['robots'];
           if (robots.isNotEmpty) {
             setState(() {
-              idRobot = robots[0]['id']?.toString();
-              robotName = robots[0]['name']?.toString();
-              shopName = robots[0]['shop_name']?.toString();
+              idRobot = robots[0]['id']?.toString() ?? '';
+              robotName = robots[0]['name']?.toString() ?? '';
+              shopName = robots[0]['shop_name']?.toString() ?? '';
             });
             await _submitForm();
           } else {
@@ -151,6 +147,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
     setState(() => _isLoading = true);
 
     try {
+      // First, add the device to the server
       final response = await http.post(
         Uri.parse('http://${_ipController.text}:5000/api/add/device'),
         headers: {
@@ -172,6 +169,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
         if (responseBody['code'] == 0 && responseBody['data']['success'] == true) {
+          // If device is added successfully, get the robot group
           await getRobotGroup();
         } else {
           throw Exception('Falha ao adicionar o robô: ${responseBody['msg'] ?? 'Erro desconhecido'}');
@@ -194,49 +192,45 @@ class _RegisterPuduState extends State<RegisterPudu> {
   }
 
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+    try {
+      final robot = PuduRobot(
+        name: _nameController.text,
+        type: _selectedType,
+        ip: _ipController.text,
+        idDevice: _idDeviceController.text,
+        secretDevice: _secretDeviceController.text,
+        region: _regionController.text,
+        idGroup: idGroup ?? '',
+        groupName: groupName ?? '',
+        shopName: shopName ?? '',
+        robotIdd: idRobot ?? '',
+        nameRobot: robotName ?? '',
+      );
 
-      try {
-        final robot = PuduRobot(
-          ip: _ipController.text,
-          idDevice: _idDeviceController.text,
-          name: _nameController.text,
-          secretDevice: _secretDeviceController.text,
-          region: _regionController.text,
-          type: _selectedType,
-          groupName: groupName ?? "",
-          idGroup: idGroup ?? "",
-          nameRobot: robotName ?? "",
-          robotIdd: idRobot ?? "",
-          shopName: shopName ?? "",
+      final dbHelper = PuduDatabase.instance;
+      await dbHelper.create(robot);
+
+      if (mounted) {
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Robot registrado com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
         );
-
-        final savedRobot = await PuduDatabase.instance.create(robot);
-        print('Robot saved with ID: ${savedRobot.id}');
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Robot registered successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.pop(context, true);
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error registering robot: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao registrar o Robot: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
