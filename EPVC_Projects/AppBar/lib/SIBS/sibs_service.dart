@@ -56,6 +56,43 @@ class SibsService {
     }
   }
 
+    Future<Map<String, dynamic>> SendToWebhook({
+    required String transactionId,
+    required String transactionSignature,
+  }) async {
+    try {
+      final timestamp = DateTime.now().toUtc().toIso8601String();
+      
+
+    
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/payments/$transactionId/mbway-id/purchase'),
+        headers: {
+          'Authorization': 'Digest $transactionSignature',
+          'X-IBM-Client-Id': clientId,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode(payload),
+      );
+
+      print('SIBS Response: ${response.statusCode}');
+      print('Body: ${response.body}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorBody = json.decode(response.body);
+        throw Exception(
+            'Failed to create MBWay payment: ${errorBody['httpMessage'] ?? 'Unknown error'}');
+      }
+    } catch (e) {
+      print('Detailed error: $e');
+      throw Exception('SIBS communication error: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> initiateMBWayPayment({
     required double amount,
     required String orderNumber,
