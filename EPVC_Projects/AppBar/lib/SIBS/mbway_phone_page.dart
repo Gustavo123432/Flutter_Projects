@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'sibs_service.dart';
 import 'mbway_waiting_page.dart';
 import 'order_confirmation_page.dart';
+import 'order_declined_page.dart';
 
 class MBWayPhoneNumberPage extends StatefulWidget {
   final double amount;
@@ -178,17 +179,17 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
                 // Retornar falha - nenhum pedido foi criado
                 widget.onResult(false, 0);
 
-                // Mostrar mensagem de erro
+                // Navegar para a página de pedido recusado
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(message),
-                      backgroundColor: Colors.red,
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OrderDeclinedPage(
+                        amount: widget.amount,
+                        reason: message,
+                      ),
                     ),
                   );
-
-                  Navigator.pop(
-                      context); // Fechar a página de espera e voltar para o telefone
                 }
               }
             },
@@ -295,7 +296,7 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
                       padding: const EdgeInsets.symmetric(vertical: 30.0),
                       child: Image.asset(
                         'lib/assets/mbway_logo.png',
-                        height: 100,
+                        height: 50,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             height: 100,

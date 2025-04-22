@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
 
-class OrderConfirmationPage extends StatelessWidget {
-  final int orderNumber;
+class OrderDeclinedPage extends StatelessWidget {
   final double amount;
+  final String? reason;
 
-  const OrderConfirmationPage({
+  const OrderDeclinedPage({
     Key? key,
-    required this.orderNumber,
     required this.amount,
+    required this.reason,
   }) : super(key: key);
 
   @override
@@ -58,22 +58,22 @@ class OrderConfirmationPage extends StatelessWidget {
                   ),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.green[50],
+                      color: Colors.red[50],
                       borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Colors.green, width: 2),
+                      border: Border.all(color: Colors.red, width: 2),
                     ),
                     padding: EdgeInsets.all(25),
                     margin: EdgeInsets.all(20),
                     child: Column(
                       children: [
                         Icon(
-                          Icons.check_circle_outline,
-                          color: Colors.green,
+                          Icons.cancel_outlined,
+                          color: Colors.red,
                           size: 80,
                         ),
                         SizedBox(height: 20),
                         Text(
-                          'O teu pedido nº $orderNumber\nfoi efetuado com sucesso!',
+                          'O teu pedido foi recusado',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 22,
@@ -81,16 +81,25 @@ class OrderConfirmationPage extends StatelessWidget {
                           ),
                         ),
                         SizedBox(height: 10),
-                        Text(
-                          'Aguarde que fique pronto.',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[800],
+                        if (reason != null && reason!.isNotEmpty)
+                          Text(
+                            'Motivo: Pagamento recusado | Pagamento Expirado',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[800],
+                            ),
                           ),
-                        ),
+                        if (reason == null || reason!.isEmpty)
+                          Text(
+                            'O pagamento não foi processado.',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[800],
+                            ),
+                          ),
                         SizedBox(height: 20),
                         Text(
-                          'Valor pago: ${amount.toStringAsFixed(2).replaceAll('.', ',')}€',
+                          'Valor: ${amount.toStringAsFixed(2).replaceAll('.', ',')}€',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -105,7 +114,7 @@ class OrderConfirmationPage extends StatelessWidget {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => HomeAlunoMain()),
+                            builder: (context) => ShoppingCartPage()),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -117,7 +126,7 @@ class OrderConfirmationPage extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      'Voltar ao ecrã principal',
+                      'Voltar ao carrinho',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

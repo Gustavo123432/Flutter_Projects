@@ -74,7 +74,7 @@ class SibsService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: json.encode(payload),
+        body: json.encode(""),
       );
 
       print('SIBS Response: ${response.statusCode}');

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
 import 'sibs_service.dart';
+import 'mbway_phone_page.dart';
+import 'order_declined_page.dart';
 
 class MBWayPaymentWaitingPage extends StatefulWidget {
   final double amount;
@@ -30,7 +32,7 @@ class MBWayPaymentWaitingPage extends StatefulWidget {
 
 class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
   late Timer _timer;
-  int _secondsRemaining = 5 * 60; // 5 minutos em segundos
+  int _secondsRemaining = 4 * 60; // 5 minutos em segundos
   bool _isCheckingStatus = false;
   Timer? _statusCheckTimer;
   late SibsService _sibsService;
@@ -57,6 +59,13 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
           // Tempo expirado - informar o usuário
           widget.onPaymentResult(
               false, "Tempo expirado para o pagamento MB WAY");
+          // Redirecionar para a página inicial se o tempo expirar
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OrderDeclinedPage(amount: widget.amount, reason: "Tempo Expirado",),
+            ),
+          );
         }
       });
     });
@@ -86,13 +95,8 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
           _statusCheckTimer?.cancel();
           String errorMsg =
               result['returnStatus']?['statusMsg'] ?? 'Motivo desconhecido';
-          widget.onPaymentResult(false, "Pagamento recusado");
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ShoppingCartPage(),
-            ),
-          );
+          widget.onPaymentResult(false, errorMsg);
+          // Não navegar diretamente aqui, deixar a callback lidar com isso
         }
         // Se 'Pending', continua aguardando
       } catch (e) {
@@ -142,7 +146,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ShoppingCartPage(),
+                        builder: (context) => HomeAlunoMain(),
                       ),
                     );
                     widget.onPaymentResult(
@@ -213,7 +217,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
                           // Logo MB WAY
                           Image.asset(
                             'lib/assets/mbway_logo.png',
-                            height: 50,
+                            height: 40,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
                                 height: 50,
@@ -235,7 +239,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
 
                           // Texto de instrução
                           const Text(
-                            'É necessário aprovar o pagamento na App MB WAY em até 5 minutos, senão o pagamento será cancelado.',
+                            'É necessário aprovar o pagamento na App MB WAY em até 4 minutos, senão o pagamento será cancelado.',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 16),
                           ),
@@ -298,7 +302,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => ShoppingCartPage(),
+                                      builder: (context) => HomeAlunoMain(),
                                     ),
                                   );
                                   widget.onPaymentResult(false,
