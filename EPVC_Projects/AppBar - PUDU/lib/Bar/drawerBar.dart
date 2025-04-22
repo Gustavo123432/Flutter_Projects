@@ -3,7 +3,7 @@ import 'package:my_flutter_project/Bar/barPage.dart';
 import 'package:my_flutter_project/Bar/pedidosRegistados.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 import 'package:my_flutter_project/Bar/restaurantePage.dart';
-import 'package:my_flutter_project/PuduRobot/homePudu.dart';
+import 'package:my_flutter_project/BotDelivery/homeBotDelivery.dart';
 
 class DrawerBar extends StatefulWidget {
   const DrawerBar({super.key});
@@ -92,7 +92,7 @@ class _DrawerBarState extends State<DrawerBar> {
                 width: 24,
                 height: 24,
               ),
-              title: Text('Pudu Robot'),
+              title: Text('Bot Delivery'),
             ),
         
             Spacer(),
