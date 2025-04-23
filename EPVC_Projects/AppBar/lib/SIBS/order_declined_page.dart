@@ -40,7 +40,7 @@ class OrderDeclinedPage extends StatelessWidget {
                       height: 50,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
-                          height: 100,
+                          height: 50,
                           color: Colors.red[800],
                           child: Center(
                             child: Text(
@@ -83,7 +83,7 @@ class OrderDeclinedPage extends StatelessWidget {
                         SizedBox(height: 10),
                         if (reason != null && reason!.isNotEmpty)
                           Text(
-                            'Motivo: Pagamento recusado | Pagamento Expirado',
+                            'Motivo: ${reason}',
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.grey[800],

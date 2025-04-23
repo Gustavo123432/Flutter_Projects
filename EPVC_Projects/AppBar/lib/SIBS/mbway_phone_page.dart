@@ -6,6 +6,7 @@ import 'sibs_service.dart';
 import 'mbway_waiting_page.dart';
 import 'order_confirmation_page.dart';
 import 'order_declined_page.dart';
+import 'package:my_flutter_project/Aluno/home.dart';
 
 class MBWayPhoneNumberPage extends StatefulWidget {
   final double amount;
@@ -97,13 +98,32 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
       // Debug print
       print('Create Payment Response: $createResponse');
 
-      // 4. Verificar resposta da criação do pagamento
+      // 4. Enviar para o webhook para processamento de status
+      print('Registering transaction with webhook for status monitoring');
+      try {
+        final webhookResponse = await widget.sibsService.SendToWebhook(
+          transactionId: transactionId,
+          transactionSignature: transactionSignature,
+        );
+        
+        if (webhookResponse['status'] == 'success') {
+          print('Transaction successfully registered with webhook');
+        } else {
+          print('Warning: Webhook registration returned non-success: ${webhookResponse['message']}');
+          // Continue even if webhook registration fails
+        }
+      } catch (e) {
+        print('Warning: Error during webhook registration: $e');
+        // Continue the process even if webhook registration fails
+      }
+
+      // 5. Verificar resposta da criação do pagamento
       if (!createResponse.containsKey('transactionID') &&
           createResponse['statusCode'] != "000") {
         throw Exception('Resposta de pagamento inválida: $createResponse');
       }
 
-      // 5. Navegar para a página de espera do MB WAY
+      // 6. Navegar para a página de espera do MB WAY
       if (!mounted) return;
 
       Navigator.push(
@@ -116,81 +136,18 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
             accessToken: widget.sibsService.accessToken,
             merchantId: widget.sibsService.merchantId,
             merchantName: widget.sibsService.merchantName,
+            orderData: widget.orderData,
             onPaymentResult: (success, message) async {
               if (success) {
-                // Se o pagamento for bem-sucedido, AGORA criar o pedido na API
-                final orderResponse = await http.post(
-                  Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
-                  body: {
-                    'query_param': '5',
-                    'nome': widget.orderData['nome'],
-                    'apelido': widget.orderData['apelido'],
-                    'orderNumber': '0',
-                    'turma': widget.orderData['turma'],
-                    'descricao': widget.orderData['descricao'],
-                    'permissao': widget.orderData['permissao'],
-                    'total': widget.amount.toString(),
-                    'valor': widget.amount.toString(),
-                    'imagem': widget.orderData['imagem'],
-                    'cartItems': widget.orderData['cartItems'],
-                    'payment_method': 'mbway',
-                    'phone_number': phoneNumber,
-                    'transaction_id':
-                        transactionId, // Incluir ID da transação para rastreamento
-                    'payment_status': 'paid', // Já marcar como pago
-                  },
-                );
-
-                if (orderResponse.statusCode != 200) {
-                  throw Exception(
-                      'Erro na criação do pedido (status ${orderResponse.statusCode})');
-                }
-
-                final orderResponseData = json.decode(orderResponse.body);
-                if (orderResponseData['status'] != 'success') {
-                  throw Exception(orderResponseData['message'] ??
-                      'Erro na criação do pedido');
-                }
-
-                int orderNumber =
-                    int.parse(orderResponseData['orderNumber'].toString());
-
-                // Agora que temos o número do pedido e a confirmação do pagamento,
-                // enviar os detalhes dos produtos para a API
-                await sendOrderItemsToAPI(
-                    orderNumber, widget.orderData['cartItems'], transactionId);
-
-                // Retornar sucesso para a página que chamou
-                widget.onResult(true, orderNumber);
-
-                // Navegar para a página de confirmação de pedido
-                if (mounted) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => OrderConfirmationPage(
-                        orderNumber: orderNumber,
-                        amount: widget.amount,
-                      ),
-                    ),
-                  );
-                }
+                // O processamento do pedido agora é feito na página de espera
+                // Apenas informamos o resultado ao chamador
+                widget.onResult(true, 0); // O número do pedido já é exibido na página de confirmação
               } else {
                 // Retornar falha - nenhum pedido foi criado
+                print('Payment declined - returning to home screen');
                 widget.onResult(false, 0);
 
-                // Navegar para a página de pedido recusado
-                if (mounted) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => OrderDeclinedPage(
-                        amount: widget.amount,
-                        reason: message,
-                      ),
-                    ),
-                  );
-                }
+                // Navegar para a página de pedido recusado já é feito na página de espera
               }
             },
           ),
@@ -200,14 +157,58 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
       print('Erro ao processar pagamento MBWay: $e');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Erro ao processar pagamento: ${e.toString().replaceAll(RegExp(r'^Exception: '), '')}'),
-            duration: Duration(seconds: 5),
-            backgroundColor: Colors.red,
-          ),
-        );
+        // Verificar se é um erro relacionado ao número MB WAY
+        bool isPhoneNumberError = e.toString().toLowerCase().contains('número mb way inválido') ||
+                                 e.toString().toLowerCase().contains('número inválido') ||
+                                 e.toString().toLowerCase().contains('e9999');
+
+        if (isPhoneNumberError) {
+          // Mostrar diálogo específico para erro de número de telefone
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext dialogContext) {
+              return AlertDialog(
+                title: Text('Erro no número MB WAY'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('O pagamento foi recusado pelo sistema MB WAY.'),
+                    SizedBox(height: 8),
+                    Text('Possíveis motivos:'),
+                    SizedBox(height: 4),
+                    Text('• Número de telefone incorreto'),
+                    Text('• Conta MB WAY não ativa'),
+                    Text('• Saldo insuficiente'),
+                    SizedBox(height: 8),
+                    Text('Por favor, verifique o número e tente novamente.',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                actions: <Widget>[
+                  TextButton(
+                    child: Text('OK'),
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop(); // Fecha o diálogo
+                      // Não navegamos para fora - o usuário deve corrigir e tentar novamente
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        } else {
+          // Para outros erros, mostrar uma snackbar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Erro ao processar pagamento: ${e.toString().replaceAll(RegExp(r'^Exception: '), '')}'),
+              duration: Duration(seconds: 5),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
 
         setState(() {
           _isProcessing = false;
@@ -220,30 +221,48 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
 
   Future<void> _updateOrderStatusInAPI(String orderId, String status) async {
     try {
+      print('Updating order #$orderId status to: $status');
+      
       final response = await http.post(
         Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
         body: {
           'query_param': 'update_order_status',
           'order_id': orderId,
           'status': status,
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
         },
       );
 
+      print('Update status response code: ${response.statusCode}');
+      
       if (response.statusCode != 200) {
-        throw Exception('Falha ao atualizar status do pedido na API');
+        throw Exception('Falha ao atualizar status do pedido (status ${response.statusCode})');
       }
 
-      print('Status do pedido atualizado com sucesso: $status');
+      try {
+        final responseData = json.decode(response.body);
+        if (responseData['status'] != 'success') {
+          throw Exception('API returned non-success status: ${responseData['message'] ?? 'Unknown error'}');
+        }
+        print('Status do pedido atualizado com sucesso para: $status');
+      } catch (jsonError) {
+        print('Warning: Could not parse API response: $jsonError');
+        // Continue even if response parsing fails
+      }
     } catch (e) {
       print('Erro ao atualizar status do pedido: $e');
+      throw e; // Re-throw to allow caller to handle
     }
   }
 
   Future<void> sendOrderItemsToAPI(
       int orderId, String cartItemsJson, String transactionId) async {
     try {
+      print('Sending order items to API for order #$orderId');
+      
       // Decodificar o JSON dos itens do carrinho
       List<dynamic> cartItems = json.decode(cartItemsJson);
+      print('Cart items count: ${cartItems.length}');
 
       // Enviar cada item para a API individualmente ou em lote
       final response = await http.post(
@@ -256,14 +275,54 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
         },
       );
 
+      print('Send items response code: ${response.statusCode}');
+      print('Send items response body: ${response.body}');
+
       if (response.statusCode != 200) {
-        throw Exception('Falha ao enviar itens do pedido para a API');
+        throw Exception('Falha ao enviar itens do pedido (status ${response.statusCode}): ${response.body}');
       }
 
-      print('Itens do pedido enviados com sucesso');
+      // Verificar resposta para garantir que os itens foram adicionados corretamente
+      try {
+        final responseData = json.decode(response.body);
+        if (responseData['status'] != 'success') {
+          throw Exception('API returned non-success status: ${responseData['message'] ?? 'Unknown error'}');
+        }
+        print('Itens do pedido enviados com sucesso. Resposta: ${response.body}');
+      } catch (jsonError) {
+        print('Warning: Could not parse API response: $jsonError');
+        // Continue even if response parsing fails
+      }
     } catch (e) {
       print('Erro ao enviar itens do pedido: $e');
       // Não lança a exceção para não interromper o fluxo após o pagamento ser confirmado
+    }
+  }
+
+  Future<void> notifyOrderSystem(int orderNumber, String transactionId) async {
+    // This function can be used to notify other parts of the system about the new order
+    // For example, sending a WebSocket message or making an API call
+    try {
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        body: {
+          'query_param': 'notify_order',
+          'order_number': orderNumber.toString(),
+          'transaction_id': transactionId,
+          'status': 'new',
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print('Order system notified successfully');
+        return;
+      }
+      
+      print('Warning: Order system notification returned status ${response.statusCode}');
+    } catch (e) {
+      print('Error notifying order system: $e');
+      // Don't throw exception, just log the error
     }
   }
 
@@ -299,7 +358,7 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
                         height: 50,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
-                            height: 100,
+                            height: 50,
                             color: Colors.red[800],
                             child: Center(
                               child: Text(

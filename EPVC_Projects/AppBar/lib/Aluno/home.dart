@@ -1710,7 +1710,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               },
               style: ElevatedButton.styleFrom(
                 minimumSize: Size(double.infinity, 50), // width, height
-                backgroundColor: Colors.purple,
+                backgroundColor: Colors.red[800],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,

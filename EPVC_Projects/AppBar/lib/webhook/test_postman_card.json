@@ -1,0 +1,32 @@
+{
+  "merchant": {
+    "terminalId": 82144,
+    "channel": "web",
+    "merchantTransactionId": "test_tx_001"
+  },
+  "amount": {
+    "value": 10.99,
+    "currency": "EUR"
+  },
+  "cardInfo": {
+    "PAN": "4000000000000002",
+    "secureCode": "123",
+    "validationDate": "2512",
+    "cardholderName": "SIBS TEST"
+  },
+  "deviceInfo": {
+    "browserAcceptHeader": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "browserJavaEnabled": "False",
+    "browserJavascriptEnabled": "True",
+    "browserLanguage": "pt-PT",
+    "browserColorDepth": "24",
+    "browserScreenHeight": "1080",
+    "browserScreenWidth": "1920",
+    "browserTZ": "-60",
+    "browserUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+  },
+  "customerInfo": {
+    "key": "EMAIL",
+    "value": "john.doe@example.com"
+  }
+} 

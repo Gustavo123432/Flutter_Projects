@@ -40,7 +40,7 @@ class OrderConfirmationPage extends StatelessWidget {
                       height: 50,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
-                          height: 100,
+                          height: 50,
                           color: Colors.red[800],
                           child: Center(
                             child: Text(
