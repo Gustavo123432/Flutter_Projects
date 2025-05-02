@@ -2298,18 +2298,19 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                             title: Text('Confirmação do Pedido'),
                             content: Text('Deseja confirmar o pedido?'),
                             actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                                            checkAvailabilityBeforeOrder(total);
-                                },
-                                child: Text('Confirmar'),
-                              ),
+                             
                               TextButton(
                                 onPressed: () {
                                   Navigator.of(context).pop();
                                 },
                                 child: Text('Cancelar'),
+                              ),
+                               TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                                            checkAvailabilityBeforeOrder(total);
+                                },
+                                child: Text('Confirmar'),
                               ),
                             ],
                           );

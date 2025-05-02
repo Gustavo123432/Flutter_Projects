@@ -391,7 +391,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
                   const Spacer(),
 
                   // Botão para cancelar
-                  Container(
+                 /* Container(
                     margin: const EdgeInsets.symmetric(
                         horizontal: 16.0, vertical: 8.0),
                     width: double.infinity,
@@ -433,7 +433,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
                         style: TextStyle(fontSize: 16),
                       ),
                     ),
-                  ),
+                  ),*/
 
                   // Rodapé
                   Padding(
