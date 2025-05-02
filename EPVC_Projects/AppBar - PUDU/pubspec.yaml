@@ -99,6 +99,7 @@ flutter:
     - lib/assets/monteRestaurante.jpg
     - lib/assets/mbway_logo.png
     - lib/assets/robo.png
+    - lib/assets/logo_bot_delivery.png
     #- lib/assets/fonts/Helvetica.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see

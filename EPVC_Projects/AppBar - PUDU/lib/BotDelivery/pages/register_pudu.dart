@@ -28,11 +28,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
   String? robotName;
 
   final List<String> _robotTypes = [
-    //'KettyBot',
     'BellaBot'
-    //'HolaBot',
-    //'SwiftBot',
-    //'PuduBot',
   ];
 
   @override
@@ -70,7 +66,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
             });
             await getRobotInterface();
           } else {
-            throw Exception('Nenhum grupo de robô encontrado');
+            throw Exception('Nenhum grupo de robot encontrado');
           }
         } else {
           throw Exception('Dados inválidos recebidos do servidor');
@@ -117,7 +113,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
             });
             await _submitForm();
           } else {
-            throw Exception('Nenhum robô encontrado');
+            throw Exception('Nenhum robot encontrado');
           }
         } else {
           throw Exception('Dados inválidos recebidos do servidor');
@@ -172,7 +168,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
           // If device is added successfully, get the robot group
           await getRobotGroup();
         } else {
-          throw Exception('Falha ao adicionar o robô: ${responseBody['msg'] ?? 'Erro desconhecido'}');
+          throw Exception('Falha ao adicionar o robot: ${responseBody['msg'] ?? 'Erro desconhecido'}');
         }
       } else {
         throw Exception('Erro ${response.statusCode}: ${response.body}');

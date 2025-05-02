@@ -4,6 +4,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/pudu_robot_model.dart';
+import '../entities/robot_state_query_response.dart';
+import '../widgets/charging_dialog.dart';
 
 class Destination {
   final String name;
@@ -19,41 +21,6 @@ class Destination {
       name: json['name'] as String,
       type: json['type'] as String,
     );
-  }
-}
-
-class RobotStatus {
-  final String chargeStage;
-  final String moveState;
-  final String robotState;
-  final Map<String, dynamic> robotPose;
-  final int robotPower;
-  final List<Map<String, dynamic>> destinationQueue;
-
-  RobotStatus({
-    required this.chargeStage,
-    required this.moveState,
-    required this.robotState,
-    required this.robotPose,
-    required this.robotPower,
-    required this.destinationQueue,
-  });
-
-  factory RobotStatus.empty() {
-    return RobotStatus(
-      chargeStage: 'Unknown',
-      moveState: 'Unknown',
-      robotState: 'Unknown',
-      robotPose: {'x': 0.0, 'y': 0.0, 'angle': 0.0},
-      robotPower: 0,
-      destinationQueue: [],
-    );
-  }
-
-  String get formattedLocation {
-    final x = robotPose['x']?.toStringAsFixed(2) ?? '0.00';
-    final y = robotPose['y']?.toStringAsFixed(2) ?? '0.00';
-    return 'X: $x, Y: $y';
   }
 }
 
@@ -75,8 +42,15 @@ class _RobotMenuState extends State<RobotMenu> {
   RobotStatus robotStatus = RobotStatus.empty();
   Timer? _statusRefreshTimer;
   
+  // Current location tracking
+  String _currentLocation = "Desconhecido";
+  Destination? _currentDestination;
+  
   // Debug information to display
   String debugInfo = '';
+  
+  // Charging dialog
+  bool _isChargingDialogShowing = false;
 
   @override
   void initState() {
@@ -147,21 +121,29 @@ class _RobotMenuState extends State<RobotMenu> {
           final data = responseData['data'];
           setState(() {
             robotStatus = RobotStatus(
+              isConnected: true,
               chargeStage: data['chargeStage']?.toString() ?? 'Unknown',
               moveState: data['moveState']?.toString() ?? 'Unknown',
               robotState: data['robotState']?.toString() ?? 'Unknown',
-              robotPose: data['robotPose'] is Map ? 
-                Map<String, dynamic>.from(data['robotPose']) : 
-                {'x': 0.0, 'y': 0.0, 'angle': 0.0},
-              robotPower: data['robotPower'] is int ? 
-                data['robotPower'] : 
-                (data['robotPower'] is String ? int.tryParse(data['robotPower']) ?? 0 : 0),
-              // Keep destination queue for future API updates
-              destinationQueue: data['destinationQueue'] is List ? 
-                List<Map<String, dynamic>>.from(data['destinationQueue']) : 
-                [],
+              robotId: widget.robot.robotIdd,
+              robotPose: data['robotPose'] is Map 
+                ? RobotPose.fromJson(Map<String, dynamic>.from(data['robotPose'])) 
+                : RobotPose(0.0, 0.0, 0.0),
+              robotPower: data['robotPower'] is int 
+                ? data['robotPower'] 
+                : (data['robotPower'] is String ? int.tryParse(data['robotPower']) ?? 0 : 0),
+              destinationQueue: data['destinationQueue'] is List 
+                ? List<Map<String, dynamic>>.from(data['destinationQueue']) 
+                : [],
             );
+            
+            // Update current location based on robot status
+            _updateCurrentLocation();
+            
             debugInfo = 'Robot status updated successfully';
+            
+            // Check if robot is in special status
+            _checkRobotStatusForSpecialConditions();
           });
         } else {
           debugInfo = 'Error parsing robot status: ${responseData['msg']}';
@@ -175,62 +157,140 @@ class _RobotMenuState extends State<RobotMenu> {
     }
   }
   
-  String _translateMovementState(String state) {
-    switch (state.toLowerCase()) {
-      case 'idle':
-        return 'Parado';
-      case 'moving':
-      case 'move':
-        return 'Em movimento';
-      case 'charging':
-      case 'charge':
-        return 'Carregando';
-      case 'waiting':
-      case 'wait':
-        return 'Aguardando';
-      case 'delivering':
-      case 'deliver':
-        return 'Entregando';
-      case 'returning':
-      case 'return':
-        return 'Retornando';
-      case 'arrive':
-        return 'Chegou ao destino';
-      default:
-        return state.isNotEmpty ? state : 'Desconhecido';
+  // Method to update the current location display based on robot status
+  void _updateCurrentLocation() {
+    if (robotStatus.chargeStage == CHARGING_STATE || 
+        robotStatus.chargeStage == CHARGE_FULL_STATE) {
+      _currentLocation = 'Estação de carregamento';
+    } else if (robotStatus.moveState == MOVING_STATE && 
+              _currentDestination != null) {
+      _currentLocation = 'Indo para ${_currentDestination!.name}';
+    } else if (robotStatus.moveState == ARRIVED_STATE || 
+              robotStatus.moveState == ARRIVE_STATE) {
+      if (_currentDestination != null) {
+        _currentLocation = _currentDestination!.name;
+      } else {
+        _currentLocation = 'Chegou ao destino';
+      }
+    } else if (robotStatus.moveState == IDLE_STATE) {
+      final nearestDestination = _findNearestDestination();
+      _currentLocation = nearestDestination ?? 'Aguardando';
+    } else {
+      _currentLocation = _translateMovementState(robotStatus.moveState);
     }
+  }
+  
+  // Method to find the nearest destination based on coordinates
+  String? _findNearestDestination() {
+    // This would require more complex logic to determine the nearest location
+    // For now, return null which will display "Aguardando"
+    return null;
+  }
+  
+  void _showLocationDialog(String location) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Localização atual'),
+          content: Text('O robot está em: $location'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Add a method to check for special conditions based on robot status
+  void _checkRobotStatusForSpecialConditions() {
+    // Check for charging state
+    if (robotStatus.chargeStage == CHARGING_STATE || 
+        robotStatus.chargeStage == CHARGE_FULL_STATE) {
+      // Robot is charging, show the charging dialog
+      debugInfo += '\nRobot is currently charging';
+      
+      // Show charging dialog if not already showing
+      if (!_isChargingDialogShowing && mounted) {
+        _showChargingDialog();
+      } else if (_isChargingDialogShowing && mounted) {
+        // Update the existing dialog with new data
+        Navigator.of(context).pop(); // Close current dialog
+        _showChargingDialog(); // Show updated dialog
+      }
+    } else {
+      // If robot is no longer charging, dismiss dialog if showing
+      if (_isChargingDialogShowing && mounted) {
+        Navigator.of(context).pop();
+        _isChargingDialogShowing = false;
+      }
+    }
+    
+    // Check if robot has arrived at destination
+    if (robotStatus.moveState == ARRIVED_STATE || 
+        robotStatus.moveState == ARRIVE_STATE) {
+      // Robot has arrived, could show notification or update UI
+      debugInfo += '\nRobot has arrived at destination';
+      
+      // Could enable/disable buttons based on this state
+      setState(() {
+        // Update UI based on arrived state
+      });
+    }
+    
+    // Check if robot is idle and available
+    if (robotStatus.moveState == IDLE_STATE && 
+        robotStatus.robotState == FREE_STATE) {
+      // Robot is available for new tasks
+      debugInfo += '\nRobot is available for new tasks';
+    }
+  }
+  
+  void _showChargingDialog() {
+    setState(() {
+      _isChargingDialogShowing = true;
+    });
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: ChargingDialog(
+            chargeStage: _translateChargeStage(robotStatus.chargeStage),
+            robotPower: robotStatus.robotPower,
+            onDisconnect: () {
+              setState(() {
+                _isChargingDialogShowing = false;
+                isConnected = false;
+              });
+              Navigator.of(context).pop(); // Close dialog
+              Navigator.of(context).pop(); // Return to dashboard
+            },
+          ),
+        );
+      },
+    ).then((_) {
+      setState(() {
+        _isChargingDialogShowing = false;
+      });
+    });
+  }
+
+  String _translateMovementState(String state) {
+    return translateMoveState(state);
   }
 
   String _translateRobotState(String state) {
-    switch (state.toLowerCase()) {
-      case 'free':
-        return 'Livre';
-      case 'busy':
-        return 'Ocupado';
-      case 'charging':
-        return 'Carregando';
-      case 'error':
-        return 'Erro';
-      default:
-        return state.isNotEmpty ? state : 'Desconhecido';
-    }
+    return translateRobotState(state);
   }
 
   String _translateChargeStage(String stage) {
-    switch (stage.toLowerCase()) {
-      case 'idle':
-        return 'Não carregando';
-      case 'charging':
-        return 'Carregando';
-      case 'fully_charged':
-      case 'full':
-        return 'Completamente carregado';
-      case 'low_battery':
-      case 'low':
-        return 'Bateria baixa';
-      default:
-        return stage.isNotEmpty ? stage : 'Desconhecido';
-    }
+    return translateChargeStage(stage);
   }
 
   Color _getStateColor(RobotStatus status) {
@@ -241,19 +301,19 @@ class _RobotMenuState extends State<RobotMenu> {
     
     // Then check movement state
     final moveState = status.moveState.toLowerCase();
-    if (moveState == 'idle') {
+    if (moveState == IDLE_STATE.toLowerCase()) {
       return Colors.grey;
-    } else if (moveState.contains('mov')) {
+    } else if (moveState.contains(MOVING_STATE.toLowerCase())) {
       return Colors.green;
-    } else if (moveState == 'arrive') {
+    } else if (moveState == ARRIVE_STATE.toLowerCase() || moveState == ARRIVED_STATE.toLowerCase()) {
       return Colors.amber;
     }
     
     // Check robot state if no specific movement state
     final robotState = status.robotState.toLowerCase();
-    if (robotState == 'busy') {
+    if (robotState == BUSY_STATE.toLowerCase()) {
       return const Color(0xFFFF8C42); // Orange
-    } else if (robotState == 'error') {
+    } else if (robotState == ERROR_ROBOT_STATE.toLowerCase()) {
       return Colors.red;
     }
     
@@ -342,6 +402,9 @@ class _RobotMenuState extends State<RobotMenu> {
         orElse: () => Destination(name: selectedDestination!, type: 'table'), // Default to table if not found
       );
       
+      // Store the current destination
+      _currentDestination = selectedDestinationData;
+      
       // Prepare the request body in the correct format
       final requestBody = {
         'deviceId': widget.robot.idDevice,
@@ -375,6 +438,11 @@ class _RobotMenuState extends State<RobotMenu> {
                 backgroundColor: Colors.green,
               ),
             );
+            
+            // Update current location status
+            setState(() {
+              _currentLocation = 'Indo para ${_currentDestination!.name}';
+            });
             
             // Fetch status immediately after sending
             _fetchRobotStatus();
@@ -425,6 +493,9 @@ class _RobotMenuState extends State<RobotMenu> {
         orElse: () => Destination(name: selectedDestination!, type: 'table'), // Default to table if not found
       );
       
+      // Clear the current destination
+      _currentDestination = null;
+      
       // Prepare the request body in the correct format
       final requestBody = {
         'deviceId': widget.robot.idDevice,
@@ -458,6 +529,11 @@ class _RobotMenuState extends State<RobotMenu> {
                 backgroundColor: Colors.green,
               ),
             );
+            
+            // Update current location
+            setState(() {
+              _currentLocation = 'Aguardando';
+            });
             
             // Fetch status immediately after cancellation
             _fetchRobotStatus();
@@ -604,6 +680,64 @@ class _RobotMenuState extends State<RobotMenu> {
     );
   }
 
+  IconData _getLocationIcon(RobotStatus status) {
+    if (status.chargeStage == CHARGING_STATE || status.chargeStage == CHARGE_FULL_STATE) {
+      return Icons.electrical_services;
+    }
+    
+    if (status.moveState == MOVING_STATE) {
+      return Icons.directions_walk;
+    }
+    
+    if (status.moveState == ARRIVED_STATE || status.moveState == ARRIVE_STATE) {
+      return Icons.pin_drop;
+    }
+    
+    if (status.moveState == IDLE_STATE) {
+      return Icons.home;
+    }
+    
+    return Icons.location_on;
+  }
+
+  // Method to check battery status and update UI accordingly
+  Widget _buildBatteryStatus(int power) {
+    IconData batteryIcon;
+    Color batteryColor;
+    
+    if (power > 80) {
+      batteryIcon = Icons.battery_full;
+      batteryColor = Colors.green;
+    } else if (power > 50) {
+      batteryIcon = Icons.battery_5_bar;
+      batteryColor = Colors.green;
+    } else if (power > 20) {
+      batteryIcon = Icons.battery_3_bar;
+      batteryColor = Colors.orange;
+    } else {
+      batteryIcon = Icons.battery_1_bar;
+      batteryColor = Colors.red;
+    }
+    
+    return Row(
+      children: [
+        Icon(
+          batteryIcon,
+          color: batteryColor,
+          size: 20,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$power%',
+          style: TextStyle(
+            color: batteryColor,
+            fontWeight: power <= 20 ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -616,23 +750,12 @@ class _RobotMenuState extends State<RobotMenu> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Logo and Title
-                const Row(
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Bot',
-                      style: TextStyle(
-                        fontSize: 28,
-                        color: Color(0xFF7FCFCF),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'Delivery',
-                      style: TextStyle(
-                        fontSize: 28,
-                        color: Color(0xFFFF8C42),
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Image.asset(
+                      'lib/assets/logo_bot_delivery.png',
+                      height: 70,
                     ),
                   ],
                 ),
@@ -791,20 +914,7 @@ class _RobotMenuState extends State<RobotMenu> {
                                 'Bateria:',
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
-                              Row(
-                                children: [
-                                  Icon(
-                                    robotStatus.robotPower > 80 ? Icons.battery_full :
-                                    robotStatus.robotPower > 50 ? Icons.battery_5_bar :
-                                    robotStatus.robotPower > 20 ? Icons.battery_3_bar :
-                                    Icons.battery_1_bar,
-                                    color: robotStatus.robotPower > 20 ? Colors.green : Colors.red,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text('${robotStatus.robotPower}%'),
-                                ],
-                              ),
+                              _buildBatteryStatus(robotStatus.robotPower),
                             ],
                           ),
                         ],
@@ -820,7 +930,7 @@ class _RobotMenuState extends State<RobotMenu> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'Estado do robô:',
+                                      'Estado do robot:',
                                       style: TextStyle(fontWeight: FontWeight.bold),
                                     ),
                                     Text(_translateRobotState(robotStatus.robotState)),
@@ -846,7 +956,20 @@ class _RobotMenuState extends State<RobotMenu> {
                             'Localização atual:',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          Text(robotStatus.formattedLocation),
+                          InkWell(
+                            onTap: () => _showLocationDialog(_currentLocation),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _getLocationIcon(robotStatus),
+                                  size: 16,
+                                  color: _getStateColor(robotStatus),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(_currentLocation),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 16),
                           const Text(
                             'Fila de destinos:',

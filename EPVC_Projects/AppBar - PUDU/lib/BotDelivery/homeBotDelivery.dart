@@ -148,7 +148,7 @@ class _HomePuduState extends State<HomePudu> {
                         _showRobotDetails(robot);
                       },
                     ),
-                    ListTile(
+                    /*ListTile(
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
@@ -163,24 +163,9 @@ class _HomePuduState extends State<HomePudu> {
                         // Implementar edição
                         Navigator.pop(context);
                       },
-                    ),
+                    ),*/
                 
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(Icons.refresh, color: Colors.orange.shade700),
-                      ),
-                      title: const Text('Reiniciar'),
-                      subtitle: const Text('Reiniciar o Robot'),
-                      onTap: () {
-                        // Implementar reinicialização
-                        Navigator.pop(context);
-                      },
-                    ),
+                    
                     ListTile(
                       leading: Container(
                         padding: const EdgeInsets.all(8),
@@ -325,7 +310,7 @@ class _HomePuduState extends State<HomePudu> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 246, 141, 45),
-        title: const Text('Pudu Robots'),
+        title: const Text('Bot Delivery'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
