@@ -1510,6 +1510,86 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
+  Future<bool> _showPrencadoConfirmationDialog(List<Map<String, dynamic>> prencadoProducts) async {
+    Map<String, bool> selectedProducts = {};
+    
+    return await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirmação de Preparação'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: prencadoProducts.map((product) {
+                String prencado = product['Prencado'] ?? '0';
+                String preparationType = prencado == '1' ? 'Prençado' : 'Aquecido';
+                selectedProducts[product['Nome']] = false;
+                
+                return StatefulBuilder(
+                  builder: (context, setState) {
+                    return CheckboxListTile(
+                      title: Text(product['Nome']),
+                      subtitle: Text('Deseja $preparationType?'),
+                      value: selectedProducts[product['Nome']],
+                      onChanged: (bool? value) {
+                        setState(() {
+                          selectedProducts[product['Nome']] = value ?? false;
+                          product['PrepararPrencado'] = value ?? false;
+                        });
+                      },
+                    );
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                // Update cartItems with selected preferences
+                for (var product in prencadoProducts) {
+                  int index = cartItems.indexWhere((item) => item['Nome'] == product['Nome']);
+                  if (index != -1) {
+                    cartItems[index]['PrepararPrencado'] = selectedProducts[product['Nome']];
+                  }
+                }
+                Navigator.of(context).pop(true);
+              },
+              child: Text('Confirmar'),
+            ),
+          ],
+        );
+      },
+    ) ?? false;
+  }
+
+  Future<bool> _showOrderConfirmationDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirmar Pedido'),
+          content: Text('Deseja confirmar o pedido?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text('Confirmar'),
+            ),
+          ],
+        );
+      },
+    ) ?? false;
+  }
+
   Future<void> sendOrderToApi() async {
     if (itemCountMap.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1518,13 +1598,44 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       return;
     }
 
+    // First confirmation dialog
+    bool confirmOrder = await _showOrderConfirmationDialog();
+    if (!confirmOrder) return;
+
+    // Check for products with Prencado != 0
+    List<Map<String, dynamic>> prencadoProducts = cartItems.where((item) {
+      String prencado = item['Prencado'] ?? '0';
+      return prencado != '0';
+    }).toList();
+
+    // If there are products with Prencado != 0, show the confirmation dialog
+    if (prencadoProducts.isNotEmpty) {
+      bool confirmPrencado = await _showPrencadoConfirmationDialog(prencadoProducts);
+      if (!confirmPrencado) return;
+    }
+
     // Mostrar diálogo de seleção de método de pagamento
     final paymentMethod = await _showPaymentMethodDialog();
     if (paymentMethod == null) return;
 
     try {
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
+      // Create the description string with proper formatting
+      List<String> formattedNames = cartItems.map((item) {
+        String name = item['Nome'] as String;
+        bool prepararPrencado = item['PrepararPrencado'] ?? false;
+        String prencado = item['Prencado'] ?? '0';
+        
+        if (prepararPrencado && prencado != '0') {
+          if (prencado == '1') {
+            return '$name - Prençado';
+          } else if (prencado == '2') {
+            return '$name - Aquecido';
+          }
+        }
+        return name;
+      }).toList();
+
+      String descricao = formattedNames.join(', ');
 
       // Extract user information
       var turma = users[0]['Turma'] ?? '';
@@ -1532,37 +1643,30 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       var apelido = users[0]['Apelido'] ?? '';
       var permissao = users[0]['Permissao'] ?? '';
       var imagem = users[0]['Imagem'] ?? '';
-
-      // Encode cartItems to JSON string
-      String cartItemsJson = json.encode(cartItems);
       double total = calculateTotal();
 
       if (paymentMethod == 'mbway') {
-        // Usar a nova página MBWayPhoneNumberPage que contém a lógica de pagamento
-        double total = calculateTotal();
-        
         // Preparar os dados do pedido
         Map<String, dynamic> orderData = {
           'nome': nome,
           'apelido': apelido,
           'turma': turma,
-          'descricao': itemNames.join(', '),
+          'descricao': descricao,
           'permissao': permissao,
           'imagem': imagem,
-          'cartItems': cartItemsJson,
+          'total': total.toString(),
+          'payment_method': paymentMethod,
         };
         
-        // Ir para a página de telefone MBWay com a lógica de pagamento
         await Navigator.push(
-            context,
-            MaterialPageRoute(
+          context,
+          MaterialPageRoute(
             builder: (context) => MBWayPhoneNumberPage(
               amount: total,
               orderData: orderData,
               sibsService: _sibsService!,
               onResult: (success, newOrderNumber) {
-                  if (success) {
-                  // Pagamento bem-sucedido, limpar carrinho
+                if (success) {
                   setState(() {
                     cartItems.clear();
                     updateItemCountMap();
@@ -1571,7 +1675,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                 }
               },
               onCancel: () {
-                Navigator.pop(context); // Voltar para a página do carrinho
+                Navigator.pop(context);
               },
             ),
           ),
@@ -1581,10 +1685,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         bool needsChange = await _showNeedsChangeDialog();
 
         if (needsChange) {
-          // Se precisar de troco, perguntar o valor entregue
           dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
         } else {
-          // Se não precisar de troco, o valor entregue é o mesmo do total
           dinheiroAtual = total;
         }
 
@@ -1597,16 +1699,16 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             'apelido': apelido,
             'orderNumber': '0',
             'turma': turma,
-            'descricao': itemNames.join(', '),
+            'descricao': descricao,
             'permissao': permissao,
             'total': total.toString(),
             'valor': dinheiroAtual.toString(),
             'imagem': imagem,
-            'cartItems': cartItemsJson,
             'payment_method': paymentMethod,
           },
         );
 
+        print(response);
         print('Response status: ${response.statusCode}');
         print('Response body: ${response.body}');
 
@@ -1620,50 +1722,47 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
             if (data['status'] == 'success') {
               orderNumber = int.parse(data['orderNumber'].toString());
-              // Enviar para o WebSocket e limpar o carrinho
               await sendOrderToWebSocket(cartItems, total.toString());
 
-                    setState(() {
-                      cartItems.clear();
-                      updateItemCountMap();
-                    });
+              setState(() {
+                cartItems.clear();
+                updateItemCountMap();
+              });
 
               double change = dinheiroAtual - total;
               String changeMsg = change > 0
                   ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
                   : '';
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                    content: Text(
-                        'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
-                    );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                      'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
+              );
 
-              // Navegar para a página de confirmação de pedido
-                    Navigator.pushReplacement(
-                      context,
+              Navigator.pushReplacement(
+                context,
                 MaterialPageRoute(
                   builder: (context) => OrderConfirmationPage(
                     orderNumber: orderNumber,
                     amount: total,
                   ),
                 ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                    content: Text(
-                        'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                      'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
               );
             }
           } catch (e) {
             print('JSON decode error: $e');
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text('Erro ao processar resposta do servidor')),
+              SnackBar(content: Text('Erro ao processar resposta do servidor')),
             );
-        }
-      } else {
+          }
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
           );
@@ -1799,13 +1898,23 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Future<void> sendOrderToWebSocket(
       List<Map<String, dynamic>> cartItems, String total) async {
     try {
-      // Check if cartItems is not empty
-      print('Cart items: $cartItems'); // Debugging
-
-      // Extract item names or any other needed data
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
-      print('Item names: $itemNames'); // Debugging
+      // Format item names with preparation preferences
+      List<String> formattedNames = cartItems.map((item) {
+        String name = item['Nome'] as String;
+        bool prepararPrencado = item['PrepararPrencado'] ?? false;
+        String prencado = item['Prencado'] ?? '0';
+        
+        if (prepararPrencado && prencado != '0') {
+          if (prencado == '1') {
+            return '$name - Prençado';
+          } else if (prencado == '2') {
+            return '$name - Aquecido';
+          }
+        }
+        return name;
+      }).toList();
+      
+      String descricao = formattedNames.join(', ');
 
       var turma = users[0]['Turma'];
       var nome = users[0]['Nome'];
@@ -1816,7 +1925,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         Uri.parse('ws://websocket.appbar.epvc.pt'),
       );
 
-      // Send all necessary cart data
+      // Send order data
       Map<String, dynamic> orderData = {
         'QPediu': nome,
         'NPedido': orderNumber,
@@ -1824,14 +1933,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         'Turma': turma,
         'Permissao': permissao,
         'Estado': 0,
-        'Descricao': itemNames, // Cart item names
+        'Descricao': descricao,
         'Total': total,
         'Imagem': imagem,
       };
 
-      print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
-
-      // Send the order to the server
       channel.sink.add(json.encode(orderData));
 
       channel.stream.listen(
@@ -1973,7 +2079,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
     for (var item in cartItems) {
       var itemName = item['Nome'];
-      var quantity = await checkQuantidade(itemName); // Await here
+      var quantity = await checkQuantidade(itemName);
 
       if (quantity == 0) {
         allAvailable = false;
@@ -1983,15 +2089,13 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
     if (cartItems.isNotEmpty) {
       if (allAvailable) {
-        // Em vez de enviar diretamente para a API, abrir o diálogo de seleção de método de pagamento
+        // Show payment method selection dialog
         final paymentMethod = await _showPaymentMethodDialog();
         if (paymentMethod == null) return;
         
         if (paymentMethod == 'mbway') {
-          // Para MBWay, apenas abrir a página de telefone sem enviar para a API ainda
           await _handleMBWayPayment(total);
         } else if (paymentMethod == 'dinheiro') {
-          // Para pagamento em dinheiro, seguir o fluxo normal
           await _handleCashPayment(total);
         }
       } else {
@@ -2020,8 +2124,23 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   // Método para lidar com pagamento MBWay
   Future<void> _handleMBWayPayment(double total) async {
     try {
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
+      // Create the description string with proper formatting
+      List<String> formattedNames = cartItems.map((item) {
+        String name = item['Nome'] as String;
+        bool prepararPrencado = item['PrepararPrencado'] ?? false;
+        String prencado = item['Prencado'] ?? '0';
+        
+        if (prepararPrencado && prencado != '0') {
+          if (prencado == '1') {
+            return '$name - Prençado';
+          } else if (prencado == '2') {
+            return '$name - Aquecido';
+          }
+        }
+        return name;
+      }).toList();
+
+      String descricao = formattedNames.join(', ');
 
       // Extract user information
       var turma = users[0]['Turma'] ?? '';
@@ -2030,18 +2149,16 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       var permissao = users[0]['Permissao'] ?? '';
       var imagem = users[0]['Imagem'] ?? '';
 
-      // Encode cartItems to JSON string
-      String cartItemsJson = json.encode(cartItems);
-      
       // Preparar os dados do pedido
       Map<String, dynamic> orderData = {
-            'nome': nome,
-            'apelido': apelido,
-            'turma': turma,
-            'descricao': itemNames.join(', '),
-            'permissao': permissao,
-            'imagem': imagem,
-            'cartItems': cartItemsJson,
+        'nome': nome,
+        'apelido': apelido,
+        'turma': turma,
+        'descricao': descricao,
+        'permissao': permissao,
+        'imagem': imagem,
+        'total': total.toString(),
+        'payment_method': 'mbway',
       };
       
       // Ir para a página de telefone MBWay com a lógica de pagamento
@@ -2054,7 +2171,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             sibsService: _sibsService!,
             onResult: (success, newOrderNumber) {
               if (success) {
-                // Pagamento bem-sucedido, limpar carrinho
                 setState(() {
                   cartItems.clear();
                   updateItemCountMap();
@@ -2063,14 +2179,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               }
             },
             onCancel: () {
-              Navigator.pop(context); // Voltar para a página do carrinho
+              Navigator.pop(context);
             },
           ),
         ),
       );
     } catch (e) {
       print('Erro ao processar pagamento MBWay: $e');
-            ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
       );
     }
@@ -2079,8 +2195,23 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   // Método para lidar com pagamento em dinheiro
   Future<void> _handleCashPayment(double total) async {
     try {
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
+      // Create the description string with proper formatting
+      List<String> formattedNames = cartItems.map((item) {
+        String name = item['Nome'] as String;
+        bool prepararPrencado = item['PrepararPrencado'] ?? false;
+        String prencado = item['Prencado'] ?? '0';
+        
+        if (prepararPrencado && prencado != '0') {
+          if (prencado == '1') {
+            return '$name - Prençado';
+          } else if (prencado == '2') {
+            return '$name - Aquecido';
+          }
+        }
+        return name;
+      }).toList();
+
+      String descricao = formattedNames.join(', ');
 
       // Extract user information
       var turma = users[0]['Turma'] ?? '';
@@ -2089,100 +2220,93 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       var permissao = users[0]['Permissao'] ?? '';
       var imagem = users[0]['Imagem'] ?? '';
 
-      // Encode cartItems to JSON string
-      String cartItemsJson = json.encode(cartItems);
-      
-          // Se for dinheiro, perguntar sobre o troco
-          bool needsChange = await _showNeedsChangeDialog();
+      // Se for dinheiro, perguntar sobre o troco
+      bool needsChange = await _showNeedsChangeDialog();
 
-          if (needsChange) {
-            // Se precisar de troco, perguntar o valor entregue
-            dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
-          } else {
-            // Se não precisar de troco, o valor entregue é o mesmo do total
-            dinheiroAtual = total;
-          }
-      
-            // Criar o pedido com as informações de pagamento em dinheiro
-            final response = await http.post(
-              Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
-              body: {
-                'query_param': '5',
-                'nome': nome,
-                'apelido': apelido,
-                'orderNumber': '0',
-                'turma': turma,
-                'descricao': itemNames.join(', '),
-                'permissao': permissao,
-                'total': total.toString(),
-                'valor': dinheiroAtual.toString(),
-                'imagem': imagem,
-                'cartItems': cartItemsJson,
+      if (needsChange) {
+        dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
+      } else {
+        dinheiroAtual = total;
+      }
+
+      // Criar o pedido com as informações de pagamento em dinheiro
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        body: {
+          'query_param': '5',
+          'nome': nome,
+          'apelido': apelido,
+          'orderNumber': '0',
+          'turma': turma,
+          'descricao': descricao,
+          'permissao': permissao,
+          'total': total.toString(),
+          'valor': dinheiroAtual.toString(),
+          'imagem': imagem,
           'payment_method': 'dinheiro',
-              },
-            );
+        },
+      );
 
-            print('Response status: ${response.statusCode}');
-            print('Response body: ${response.body}');
+      print(response);
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
-            if (response.statusCode == 200) {
-              if (response.body.isEmpty) {
-                throw Exception('Empty response from server');
-              }
+      if (response.statusCode == 200) {
+        if (response.body.isEmpty) {
+          throw Exception('Empty response from server');
+        }
 
-              try {
-                final data = json.decode(response.body);
+        try {
+          final data = json.decode(response.body);
 
-                if (data['status'] == 'success') {
-                  orderNumber = int.parse(data['orderNumber'].toString());
-                  // Enviar para o WebSocket e limpar o carrinho
-                  await sendOrderToWebSocket(cartItems, total.toString());
-            await sendRecentOrderToApi(cartItems);
+          if (data['status'] == 'success') {
+            orderNumber = int.parse(data['orderNumber'].toString());
+            // Enviar para o WebSocket e limpar o carrinho
+            await sendOrderToWebSocket(cartItems, total.toString());
 
-                  setState(() {
-                    cartItems.clear();
-                    updateItemCountMap();
-                  });
+            setState(() {
+              cartItems.clear();
+              updateItemCountMap();
+            });
 
-                  double change = dinheiroAtual - total;
-                  String changeMsg = change > 0
-                      ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
-                      : '';
+            double change = dinheiroAtual - total;
+            String changeMsg = change > 0
+                ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
+                : '';
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(
-                            'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
-                  );
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
+              );
 
             // Navegar para a página de confirmação de pedido
-                  Navigator.pushReplacement(
-                    context,
+            Navigator.pushReplacement(
+              context,
               MaterialPageRoute(
                 builder: (context) => OrderConfirmationPage(
                   orderNumber: orderNumber,
                   amount: total,
                 ),
               ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(
-                            'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
-                  );
-                }
-              } catch (e) {
-                print('JSON decode error: $e');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text('Erro ao processar resposta do servidor')),
-                );
-              }
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
               );
+          }
+        } catch (e) {
+          print('JSON decode error: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro ao processar resposta do servidor')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
+        );
       }
     } catch (e) {
       print('Erro ao processar pagamento em dinheiro: $e');
@@ -2270,7 +2394,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
                 ),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (cartItems.isEmpty) {
                       showDialog(
                         context: context,
@@ -2291,31 +2415,20 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                         },
                       );
                     } else {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text('Confirmação do Pedido'),
-                            content: Text('Deseja confirmar o pedido?'),
-                            actions: [
-                             
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                child: Text('Cancelar'),
-                              ),
-                               TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                                            checkAvailabilityBeforeOrder(total);
-                                },
-                                child: Text('Confirmar'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
+                      // First, check for products with Prencado != 0
+                      List<Map<String, dynamic>> prencadoProducts = cartItems.where((item) {
+                        String prencado = item['Prencado'] ?? '0';
+                        return prencado != '0';
+                      }).toList();
+
+                      // If there are products that can be prepared, show the dialog
+                      if (prencadoProducts.isNotEmpty) {
+                        bool confirmPrencado = await _showPrencadoConfirmationDialog(prencadoProducts);
+                        if (!confirmPrencado) return;
+                      }
+
+                      // After preparation options, proceed with availability check and payment
+                      checkAvailabilityBeforeOrder(total);
                     }
                   },
                   child: Text('Confirmar Pedido'),
