@@ -1523,7 +1523,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               mainAxisSize: MainAxisSize.min,
               children: prencadoProducts.map((product) {
                 String prencado = product['Prencado'] ?? '0';
-                String preparationType = prencado == '1' ? 'Prençado' : 'Aquecido';
+                String preparationType = prencado == '1' ? 'Prensado' : 'Aquecido';
                 selectedProducts[product['Nome']] = false;
                 
                 return StatefulBuilder(
@@ -1627,7 +1627,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         
         if (prepararPrencado && prencado != '0') {
           if (prencado == '1') {
-            return '$name - Prençado';
+            return '$name - Prensado';
           } else if (prencado == '2') {
             return '$name - Aquecido';
           }
@@ -1906,7 +1906,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         
         if (prepararPrencado && prencado != '0') {
           if (prencado == '1') {
-            return '$name - Prençado';
+            return '$name - Prensado';
           } else if (prencado == '2') {
             return '$name - Aquecido';
           }
@@ -2132,7 +2132,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         
         if (prepararPrencado && prencado != '0') {
           if (prencado == '1') {
-            return '$name - Prençado';
+            return '$name - Prensado';
           } else if (prencado == '2') {
             return '$name - Aquecido';
           }
@@ -2203,7 +2203,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         
         if (prepararPrencado && prencado != '0') {
           if (prencado == '1') {
-            return '$name - Prençado';
+            return '$name - Prensado';
           } else if (prencado == '2') {
             return '$name - Aquecido';
           }
