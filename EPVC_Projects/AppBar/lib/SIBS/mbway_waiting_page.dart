@@ -461,7 +461,13 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
     
     // Log order data for debugging
     print('Creating order with data: ${widget.orderData}');
-    UserInfo();
+    
+    // Wait for user info to be loaded
+    await _loadUserInfo();
+    
+    if (users == null) {
+      throw Exception('Failed to load user information');
+    }
     
     // Criar o pedido na API
     final orderResponse = await http.post(
@@ -474,10 +480,10 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
         'descricao': widget.orderData['descricao'],
         'permissao': widget.orderData['permissao'],
         'total': widget.amount.toString(),
-        'valor': widget.amount.toString(), // Valor entregue, igual ao total para MBWAY
+        'valor': widget.amount.toString(),
         'imagem': widget.orderData['imagem'],
-        'payment_method': widget.phoneNumber, // API espera o telefone aqui (parâmetros trocados no PHP)
-        'phone_number': 'mbway', // API espera 'mbway' aqui (parâmetros trocados no PHP)
+        'payment_method': widget.phoneNumber,
+        'phone_number': 'mbway',
       },
     );
 
@@ -500,20 +506,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
     
     print('Order created successfully with number: $orderNumber');
 
-    // Enviar os detalhes dos produtos para a API se existirem
-   
-    // Marcar o pedido como pago no sistema
-   
-    // Adicionar pedido aos recentes
-    try {
-      await _addToRecents(widget.orderData);
-      print('Successfully added order to recents');
-    } catch (recentsError) {
-      print('Warning: Failed to add to recents: $recentsError');
-      // Continue even if adding to recents fails
-    }
-
-    // Enviar pedido para WebSocket
+    // Enviar pedido para WebSocket e processar recentes
     try {
       if (widget.orderData.containsKey('cartItems') && widget.orderData['cartItems'] != null) {
         List<dynamic> cartItems = json.decode(widget.orderData['cartItems']);
@@ -544,7 +537,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
       // Continue even if notification fails
     }
 
-    // Informar sucesso à página anterior
+    // Informar sucesso à página anterior e limpar o carrinho após todo o processamento
     widget.onPaymentResult(true, "Pagamento efetuado com sucesso!");
 
     // Navegar para a página de confirmação
@@ -561,9 +554,6 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
     }
   }
 
- 
-
- 
   Future<void> _notifyOrderSystem(int orderNumber, String transactionId) async {
     // This function can be used to notify other parts of the system about the new order
     try {
@@ -590,66 +580,103 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
     }
   }
 
-  Future<void> _addToRecents(Map<String, dynamic> orderData) async {
-    try {
-      print('Adding order to recents');
-      
-      // Verificar se temos os dados necessários
-      if (!orderData.containsKey('nome') || !orderData.containsKey('apelido') ||
-          !orderData.containsKey('descricao') || !orderData.containsKey('imagem')) {
-        print('WARNING: Missing required data for recents. Available keys: ${orderData.keys.toList()}');
-        return;
+  String _getLocalDate() {
+    DateTime now = DateTime.now();
+    String formattedDateTime = DateFormat('yyyy-MM-dd').format(now);
+    return formattedDateTime;
+  }
+
+  // Função para calcular o total do carrinho (se necessário)
+  double _calculateTotal(List<dynamic> cartItems) {
+    double total = 0.0;
+    for (var item in cartItems) {
+      if (item is Map && item.containsKey('Preco')) {
+        double preco = double.parse(item['Preco'].toString());
+        total += preco;
       }
-      
-      // Formatar data atual
-      final DateTime now = DateTime.now();
-      final String formattedDate = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-      
-      // Nome completo do usuário (Nome Apelido)
-      final user = "${orderData['nome']} ${orderData['apelido']}";
-      
-      // Descrição do pedido (itens)
-      final orderDetails = orderData['descricao'];
-      
-      // Preço
-      final preco = widget.amount.toString();
-      
-      // Imagem
-      final imagem = orderData['imagem'].toString();
-      
-      // Debug - imprimir todos os parâmetros que estamos enviando
-      print('Recents API call parameters:');
-      print('query_param: 6');
-      print('user: $user');
-      print('imagem: $imagem');
-      print('data: $formattedDate');
-      print('orderDetails: $orderDetails');
-      print('preco: $preco');
-      
-      // Enviar pedido para API de recentes
+    }
+    return total;
+  }
+
+  Future<void> _loadUserInfo() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      var user = prefs.getString("username");
+
+      if (user == null) {
+        throw Exception('No user logged in');
+      }
+
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
         body: {
-          'query_param': '6',
+          'query_param': '1',
           'user': user,
-          'imagem': imagem,
-          'data': formattedDate,
-          'orderDetails': orderDetails,
-          'preco': preco,
         },
       );
 
-      print('Add to recents response code: ${response.statusCode}');
-      print('Add to recents response body: ${response.body}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Falha ao adicionar aos recentes (status ${response.statusCode}): ${response.body}');
+      if (response.statusCode == 200) {
+        setState(() {
+          users = json.decode(response.body);
+        });
+        print('User info loaded successfully');
+      } else {
+        throw Exception('Failed to load user info: ${response.statusCode}');
       }
-      
-      print('Successfully added to recents: ${response.body}');
     } catch (e) {
-      print('Error adding to recents: $e');
-      // Não lançar exceção para não interromper o fluxo principal
+      print('Error loading user info: $e');
+      throw e;
+    }
+  }
+
+  void UserInfo() async {
+    try {
+      await _loadUserInfo();
+    } catch (e) {
+      print('Error in UserInfo: $e');
+    }
+  }
+
+  Future<void> _sendRecentOrderToApi(List<dynamic> cartItems, Map<String, dynamic> orderData) async {
+    try {
+      print('Sending recent orders to API');
+      
+      for (var item in cartItems) {
+        if (item is Map) {
+          if (users == null) {
+            print('Warning: users data is not loaded yet');
+            return;
+          }
+          
+          var localData = _getLocalDate();
+
+          // Send regular POST request
+          final response = await http.post(
+            Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+            body: {
+              'query_param': '6',
+              'user': users[0]['Email'],
+              'orderDetails': json.encode(item['Nome']),
+              'data': localData.toString(),
+              'imagem': item['Imagem'], // Use only the product image
+              'preco': item['Preco'].toString(),
+              'prencado': item['Prencado'].toString(),
+            },
+          );
+
+          print('Recent order API response code: ${response.statusCode}');
+          print('Recent order API response body: ${response.body}');
+
+          if (response.statusCode == 200) {
+            print('Pedido recente enviado com sucesso para a API');
+          } else {
+            print('Erro ao enviar pedido recente para a API: ${response.statusCode} - ${response.body}');
+          }
+        }
+      }
+    } catch (e) {
+      print('Erro ao enviar pedidos recentes para a API: $e');
+      throw e;
     }
   }
 
@@ -727,116 +754,6 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
     } catch (e) {
       print('Error establishing WebSocket connection: $e');
       throw e; // Re-throw so caller can handle
-    }
-  }
-
-  String _getLocalDate() {
-    DateTime now = DateTime.now();
-    String formattedDateTime = DateFormat('yyyy-MM-dd').format(now);
-    return formattedDateTime;
-  }
-
-  // Função para calcular o total do carrinho (se necessário)
-  double _calculateTotal(List<dynamic> cartItems) {
-    double total = 0.0;
-    for (var item in cartItems) {
-      if (item is Map && item.containsKey('Preco')) {
-        double preco = double.parse(item['Preco'].toString());
-        total += preco;
-      }
-    }
-    return total;
-  }
-
-  void UserInfo() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    var user = prefs.getString("username");
-
-    final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-      body: {
-        'query_param': '1',
-        'user': user,
-      },
-    );
-    if (response.statusCode == 200) {
-      setState(() {
-        users = json.decode(response.body);
-      });
-    }
-  }
-
-  Future<void> _sendRecentOrderToApi(List<dynamic> cartItems, Map<String, dynamic> orderData) async {
-    try {
-      print('Sending recent orders to API');
-      
-      // Converter cartItems para o formato esperado
-      List<Map<String, dynamic>> recentOrders = [];
-      for (var item in cartItems) {
-        if (item is Map) {
-          Map<String, dynamic> orderItem = {};
-          orderItem['Nome'] = item['Nome'] ?? '';
-          orderItem['Preco'] = item['Preco'] ?? '';
-          orderItem['Imagem'] = item['Imagem'] ?? orderData['imagem'] ?? '';
-          recentOrders.add(orderItem);
-        }
-      }
-      
-      if (recentOrders.isEmpty) {
-        print('No recent orders to send');
-        return;
-      }
-      
-      print('Prepared ${recentOrders.length} recent orders to send to API');
-      
-      for (var order in recentOrders) {
-        // Utilizar email do usuário dos dados carregados em UserInfo()
-        if (users == null) {
-          print('Warning: users data is not loaded yet');
-          return;
-        }
-        
-        var localData = _getLocalDate();
-
-        // Extrair a imagem se não for nula, caso contrário, use uma string vazia
-        var imagem = order['Imagem'] ?? '';
-        var preco = order['Preco'] ?? '';
-        var itemName = order['Nome'] ?? '';
-        
-        print('Sending recent order to API:');
-        print('User: ${users[0]['Email']}');
-        print('OrderDetails (item name): $itemName');
-        print('Data: $localData');
-        print('Imagem: $imagem');
-        print('Preco: $preco');
-
-        // Enviar solicitação POST para a API para cada pedido
-        var response = await http.post(
-          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-          body: {
-            'query_param': '6',
-            'user': users[0]['Email'],
-            'orderDetails': json.encode(itemName),
-            'data': localData.toString(),
-            'imagem': imagem,
-            'preco': preco,
-          },
-        );
-
-        print('Recent order API response code: ${response.statusCode}');
-        print('Recent order API response body: ${response.body}');
-
-        if (response.statusCode == 200) {
-          // Se a solicitação for bem-sucedida, mostrar uma mensagem de sucesso
-          print('Pedido recente enviado com sucesso para a API');
-        } else {
-          // Se houver um erro, mostrar uma mensagem de erro
-          print('Erro ao enviar pedido recente para a API: ${response.statusCode} - ${response.body}');
-        }
-      }
-    } catch (e) {
-      print('Erro ao enviar pedidos recentes para a API: $e');
-      throw e; // Relançar para tratamento pelo chamador
     }
   }
 }

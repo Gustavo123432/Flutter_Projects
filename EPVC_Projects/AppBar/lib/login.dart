@@ -67,7 +67,7 @@ class _LoginFormState extends State<LoginForm> {
       await prefs.setString('permissao', tar[0]['Permissao'].toString());
       await prefs.setString('username', tar[0]['Email'].toString());
       await prefs.setString('idUser', tar[0]['IdUser'].toString());
-      await prefs.setString('pwd', pwd);
+     // await prefs.setString('pwd', pwd);
       PwdController.clear();
     } else if (tar == 'false') {
       final snackBar = SnackBar(

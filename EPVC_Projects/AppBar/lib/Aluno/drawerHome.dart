@@ -104,12 +104,32 @@ class _DrawerHomeState extends State<DrawerHome> {
               leading: Icon(Icons.archive),
               title: Text('Pedidos'),
             ),
-             ListTile(
+             /*ListTile(
               onTap: () {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => Reservaspagealuno()),
                 );
+              },
+              leading: Icon(Icons.restaurant),
+              title: Text('Reservas'),
+            ),*/
+            ListTile(
+              onTap: () {
+                showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: Text('Em Desenvolvimento'),
+                                  content: Text(
+                                      'O Restaurante não está disponível no momento.'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
               },
               leading: Icon(Icons.restaurant),
               title: Text('Reservas'),

@@ -272,11 +272,13 @@ class _HomeAlunoState extends State<HomeAluno> {
                     var title = product['Descricao'];
                     var price = product['Preco'].toString();
                     var imageBase64 = product['Imagem'];
+                    var prencado = product['Prencado'].toString();
 
                     return buildProductSection(
                       imagePath: imageBase64,
                       title: title,
                       price: price,
+                      prencado: prencado
                     );
                   },
                 ),
@@ -423,6 +425,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     required String imagePath,
     required String title,
     required String price,
+    required String prencado,
   }) {
     if (contador == 1) {
       CheckQuantidade(title.replaceAll('"', ''));
@@ -431,12 +434,11 @@ class _HomeAlunoState extends State<HomeAluno> {
     return GestureDetector(
       onTap: () async {
         contador = 1;
-        CheckQuantidade(title.replaceAll(
-            '"', '')); // Adiciona essa chamada para inicializar checkquantidade
+        CheckQuantidade(title.replaceAll('"', ''));
         var quantidadeDisponivel = data[0]['Qtd'];
 
         if (quantidadeDisponivel == 1) {
-          addToCart(imagePath, title, price);
+          addToCart(imagePath, title, price, prencado);
         } else {
           showDialog(
             context: context,
@@ -446,7 +448,7 @@ class _HomeAlunoState extends State<HomeAluno> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop(); // Fechar o diálogo
+                    Navigator.of(context).pop();
                   },
                   child: Text('OK'),
                 ),
@@ -505,14 +507,15 @@ class _HomeAlunoState extends State<HomeAluno> {
     );
   }
 
-  void addToCart(String imagePath, String title, String price) {
+  void addToCart(String imagePath, String title, String price, String prencado) {
     // Verifica se os parâmetros necessários não são nulos
-    if (imagePath != null && title != null && price != null) {
+    if (imagePath != null && title != null && price != null && prencado !=null) {
       // Cria um mapa representando o item a ser adicionado ao carrinho
       Map<String, dynamic> item = {
         'Imagem': imagePath,
         'Nome': title.replaceAll('"', ''),
         'Preco': price,
+        'Prencado': prencado,
       };
 
       // Atualiza a interface do usuário e adiciona o item ao carrinho
@@ -1656,6 +1659,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           'imagem': imagem,
           'total': total.toString(),
           'payment_method': paymentMethod,
+          'cartItems': json.encode(cartItems), // Include cart items with product images
         };
         
         await Navigator.push(
@@ -1668,9 +1672,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               onResult: (success, newOrderNumber) {
                 if (success) {
                   setState(() {
+                    orderNumber = newOrderNumber;
+                    // Clear cart items after all processing is complete
                     cartItems.clear();
                     updateItemCountMap();
-                    orderNumber = newOrderNumber;
                   });
                 }
               },
@@ -2030,6 +2035,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             'data': localData.toString(),
             'imagem': imagem,
             'preco': preco,
+            'prencado': order['Prencado'].toString(),
           },
         );
 
@@ -2159,6 +2165,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         'imagem': imagem,
         'total': total.toString(),
         'payment_method': 'mbway',
+        'cartItems': json.encode(cartItems), // Include cart items with product images
       };
       
       // Ir para a página de telefone MBWay com a lógica de pagamento
@@ -2172,9 +2179,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             onResult: (success, newOrderNumber) {
               if (success) {
                 setState(() {
+                  orderNumber = newOrderNumber;
+                  // Clear cart items after all processing is complete
                   cartItems.clear();
                   updateItemCountMap();
-                  orderNumber = newOrderNumber;
                 });
               }
             },
