@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Aluno/drawerHome.dart';
+import 'package:my_flutter_project/SIBS/cash_waiting_page.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
@@ -989,12 +990,12 @@ class _CategoryPageState extends State<CategoryPage> {
                                     ? Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          IconButton(
+                                          /*IconButton(
                                             onPressed: () {
                                               removeFromCart(item);
                                             },
                                             icon: Icon(Icons.remove),
-                                          ),
+                                          ),*/
                                           Text(
                                             cartItems
                                                 .where((element) =>
@@ -2252,6 +2253,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           'valor': dinheiroAtual.toString(),
           'imagem': imagem,
           'payment_method': 'dinheiro',
+          'phone_number': '--',
         },
       );
 
@@ -2271,6 +2273,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             orderNumber = int.parse(data['orderNumber'].toString());
             // Enviar para o WebSocket e limpar o carrinho
             await sendOrderToWebSocket(cartItems, total.toString());
+            await sendRecentOrderToApi(cartItems);
 
             setState(() {
               cartItems.clear();
@@ -2292,7 +2295,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => OrderConfirmationPage(
+                builder: (context) => CashConfirmationPage(
+                  change: change,
                   orderNumber: orderNumber,
                   amount: total,
                 ),

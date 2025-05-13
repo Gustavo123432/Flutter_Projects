@@ -3,6 +3,7 @@ import 'package:my_flutter_project/Admin/produtoPage.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
 import 'package:my_flutter_project/Aluno/pedidosPageAluno.dart';
 import 'package:my_flutter_project/Aluno/reservasPageAluno.dart';
+import 'package:my_flutter_project/Aluno/settingsPage.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -133,6 +134,16 @@ class _DrawerHomeState extends State<DrawerHome> {
               },
               leading: Icon(Icons.restaurant),
               title: Text('Reservas'),
+            ),
+            ListTile(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsPage()),
+                );
+              },
+              leading: Icon(Icons.settings),
+              title: Text('Definições'),
             ),
             ListTile(
               onTap: () {
