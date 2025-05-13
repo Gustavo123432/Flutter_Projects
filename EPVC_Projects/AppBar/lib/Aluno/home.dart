@@ -517,7 +517,10 @@ class _HomeAlunoState extends State<HomeAluno> {
         'Nome': title.replaceAll('"', ''),
         'Preco': price,
         'Prencado': prencado,
+        'PrepararPrencado': false, // Initialize PrepararPrencado property
       };
+
+      print('Adding item to cart: ${item['Nome']}, Prencado: ${item['Prencado']}, PrepararPrencado: ${item['PrepararPrencado']}');
 
       // Atualiza a interface do usuário e adiciona o item ao carrinho
       setState(() {
@@ -2025,6 +2028,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         // Extrair a imagem se não for nula, caso contrário, use uma string vazia
         var imagem = order['Imagem'] ?? '';
         var preco = order['Preco'] ?? '';
+        var prencado = order['Prencado'] ?? '0';
+        var prepararPrencado = order['PrepararPrencado'] ?? false;
+        
+        // Convert boolean to string representation for API
+        String prepararPrencadoValue = prepararPrencado ? '1' : '0';
 
         // Enviar solicitação POST para a API para cada pedido
         var response = await http.post(
@@ -2036,7 +2044,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             'data': localData.toString(),
             'imagem': imagem,
             'preco': preco,
-            'prencado': order['Prencado'].toString(),
+            'prencado': prencado.toString(),
+            'prepararPrencado': prepararPrencadoValue,
           },
         );
 

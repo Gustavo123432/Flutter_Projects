@@ -649,6 +649,11 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
           }
           
           var localData = _getLocalDate();
+          var prencado = item['Prencado'] ?? '0';
+          var prepararPrencado = item['PrepararPrencado'] ?? false;
+          
+          // Convert boolean to string representation for API
+          String prepararPrencadoValue = prepararPrencado ? '1' : '0';
 
           // Send regular POST request
           final response = await http.post(
@@ -660,7 +665,8 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
               'data': localData.toString(),
               'imagem': item['Imagem'], // Use only the product image
               'preco': item['Preco'].toString(),
-              'prencado': item['Prencado'].toString(),
+              'prencado': prencado.toString(),
+              'prepararPrencado': prepararPrencadoValue,
             },
           );
 
@@ -685,16 +691,38 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
     try {
       // Check if cartItems is not empty
       print('Cart items for WebSocket: $cartItems'); // Debugging
+      
+      // Debug each cart item's prensado status
+      for (var item in cartItems) {
+        if (item is Map) {
+          print('Item: ${item['Nome']}, Prencado: ${item['Prencado']}, PrepararPrencado: ${item['PrepararPrencado']}');
+        }
+      }
 
-      // Extract item names
-      List<String> itemNames = [];
+      // Extract item names with prensado information
+      List<String> formattedNames = [];
       for (var item in cartItems) {
         if (item is Map && item.containsKey('Nome')) {
-          itemNames.add(item['Nome'] as String);
+          String name = item['Nome'] as String;
+          bool prepararPrencado = item['PrepararPrencado'] ?? false;
+          String prencado = item['Prencado'] ?? '0';
+          
+          if (prepararPrencado && prencado != '0') {
+            if (prencado == '1') {
+              formattedNames.add('$name - Prensado');
+            } else if (prencado == '2') {
+              formattedNames.add('$name - Aquecido');
+            }
+          } else {
+            formattedNames.add(name);
+          }
         }
       }
       
-      print('Item names for WebSocket: $itemNames'); // Debugging
+      print('Formatted names for WebSocket: $formattedNames'); // Debugging
+
+      // Join the formatted names into a comma-separated string
+      String descricao = formattedNames.join(', ');
 
       // Get user data from orderData
       final nome = orderData['nome'] + ' ' + orderData['apelido'];
@@ -717,7 +745,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
         'Turma': turma,
         'Permissao': permissao,
         'Estado': 0,
-        'Descricao': itemNames, // Cart item names
+        'Descricao': descricao, // Use formatted description with prensado info
         'Total': total,
         'Imagem': imagem,
       };

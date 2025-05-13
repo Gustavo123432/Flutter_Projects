@@ -62,7 +62,12 @@ dependencies:
   diacritic: ^0.1.6
   flutter_dotenv: ^5.1.0
   #url_launcher: ^6.2.5
+  flutter_launcher_icons: "^0.13.1"
 
+
+flutter_launcher_icons:
+  ios: true
+  image_path: "lib/assets/barapp.png"  # Your iOS-specific icon
 
 dev_dependencies:
   flutter_test:
