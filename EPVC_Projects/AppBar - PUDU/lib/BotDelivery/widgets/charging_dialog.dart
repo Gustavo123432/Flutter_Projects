@@ -92,16 +92,6 @@ class ChargingDialog extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14),
           ),
-          SizedBox(height: 10),
-          Text(
-            'Não desconecte durante o carregamento a menos que seja necessário.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.red,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
         ],
       ),
       actions: [
