@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Aluno/drawerHome.dart';
+import 'package:my_flutter_project/SIBS/cash_waiting_page.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
@@ -272,11 +273,13 @@ class _HomeAlunoState extends State<HomeAluno> {
                     var title = product['Descricao'];
                     var price = product['Preco'].toString();
                     var imageBase64 = product['Imagem'];
+                    var prencado = product['Prencado'].toString();
 
                     return buildProductSection(
                       imagePath: imageBase64,
                       title: title,
                       price: price,
+                      prencado: prencado
                     );
                   },
                 ),
@@ -423,6 +426,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     required String imagePath,
     required String title,
     required String price,
+    required String prencado,
   }) {
     if (contador == 1) {
       CheckQuantidade(title.replaceAll('"', ''));
@@ -431,12 +435,11 @@ class _HomeAlunoState extends State<HomeAluno> {
     return GestureDetector(
       onTap: () async {
         contador = 1;
-        CheckQuantidade(title.replaceAll(
-            '"', '')); // Adiciona essa chamada para inicializar checkquantidade
+        CheckQuantidade(title.replaceAll('"', ''));
         var quantidadeDisponivel = data[0]['Qtd'];
 
         if (quantidadeDisponivel == 1) {
-          addToCart(imagePath, title, price);
+          addToCart(imagePath, title, price, prencado);
         } else {
           showDialog(
             context: context,
@@ -446,7 +449,7 @@ class _HomeAlunoState extends State<HomeAluno> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop(); // Fechar o diálogo
+                    Navigator.of(context).pop();
                   },
                   child: Text('OK'),
                 ),
@@ -505,15 +508,19 @@ class _HomeAlunoState extends State<HomeAluno> {
     );
   }
 
-  void addToCart(String imagePath, String title, String price) {
+  void addToCart(String imagePath, String title, String price, String prencado) {
     // Verifica se os parâmetros necessários não são nulos
-    if (imagePath != null && title != null && price != null) {
+    if (imagePath != null && title != null && price != null && prencado !=null) {
       // Cria um mapa representando o item a ser adicionado ao carrinho
       Map<String, dynamic> item = {
         'Imagem': imagePath,
         'Nome': title.replaceAll('"', ''),
         'Preco': price,
+        'Prencado': prencado,
+        'PrepararPrencado': false, // Initialize PrepararPrencado property
       };
+
+      print('Adding item to cart: ${item['Nome']}, Prencado: ${item['Prencado']}, PrepararPrencado: ${item['PrepararPrencado']}');
 
       // Atualiza a interface do usuário e adiciona o item ao carrinho
       setState(() {
@@ -986,12 +993,12 @@ class _CategoryPageState extends State<CategoryPage> {
                                     ? Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          IconButton(
+                                          /*IconButton(
                                             onPressed: () {
                                               removeFromCart(item);
                                             },
                                             icon: Icon(Icons.remove),
-                                          ),
+                                          ),*/
                                           Text(
                                             cartItems
                                                 .where((element) =>
@@ -1656,6 +1663,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           'imagem': imagem,
           'total': total.toString(),
           'payment_method': paymentMethod,
+          'cartItems': json.encode(cartItems), // Include cart items with product images
         };
         
         await Navigator.push(
@@ -1668,9 +1676,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               onResult: (success, newOrderNumber) {
                 if (success) {
                   setState(() {
+                    orderNumber = newOrderNumber;
+                    // Clear cart items after all processing is complete
                     cartItems.clear();
                     updateItemCountMap();
-                    orderNumber = newOrderNumber;
                   });
                 }
               },
@@ -2019,6 +2028,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         // Extrair a imagem se não for nula, caso contrário, use uma string vazia
         var imagem = order['Imagem'] ?? '';
         var preco = order['Preco'] ?? '';
+        var prencado = order['Prencado'] ?? '0';
+        var prepararPrencado = order['PrepararPrencado'] ?? false;
+        
+        // Convert boolean to string representation for API
+        String prepararPrencadoValue = prepararPrencado ? '1' : '0';
 
         // Enviar solicitação POST para a API para cada pedido
         var response = await http.post(
@@ -2030,6 +2044,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             'data': localData.toString(),
             'imagem': imagem,
             'preco': preco,
+            'prencado': prencado.toString(),
+            'prepararPrencado': prepararPrencadoValue,
           },
         );
 
@@ -2159,6 +2175,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         'imagem': imagem,
         'total': total.toString(),
         'payment_method': 'mbway',
+        'cartItems': json.encode(cartItems), // Include cart items with product images
       };
       
       // Ir para a página de telefone MBWay com a lógica de pagamento
@@ -2172,9 +2189,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             onResult: (success, newOrderNumber) {
               if (success) {
                 setState(() {
+                  orderNumber = newOrderNumber;
+                  // Clear cart items after all processing is complete
                   cartItems.clear();
                   updateItemCountMap();
-                  orderNumber = newOrderNumber;
                 });
               }
             },
@@ -2244,6 +2262,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           'valor': dinheiroAtual.toString(),
           'imagem': imagem,
           'payment_method': 'dinheiro',
+          'phone_number': '--',
         },
       );
 
@@ -2263,6 +2282,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             orderNumber = int.parse(data['orderNumber'].toString());
             // Enviar para o WebSocket e limpar o carrinho
             await sendOrderToWebSocket(cartItems, total.toString());
+            await sendRecentOrderToApi(cartItems);
 
             setState(() {
               cartItems.clear();
@@ -2284,7 +2304,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => OrderConfirmationPage(
+                builder: (context) => CashConfirmationPage(
+                  change: change,
                   orderNumber: orderNumber,
                   amount: total,
                 ),
