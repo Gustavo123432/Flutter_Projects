@@ -35,22 +35,35 @@ class RobotMenu extends StatefulWidget {
 
 class _RobotMenuState extends State<RobotMenu> {
   String? selectedDestination;
-  bool isConnected = false;
   bool isLoading = true;
   String? error;
   List<Destination> destinations = [];
   RobotStatus robotStatus = RobotStatus.empty();
   Timer? _statusRefreshTimer;
+  Timer? _destinationDelayTimer;
+  Timer? _dialogDebounceTimer;
   
   // Current location tracking
   String _currentLocation = "Desconhecido";
   Destination? _currentDestination;
   
+  // Destination queue
+  List<Destination> _destinationQueue = [];
+  bool _processingQueue = false;
+  
+  // Flag to track if we've already shown an arrival notification
+  bool _hasShownArrivalNotification = false;
+  // Flag to track the previous movement state to detect transitions
+  String _previousMoveState = '';
+  
+  // Charging dialog tracking variables
+  bool _isChargingDialogShowing = false;
+  int _lastReportedPower = -1;
+  String _lastReportedChargeStage = '';
+  bool _dialogUpdateInProgress = false;
+  
   // Debug information to display
   String debugInfo = '';
-  
-  // Charging dialog
-  bool _isChargingDialogShowing = false;
 
   @override
   void initState() {
@@ -67,6 +80,8 @@ class _RobotMenuState extends State<RobotMenu> {
   @override
   void dispose() {
     _statusRefreshTimer?.cancel();
+    _destinationDelayTimer?.cancel();
+    _dialogDebounceTimer?.cancel();
     super.dispose();
   }
   
@@ -81,12 +96,9 @@ class _RobotMenuState extends State<RobotMenu> {
       
       // Show error message
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Robot ID is missing. Please update robot information.'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
+        _showSnackBarMessage(
+          'Robot ID is missing. Please update robot information.',
+          backgroundColor: Colors.red,
         );
       });
     } else {
@@ -207,38 +219,99 @@ class _RobotMenuState extends State<RobotMenu> {
 
   // Add a method to check for special conditions based on robot status
   void _checkRobotStatusForSpecialConditions() {
+    // Detect state transitions
+    bool isStateChanged = _previousMoveState != robotStatus.moveState;
+    _previousMoveState = robotStatus.moveState;
+    
     // Check for charging state
     if (robotStatus.chargeStage == CHARGING_STATE || 
         robotStatus.chargeStage == CHARGE_FULL_STATE) {
       // Robot is charging, show the charging dialog
       debugInfo += '\nRobot is currently charging';
       
+      // Prevent multiple dialog operations at the same time
+      if (_dialogUpdateInProgress) {
+        return;
+      }
+      
       // Show charging dialog if not already showing
       if (!_isChargingDialogShowing && mounted) {
-        _showChargingDialog();
-      } else if (_isChargingDialogShowing && mounted) {
-        // Update the existing dialog with new data
-        Navigator.of(context).pop(); // Close current dialog
-        _showChargingDialog(); // Show updated dialog
+        // Use a debounce timer to prevent multiple dialog attempts
+        _dialogDebounceTimer?.cancel();
+        _dialogDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+          if (mounted && !_isChargingDialogShowing) {
+            _showChargingDialog();
+          }
+        });
+      } 
+      // We don't want to update the dialog constantly, as this causes flickering
+      // Only update if critical values change (like battery percentage)
+      else if (_isChargingDialogShowing && mounted && 
+          (robotStatus.robotPower != _lastReportedPower || 
+          robotStatus.chargeStage != _lastReportedChargeStage)) {
+        
+        // Use a debounce timer for updates too
+        _dialogDebounceTimer?.cancel();
+        _dialogDebounceTimer = Timer(const Duration(seconds: 5), () {
+          if (mounted && _isChargingDialogShowing) {
+            _lastReportedPower = robotStatus.robotPower;
+            _lastReportedChargeStage = robotStatus.chargeStage;
+            
+            // Update the existing dialog with new data, only if values changed significantly
+            _dialogUpdateInProgress = true;
+            Navigator.of(context).pop(); // Close current dialog
+            _showChargingDialog(); // Show updated dialog
+          }
+        });
       }
     } else {
       // If robot is no longer charging, dismiss dialog if showing
       if (_isChargingDialogShowing && mounted) {
+        _dialogDebounceTimer?.cancel(); // Cancel any pending updates
+        _dialogUpdateInProgress = true;
         Navigator.of(context).pop();
         _isChargingDialogShowing = false;
       }
+      
+      // Reset the charging dialog tracking variables
+      _lastReportedPower = -1;
+      _lastReportedChargeStage = '';
     }
     
-    // Check if robot has arrived at destination
-    if (robotStatus.moveState == ARRIVED_STATE || 
-        robotStatus.moveState == ARRIVE_STATE) {
+    // Check if robot has arrived at destination and there are queued destinations
+    if ((robotStatus.moveState == ARRIVED_STATE || 
+        robotStatus.moveState == ARRIVE_STATE) && 
+        _processingQueue && _currentDestination != null) {
+      
       // Robot has arrived, could show notification or update UI
       debugInfo += '\nRobot has arrived at destination';
       
-      // Could enable/disable buttons based on this state
-      setState(() {
-        // Update UI based on arrived state
-      });
+      // Reset the flag if the state has changed to arrived
+      if (isStateChanged) {
+        _hasShownArrivalNotification = false;
+      }
+      
+      // If the robot has just arrived and we haven't shown a notification yet,
+      // show notification and start delay timer for next destination
+      if (!_hasShownArrivalNotification && _destinationQueue.isNotEmpty && _destinationDelayTimer == null) {
+        _hasShownArrivalNotification = true;
+        
+        _showSnackBarMessage(
+          'Chegou a ${_currentDestination!.name}. Próximo destino em 1 minuto.',
+          backgroundColor: Colors.green,
+        );
+        
+        // Start one-minute timer before moving to next destination
+        _destinationDelayTimer = Timer(const Duration(minutes: 1), () {
+          if (mounted) {
+            _processNextDestination();
+          }
+        });
+      }
+    } else if ((robotStatus.moveState == MOVING_STATE && isStateChanged) || 
+               (robotStatus.moveState == IDLE_STATE && isStateChanged)) {
+      // Reset the notification flag whenever the robot moves or becomes idle
+      _hasShownArrivalNotification = false;
     }
     
     // Check if robot is idle and available
@@ -246,10 +319,20 @@ class _RobotMenuState extends State<RobotMenu> {
         robotStatus.robotState == FREE_STATE) {
       // Robot is available for new tasks
       debugInfo += '\nRobot is available for new tasks';
+      
+      // If we're processing a queue and the robot is now idle, 
+      // and no delay timer is active, move to next destination if available
+      if (_processingQueue && _destinationQueue.isNotEmpty && _destinationDelayTimer == null && !_hasShownArrivalNotification) {
+        _processNextDestination();
+      }
     }
   }
   
   void _showChargingDialog() {
+    // Update tracking variables
+    _lastReportedPower = robotStatus.robotPower;
+    _lastReportedChargeStage = robotStatus.chargeStage;
+    
     setState(() {
       _isChargingDialogShowing = true;
     });
@@ -266,7 +349,6 @@ class _RobotMenuState extends State<RobotMenu> {
             onDisconnect: () {
               setState(() {
                 _isChargingDialogShowing = false;
-                isConnected = false;
               });
               Navigator.of(context).pop(); // Close dialog
               Navigator.of(context).pop(); // Return to dashboard
@@ -275,8 +357,10 @@ class _RobotMenuState extends State<RobotMenu> {
         );
       },
     ).then((_) {
+      // This is called when the dialog is dismissed
       setState(() {
         _isChargingDialogShowing = false;
+        _dialogUpdateInProgress = false;
       });
     });
   }
@@ -376,42 +460,56 @@ class _RobotMenuState extends State<RobotMenu> {
       });
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
+        _showSnackBarMessage(
+          errorMessage,
+          backgroundColor: Colors.red,
         );
       }
     }
   }
 
-  Future<void> _sendToDestination() async {
-    if (selectedDestination == null) return;
+  // Method to process the next destination in the queue
+  void _processNextDestination() {
+    if (_destinationQueue.isEmpty) {
+      setState(() {
+        _processingQueue = false;
+      });
+      return;
+    }
     
+    // Cancel any existing timer
+    _destinationDelayTimer?.cancel();
+    _destinationDelayTimer = null;
+    
+    // Reset arrival notification flag
+    _hasShownArrivalNotification = false;
+    
+    // Get the next destination and send the robot there
+    Destination nextDestination = _destinationQueue.removeAt(0);
+    _sendRobotToDestination(nextDestination);
+    
+    // Update UI to show remaining destinations
+    setState(() {});
+  }
+
+  // Method to send the robot to a specific destination
+  Future<void> _sendRobotToDestination(Destination destination) async {
     try {
       setState(() {
         isLoading = true;
-        debugInfo = 'Sending robot to destination: $selectedDestination';
+        debugInfo = 'Sending robot to destination: ${destination.name}';
       });
       
-      // Find the selected destination's full data including type
-      final selectedDestinationData = destinations.firstWhere(
-        (dest) => dest.name == selectedDestination,
-        orElse: () => Destination(name: selectedDestination!, type: 'table'), // Default to table if not found
-      );
-      
       // Store the current destination
-      _currentDestination = selectedDestinationData;
+      _currentDestination = destination;
       
       // Prepare the request body in the correct format
       final requestBody = {
         'deviceId': widget.robot.idDevice,
         'robotId': widget.robot.robotIdd,
         'destination': {
-          'name': selectedDestinationData.name,
-          'type': selectedDestinationData.type
+          'name': destination.name,
+          'type': destination.type
         }
       };
       
@@ -432,11 +530,9 @@ class _RobotMenuState extends State<RobotMenu> {
         final responseData = json.decode(response.body);
         if (responseData['code'] == 0) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Robot sent successfully!'),
-                backgroundColor: Colors.green,
-              ),
+            _showSnackBarMessage(
+              'Robot sent to ${destination.name}!',
+              backgroundColor: Colors.green,
             );
             
             // Update current location status
@@ -464,12 +560,19 @@ class _RobotMenuState extends State<RobotMenu> {
       });
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error sending robot: $errorMessage'),
-            backgroundColor: Colors.red,
-          ),
+        _showSnackBarMessage(
+          'Error sending robot: $errorMessage',
+          backgroundColor: Colors.red,
         );
+      }
+      
+      // If there was an error, try the next destination after a delay
+      if (_processingQueue && _destinationQueue.isNotEmpty) {
+        _destinationDelayTimer = Timer(const Duration(seconds: 30), () {
+          if (mounted) {
+            _processNextDestination();
+          }
+        });
       }
     } finally {
       setState(() {
@@ -478,31 +581,77 @@ class _RobotMenuState extends State<RobotMenu> {
     }
   }
 
-  Future<void> _cancelToDestination() async {
+  // Update sendToDestination to use the queue system
+  Future<void> _sendToDestination() async {
     if (selectedDestination == null) return;
+    
+    // Find the selected destination's full data including type
+    final selectedDestinationData = destinations.firstWhere(
+      (dest) => dest.name == selectedDestination,
+      orElse: () => Destination(name: selectedDestination!, type: 'table'), // Default to table if not found
+    );
+    
+    // Check if already processing a queue
+    if (_processingQueue) {
+      // Add to queue
+      _destinationQueue.add(selectedDestinationData);
+      
+      if (mounted) {
+        _showSnackBarMessage(
+          'Destino ${selectedDestinationData.name} adicionado à fila. Posição: ${_destinationQueue.length}',
+          backgroundColor: Colors.blue,
+        );
+      }
+      
+      setState(() {});  // Update UI to show queue
+      return;
+    }
+    
+    // Start a new queue
+    setState(() {
+      _processingQueue = true;
+      _destinationQueue = [];  // Clear any old queue
+    });
+    
+    // Send robot to the first destination
+    await _sendRobotToDestination(selectedDestinationData);
+  }
+
+  // Update cancelToDestination to handle queued destinations
+  Future<void> _cancelToDestination() async {
+    // If there are queued destinations, just clear the queue
+    if (_destinationQueue.isNotEmpty) {
+      setState(() {
+        _destinationQueue.clear();
+      });
+      
+      if (mounted) {
+        _showSnackBarMessage(
+          'Fila de destinos cancelada',
+          backgroundColor: Colors.orange,
+        );
+      }
+      
+      // Only cancel current destination if specifically requested
+      if (selectedDestination == null) return;
+    }
+    
+    // Cancel the current robot journey
+    if (_currentDestination == null) return;
     
     try {
       setState(() {
         isLoading = true;
-        debugInfo = 'Cancel robot to destination: $selectedDestination';
+        debugInfo = 'Cancel robot to destination: ${_currentDestination!.name}';
       });
-      
-      // Find the selected destination's full data including type
-      final selectedDestinationData = destinations.firstWhere(
-        (dest) => dest.name == selectedDestination,
-        orElse: () => Destination(name: selectedDestination!, type: 'table'), // Default to table if not found
-      );
-      
-      // Clear the current destination
-      _currentDestination = null;
       
       // Prepare the request body in the correct format
       final requestBody = {
         'deviceId': widget.robot.idDevice,
         'robotId': widget.robot.robotIdd,
         'destination': {
-          'name': selectedDestinationData.name,
-          'type': selectedDestinationData.type
+          'name': _currentDestination!.name,
+          'type': _currentDestination!.type
         }
       };
       
@@ -523,23 +672,29 @@ class _RobotMenuState extends State<RobotMenu> {
         final responseData = json.decode(response.body);
         if (responseData['code'] == 0) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Robot cancellation successfully!'),
-                backgroundColor: Colors.green,
-              ),
+            _showSnackBarMessage(
+              'Robot cancellation successfully!',
+              backgroundColor: Colors.green,
             );
             
-            // Update current location
+            // Reset queue processing
             setState(() {
+              _processingQueue = false;
+              _currentDestination = null;
+              _destinationQueue.clear();
               _currentLocation = 'Aguardando';
+              _hasShownArrivalNotification = false;
             });
+            
+            // Cancel any pending timers
+            _destinationDelayTimer?.cancel();
+            _destinationDelayTimer = null;
             
             // Fetch status immediately after cancellation
             _fetchRobotStatus();
           }
         } else {
-          throw Exception('Error sending robot: ${responseData['msg']}');
+          throw Exception('Error cancelling robot: ${responseData['msg']}');
         }
       } else {
         throw Exception('Error ${response.statusCode}: ${response.body}');
@@ -551,15 +706,13 @@ class _RobotMenuState extends State<RobotMenu> {
       }
       
       setState(() {
-        debugInfo = 'Error sending robot: $errorMessage';
+        debugInfo = 'Error cancelling robot: $errorMessage';
       });
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error sending robot: $errorMessage'),
-            backgroundColor: Colors.red,
-          ),
+        _showSnackBarMessage(
+          'Error cancelling robot: $errorMessage',
+          backgroundColor: Colors.red,
         );
       }
     } finally {
@@ -652,31 +805,103 @@ class _RobotMenuState extends State<RobotMenu> {
   }
 
   Widget _buildQueueList() {
-    if (robotStatus.destinationQueue.isEmpty) {
+    List<Widget> queueItems = [];
+    
+    // First show current destination if there is one
+    if (_currentDestination != null) {
+      queueItems.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              Icon(
+                Icons.location_on, 
+                size: 16, 
+                color: Colors.green
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  'Atual: ${_currentDestination!.name} (${_formatDestinationType(_currentDestination!.type)})',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        )
+      );
+    }
+    
+    // Then show our app's destination queue
+    if (_destinationQueue.isNotEmpty) {
+      for (int i = 0; i < _destinationQueue.length; i++) {
+        final destination = _destinationQueue[i];
+        queueItems.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.queue, 
+                  size: 14, 
+                  color: const Color(0xFFFF8C42)
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '${i+1}. ${destination.name} (${_formatDestinationType(destination.type)})',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          )
+        );
+      }
+    }
+    
+    // Then show robot's internal queue from the status
+    if (robotStatus.destinationQueue.isNotEmpty) {
+      for (var destination in robotStatus.destinationQueue) {
+        final name = destination['name'] ?? 'Unknown';
+        final type = destination['type'] ?? '';
+        queueItems.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.history, 
+                  size: 14, 
+                  color: Colors.grey
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '$name (${_formatDestinationType(type)})',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        );
+      }
+    }
+    
+    if (queueItems.isEmpty) {
       return const Text('Nenhum destino na fila');
     }
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: robotStatus.destinationQueue.map((destination) {
-        final name = destination['name'] ?? 'Unknown';
-        final type = destination['type'] ?? '';
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Row(
-            children: [
-              const Icon(Icons.location_on, size: 14, color: Color(0xFFFF8C42)),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  '$name (${_formatDestinationType(type)})',
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+      children: queueItems,
     );
   }
 
@@ -736,6 +961,22 @@ class _RobotMenuState extends State<RobotMenu> {
         ),
       ],
     );
+  }
+
+  // Method to show a SnackBar message, ensuring only one is visible at a time
+  void _showSnackBarMessage(String message, {Color backgroundColor = Colors.black}) {
+    if (mounted) {
+      // This will hide any existing SnackBars before showing a new one
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: backgroundColor,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
@@ -971,10 +1212,58 @@ class _RobotMenuState extends State<RobotMenu> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
-                            'Fila de destinos:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Fila de destinos:',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              if (_processingQueue)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF8C42),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.playlist_play, color: Colors.white, size: 16),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _destinationQueue.isEmpty 
+                                          ? 'Processando último' 
+                                          : 'Processando ${_destinationQueue.length + 1}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
                           ),
+                          if (_destinationDelayTimer != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4, bottom: 8),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.timer, size: 14, color: Colors.blue),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Aguardando 1 minuto antes do próximo destino...',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.blue[700],
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           _buildQueueList(),
                         ],
                       ),
@@ -1005,19 +1294,25 @@ class _RobotMenuState extends State<RobotMenu> {
                                 strokeWidth: 2,
                               )
                             )
-                          : const Text('INICIAR PERCURSO'),
+                          : Text(_processingQueue 
+                              ? 'ADICIONAR À FILA' 
+                              : 'INICIAR PERCURSO'),
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey,
+                          backgroundColor: const Color(0xFFFF8C42),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        onPressed: _cancelToDestination,
-                        child: const Text('CANCELAR PERCURSO'),
+                        onPressed: (_processingQueue || _currentDestination != null) 
+                          ? _cancelToDestination 
+                          : null,
+                        child: Text(_destinationQueue.isNotEmpty 
+                          ? 'CANCELAR FILA' 
+                          : 'CANCELAR PERCURSO'),
                       ),
                     ),
                   ],
@@ -1033,23 +1328,6 @@ class _RobotMenuState extends State<RobotMenu> {
                     Navigator.pop(context);
                   },
                   child: const Text('VOLTAR PARA DASHBOARD ROBOT'),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        isConnected ? Colors.red : const Color(0xFFFF8C42),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      isConnected = !isConnected;
-                    });
-                  },
-                  child: Text(isConnected
-                      ? 'DESCONECTAR ${widget.robot.name.toUpperCase()}'
-                      : 'CONECTAR AO ${widget.robot.name.toUpperCase()}'),
                 ),
               ],
             ),

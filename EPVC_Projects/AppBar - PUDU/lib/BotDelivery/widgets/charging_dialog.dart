@@ -100,11 +100,7 @@ class ChargingDialog extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
           ),
-          child: Text('DESCONECTAR', style: TextStyle(color: Colors.white)),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('FECHAR'),
+          child: Text('SAIR', style: TextStyle(color: Colors.white)),
         ),
       ],
     );
