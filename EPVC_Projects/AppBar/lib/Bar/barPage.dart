@@ -178,7 +178,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     // Aggregate products from all relevant orders (current order + matching orders)
     Map<String, int> productCounts = {};
     
-    // Add products from current order
+    // Add products from current orders
     for (String product in currentProducts) {
       productCounts[product] = (productCounts[product] ?? 0) + 1;
     }

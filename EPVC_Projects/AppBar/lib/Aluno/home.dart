@@ -1905,7 +1905,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Future<void> sendOrderToWebSocket(
-      List<Map<String, dynamic>> cartItems, String total, {String paymentMethod = 'dinheiro'}) async {
+      List<Map<String, dynamic>> cartItems, String total, {String paymentMethod = 'dinheiro', bool requestInvoice = false, String nif = ''}) async {
     try {
       // Format item names with preparation preferences
       List<String> formattedNames = cartItems.map((item) {
@@ -1949,6 +1949,12 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         'Imagem': imagem,
         'MetodoDePagamento': paymentMethod,
       };
+
+      // Add invoice information if requested
+      if (requestInvoice) {
+        orderData['RequestInvoice'] = '1';
+        orderData['NIF'] = nif;
+      }
 
       channel.sink.add(json.encode(orderData));
 
@@ -2108,14 +2114,32 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
     if (cartItems.isNotEmpty) {
       if (allAvailable) {
+        // Check if user is a professor before proceeding to payment
+        String userPermission = users != null && users.isNotEmpty ? users[0]['Permissao'] ?? '' : '';
+        String nif = '';
+        bool requestInvoice = false;
+        
+        // If the user is a professor, ask if they want an invoice with NIF
+        if (userPermission == 'Professor') {
+          requestInvoice = await _showInvoiceRequestDialog();
+          
+          if (requestInvoice) {
+            nif = await _showNifInputDialog() ?? '';
+            if (nif.isEmpty) {
+              // User cancelled NIF input
+              return;
+            }
+          }
+        }
+        
         // Show payment method selection dialog
         final paymentMethod = await _showPaymentMethodDialog();
         if (paymentMethod == null) return;
         
         if (paymentMethod == 'mbway') {
-          await _handleMBWayPayment(total);
+          await _handleMBWayPayment(total, requestInvoice: requestInvoice, nif: nif);
         } else if (paymentMethod == 'dinheiro') {
-          await _handleCashPayment(total);
+          await _handleCashPayment(total, requestInvoice: requestInvoice, nif: nif);
         }
       } else {
         showDialog(
@@ -2140,8 +2164,71 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  // Método para lidar com pagamento MBWay
-  Future<void> _handleMBWayPayment(double total) async {
+  Future<bool> _showInvoiceRequestDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Fatura com NIF'),
+        content: Text('Deseja incluir fatura com NIF neste pedido?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Não'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Sim'),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
+  Future<String?> _showNifInputDialog() async {
+    final nifController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Inserir NIF'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nifController,
+              keyboardType: TextInputType.number,
+              maxLength: 9,
+              decoration: InputDecoration(
+                hintText: 'Digite o NIF',
+                counterText: '',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              String nif = nifController.text.trim();
+              if (nif.length == 9 && int.tryParse(nif) != null) {
+                Navigator.pop(context, nif);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('NIF inválido. O NIF deve ter 9 dígitos numéricos.')),
+                );
+              }
+            },
+            child: Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Method for MBWay payment
+  Future<void> _handleMBWayPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
     try {
       // Create the description string with proper formatting
       List<String> formattedNames = cartItems.map((item) {
@@ -2178,7 +2265,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         'imagem': imagem,
         'total': total.toString(),
         'payment_method': 'mbway',
-        'cartItems': json.encode(cartItems), // Include cart items with product images
+        'cartItems': json.encode(cartItems),
+        'requestInvoice': requestInvoice ? '1' : '0',
+        'nif': nif,
       };
       
       // Ir para a página de telefone MBWay com a lógica de pagamento
@@ -2213,8 +2302,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  // Método para lidar com pagamento em dinheiro
-  Future<void> _handleCashPayment(double total) async {
+  // Method for Cash payment
+  Future<void> _handleCashPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
     try {
       // Create the description string with proper formatting
       List<String> formattedNames = cartItems.map((item) {
@@ -2266,6 +2355,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           'imagem': imagem,
           'payment_method': 'dinheiro',
           'phone_number': '--',
+          'requestInvoice': requestInvoice ? '1' : '0',
+          'nif': nif,
         },
       );
 
@@ -2284,7 +2375,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           if (data['status'] == 'success') {
             orderNumber = int.parse(data['orderNumber'].toString());
             // Enviar para o WebSocket e limpar o carrinho
-            await sendOrderToWebSocket(cartItems, total.toString(), paymentMethod: 'dinheiro');
+            await sendOrderToWebSocket(cartItems, total.toString(), paymentMethod: 'dinheiro', requestInvoice: requestInvoice, nif: nif);
             await sendRecentOrderToApi(cartItems);
 
             setState(() {

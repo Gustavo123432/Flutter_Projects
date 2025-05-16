@@ -30,15 +30,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  shared_preferences: ^2.2.2
+  http: ^1.1.0
+  intl: ^0.19.0
+  diacritic: ^0.1.4
+  flutter_advanced_drawer: ^1.3.5
+  web_socket_channel: ^2.4.0
+  fl_chart: ^0.65.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.6
-  shared_preferences: ^2.1.0
   flutter_speed_dial: ^7.0.0
-  flutter_advanced_drawer: ^1.3.6
-  flutterfire_cli: ^1.0.1-dev.2
   collection: ^1.18.0
   path_provider: ^2.1.2
   pdf: ^3.8.4
@@ -48,7 +51,6 @@ dependencies:
   #http: ^0.13.6
   permission_handler: ^11.3.0
   #blue_thermal_printer: ^1.2.3
-  http: ^1.2.1
   http_parser: ^4.0.2
   #esc_pos_utils: ^1.1.0
   #esc_pos_printer: ^4.1.0
@@ -56,10 +58,8 @@ dependencies:
   #flutter_thermal_printer: ^0.0.4
   #flutter_esc_pos_network: ^1.0.2
   #print_bluetooth_thermal: ^1.1.1
-  web_socket_channel: ^3.0.1
   sidebarx: ^0.17.1
   auto_size_text: ^3.0.0
-  diacritic: ^0.1.6
   flutter_dotenv: ^5.1.0
   #url_launcher: ^6.2.5
   flutter_launcher_icons: "^0.13.1"
