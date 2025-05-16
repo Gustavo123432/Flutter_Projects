@@ -163,6 +163,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
         .map((product) => product.trim())
         .toList();
 
+    // Find orders with similar products
     List<PurchaseOrder> matchingOrders = allOrders.where((order) {
       List<String> orderProducts = order.description
           .split(',')
@@ -174,8 +175,29 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     matchingOrders.removeWhere((order) => order.number == currentOrder.number);
     matchingOrders.removeWhere((order) => int.parse(order.status) != 0);
 
+    // Aggregate products from all relevant orders (current order + matching orders)
+    Map<String, int> productCounts = {};
+    
+    // Add products from current order
+    for (String product in currentProducts) {
+      productCounts[product] = (productCounts[product] ?? 0) + 1;
+    }
+    
+    // Add products from matching orders
+    for (PurchaseOrder order in matchingOrders) {
+      List<String> orderProducts = order.description
+          .split(',')
+          .map((product) => product.trim())
+          .toList();
+      
+      for (String product in orderProducts) {
+        productCounts[product] = (productCounts[product] ?? 0) + 1;
+      }
+    }
+
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (BuildContext context) {
         return SingleChildScrollView(
           scrollDirection: Axis.vertical,
@@ -187,6 +209,22 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
               children: [
                 Text('Você está preparando o pedido ${currentOrder.number}.'),
                 SizedBox(height: 10),
+                
+                // Display aggregated product counts
+                Text('Total de produtos a preparar:'),
+                SizedBox(height: 5),
+                ...productCounts.entries.map((entry) {
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 16.0, bottom: 4.0),
+                    child: Text(
+                      '• ${entry.value}x ${entry.key}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  );
+                }).toList(),
+                
+                SizedBox(height: 15),
+                Text('Produtos no pedido atual:'),
                 Text.rich(
                   TextSpan(
                     children: currentOrder.description
@@ -200,15 +238,18 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                         .toList(),
                   ),
                 ),
-                if (matchingOrders.isNotEmpty)
+                
+                if (matchingOrders.isNotEmpty) ...[
+                  SizedBox(height: 10),
                   Text('Os seguintes pedidos contêm produtos semelhantes:'),
-                ...matchingOrders.map((order) {
-                  return ListTile(
-                    title: Text('Pedido ${order.number} - ${order.requester}'),
-                    subtitle: Text(
-                        'Produtos: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
-                  );
-                }).toList(),
+                  ...matchingOrders.map((order) {
+                    return ListTile(
+                      title: Text('Pedido ${order.number} - ${order.requester}'),
+                      subtitle: Text(
+                          'Produtos: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
+                    );
+                  }).toList(),
+                ],
               ],
             ),
             actions: [
@@ -551,7 +592,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                           borderRadius: BorderRadius.circular(12),
                                           border: Border.all(
                                             color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                                ? Color.fromARGB(255, 66, 133, 244) 
+                                                ? Colors.red
                                                 : Color.fromARGB(255, 76, 175, 80),
                                             width: 1,
                                           ),
@@ -562,7 +603,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                             color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                                ? Color.fromARGB(255, 66, 133, 244) 
+                                                ? Colors.red
                                                 : Color.fromARGB(255, 76, 175, 80),
                                           ),
                                         ),
@@ -745,7 +786,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                          ? Color.fromARGB(255, 66, 133, 244) 
+                                          ? Colors.red
                                           : Color.fromARGB(255, 76, 175, 80),
                                       width: 1,
                                     ),
@@ -756,7 +797,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                       color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                          ? Color.fromARGB(255, 66, 133, 244) 
+                                          ? Colors.red
                                           : Color.fromARGB(255, 76, 175, 80),
                                     ),
                                   ),
