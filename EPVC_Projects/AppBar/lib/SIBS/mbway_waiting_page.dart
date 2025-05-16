@@ -482,8 +482,8 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
         'total': widget.amount.toString(),
         'valor': widget.amount.toString(),
         'imagem': widget.orderData['imagem'],
-        'payment_method': widget.phoneNumber,
-        'phone_number': 'mbway',
+        'payment_method': 'mbway',
+        'phone_number': widget.phoneNumber,
       },
     );
 
@@ -748,6 +748,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
         'Descricao': descricao, // Use formatted description with prensado info
         'Total': total,
         'Imagem': imagem,
+        'payment_method': 'mbway',
       };
 
       print('Sending over WebSocket: ${json.encode(webSocketData)}'); // Debugging

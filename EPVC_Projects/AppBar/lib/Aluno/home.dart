@@ -1662,7 +1662,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           'permissao': permissao,
           'imagem': imagem,
           'total': total.toString(),
-          'payment_method': paymentMethod,
+          'MetodoDePagamento': paymentMethod,
           'cartItems': json.encode(cartItems), // Include cart items with product images
         };
         
@@ -1731,7 +1731,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
             if (data['status'] == 'success') {
               orderNumber = int.parse(data['orderNumber'].toString());
-              await sendOrderToWebSocket(cartItems, total.toString());
+              await sendOrderToWebSocket(cartItems, total.toString(), paymentMethod: paymentMethod);
 
               setState(() {
                 cartItems.clear();
@@ -1905,7 +1905,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Future<void> sendOrderToWebSocket(
-      List<Map<String, dynamic>> cartItems, String total) async {
+      List<Map<String, dynamic>> cartItems, String total, {String paymentMethod = 'dinheiro'}) async {
     try {
       // Format item names with preparation preferences
       List<String> formattedNames = cartItems.map((item) {
@@ -1929,6 +1929,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       var nome = users[0]['Nome'];
       var permissao = users[0]['Permissao'];
       var imagem = users[0]['Imagem'];
+      var troco = dinheiroAtual - double.parse(total);
+      String trocos = troco.toStringAsFixed(2);
 
       final channel = WebSocketChannel.connect(
         Uri.parse('ws://websocket.appbar.epvc.pt'),
@@ -1938,13 +1940,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       Map<String, dynamic> orderData = {
         'QPediu': nome,
         'NPedido': orderNumber,
-        'Troco': dinheiroAtual,
+        'Troco': trocos,
         'Turma': turma,
         'Permissao': permissao,
         'Estado': 0,
         'Descricao': descricao,
         'Total': total,
         'Imagem': imagem,
+        'MetodoDePagamento': paymentMethod,
       };
 
       channel.sink.add(json.encode(orderData));
@@ -2281,7 +2284,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           if (data['status'] == 'success') {
             orderNumber = int.parse(data['orderNumber'].toString());
             // Enviar para o WebSocket e limpar o carrinho
-            await sendOrderToWebSocket(cartItems, total.toString());
+            await sendOrderToWebSocket(cartItems, total.toString(), paymentMethod: 'dinheiro');
             await sendRecentOrderToApi(cartItems);
 
             setState(() {

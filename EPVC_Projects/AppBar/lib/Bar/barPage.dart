@@ -18,6 +18,7 @@ class PurchaseOrder {
   final String status;
   final String userPermission;
   final String imagem;
+  final String paymentMethod;
 
   PurchaseOrder({
     required this.number,
@@ -29,6 +30,7 @@ class PurchaseOrder {
     required this.status,
     required this.userPermission,
     required this.imagem,
+    required this.paymentMethod,
   });
 
   factory PurchaseOrder.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class PurchaseOrder {
       status: json['Estado']?.toString() ?? '0',
       imagem: json['Imagem'] ?? '',
       userPermission: json['Permissao'] ?? 'Sem permissão',
+      paymentMethod: json['payment_method'] ?? json['MetodoDePagamento'] ?? 'dinheiro',
     );
   }
 }
@@ -77,6 +80,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
         List<dynamic> data = jsonDecode(response.body);
         List<PurchaseOrder> orders =
             data.map((json) => PurchaseOrder.fromJson(json)).toList();
+        
 
         setState(() {
           currentOrders = orders.where((order) => order.status != '2').toList();
@@ -252,6 +256,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
               status: '1', // Set status to 1 (Preparar)
               userPermission: order.userPermission,
               imagem: order.imagem,
+              paymentMethod: order.paymentMethod,
             );
             purchaseOrderController.add(currentOrders);
           }
@@ -521,11 +526,48 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                   ),
                                   SizedBox(height: 4),
                                   Text(
-                                    'Troco: ${order.troco}€',
+                                    'Troco: ${double.parse(order.troco).toStringAsFixed(2).replaceAll('.', ',')}€',
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey[800],
                                     ),
+                                  ),
+                                  SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Método de Pagamento: ',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[800],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: order.paymentMethod.toLowerCase() == 'mbway' 
+                                              ? Color.fromARGB(255, 232, 240, 254) 
+                                              : Color.fromARGB(255, 239, 249, 239),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: order.paymentMethod.toLowerCase() == 'mbway' 
+                                                ? Color.fromARGB(255, 66, 133, 244) 
+                                                : Color.fromARGB(255, 76, 175, 80),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          order.paymentMethod.toLowerCase() == 'mbway' ? 'MBWay' : 'Dinheiro',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: order.paymentMethod.toLowerCase() == 'mbway' 
+                                                ? Color.fromARGB(255, 66, 133, 244) 
+                                                : Color.fromARGB(255, 76, 175, 80),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   SizedBox(height: 12),
                                   Card(
@@ -682,10 +724,41 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                   ),
                                 ),
                                 Text(
-                                  'Troco: ${order.troco}€',
+                                  'Troco: ${double.parse(order.troco).toStringAsFixed(2).replaceAll('.', ',')}€',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // Display payment method
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: order.paymentMethod.toLowerCase() == 'mbway' 
+                                        ? Color.fromARGB(255, 232, 240, 254) 
+                                        : Color.fromARGB(255, 239, 249, 239),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: order.paymentMethod.toLowerCase() == 'mbway' 
+                                          ? Color.fromARGB(255, 66, 133, 244) 
+                                          : Color.fromARGB(255, 76, 175, 80),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    order.paymentMethod.toLowerCase() == 'mbway' ? 'MBWay' : 'Dinheiro',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: order.paymentMethod.toLowerCase() == 'mbway' 
+                                          ? Color.fromARGB(255, 66, 133, 244) 
+                                          : Color.fromARGB(255, 76, 175, 80),
+                                    ),
                                   ),
                                 ),
                               ],
