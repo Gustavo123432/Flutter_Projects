@@ -22,6 +22,11 @@ class _DashboardPageState extends State<DashboardPage> {
   List<Map<String, dynamic>> popularProducts = [];
   Map<String, double> salesData = {};
   bool isLoading = true;
+  Map<String, String> formattedSalesData =
+      {}; // For display (formatted strings)
+  String formattedTotalRevenue = '€0,00'; // Formatted total
+  double numericTotalRevenue = 0.0; // Numeric total
+  Map<String, String> displayData = {}; // For display
   String selectedTimeRange = 'Hoje';
 
   @override
@@ -37,144 +42,224 @@ class _DashboardPageState extends State<DashboardPage> {
       isLoading = true;
     });
 
-    try {
-      // Fetch dashboard statistics
-      final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=30&time_range=$selectedTimeRange'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        print("Dashboard API response: $data"); // Debug print
-        
-        setState(() {
-          totalUsers = data['total_users'] ?? 0;
-          totalProducts = data['total_products'] ?? 0;
-          totalOrders = data['total_orders'] ?? 0;
-          totalRevenue = double.parse((data['total_revenue'] ?? '0').toString());
-          
-          // Parse recent orders
-          if (data['recent_orders'] != null) {
-            recentOrders = List<Map<String, dynamic>>.from(data['recent_orders']);
-          }
-          
-          // Parse popular products
-          if (data['popular_products'] != null) {
-            popularProducts = List<Map<String, dynamic>>.from(data['popular_products']);
-          }
-          
-          // Parse sales data for chart
-          if (data['sales_data'] != null) {
-            final Map<String, dynamic> rawSalesData = data['sales_data'];
-            salesData = Map<String, double>.from(
-              rawSalesData.map((key, value) => MapEntry(key, double.parse(value.toString())))
-            );
-          }
-          
-          // If no data was received, use sample data for demonstration
-          if (totalUsers == 0 && totalProducts == 0 && totalOrders == 0 && 
-              totalRevenue == 0 && recentOrders.isEmpty && popularProducts.isEmpty) {
-            _loadSampleData();
-          }
-          
-          isLoading = false;
-        });
-      } else {
-        print("API Error: ${response.statusCode} - ${response.body}"); // Debug print
-        setState(() {
-          _loadSampleData();
-          isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao carregar dados: ${response.statusCode} - usando dados de exemplo')),
-        );
-      }
-    } catch (e) {
-      print("Exception: $e"); // Debug print
+  
+    
       setState(() {
         _loadSampleData();
         isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao carregar dados: $e - usando dados de exemplo')),
-      );
+      
+    
+  }
+
+  void fetchQuantidadeClientes() {
+    http
+        .get(Uri.parse(
+            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2'))
+        .then((response) {
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          totalUsers = int.parse(data['clients_count']) ?? 0;
+        });
+      } else {
+        print("Erro ao obter quantidade de clientes: ${response.statusCode}");
+      }
+    }).catchError((error) {
+      print("Erro ao obter quantidade de clientes: $error");
+    });
+  }
+
+  void fetchQuantidadeProdutos() {
+    http
+        .get(Uri.parse(
+            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=25'))
+        .then((response) {
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          totalProducts = int.parse(data['product_count']) ?? 0;
+        });
+      } else {
+        print("Erro ao obter quantidade de produtos: ${response.statusCode}");
+      }
+    }).catchError((error) {
+      print("Erro ao obter quantidade de produtos: $error");
+    });
+  }
+
+  void fetchQuantidadePedidos() {
+    http
+        .get(Uri.parse(
+            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=26'))
+        .then((response) {
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          totalOrders = int.parse(data['orders_count']) ?? 0;
+        });
+      } else {
+        print("Erro ao obter quantidade de pedidos: ${response.statusCode}");
+      }
+    }).catchError((error) {
+      print("Erro ao obter quantidade de pedidos: $error");
+    });
+  }
+
+  void fetchAnualReceita() {
+    http
+        .get(Uri.parse(
+            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=27'))
+        .then((response) {
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          totalRevenue = double.parse(data['annual_total']) ?? 0.0;
+        });
+      } else {
+        print("Erro ao obter quantidade de pedidos: ${response.statusCode}");
+      }
+    }).catchError((error) {
+      print("Erro ao obter quantidade de pedidos: $error");
+    });
+  }
+
+  void fetchMonthTotalValue() {
+    http
+        .get(Uri.parse(
+            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=28'))
+        .then((response) {
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          final monthlyData = data['monthly_breakdown'] as List;
+
+          // Setup Euro formatter
+          final NumberFormat euroFormat = NumberFormat.currency(
+            locale: 'pt_PT',
+            symbol: '€',
+            decimalDigits: 2,
+          );
+
+          // For chart data (keep numeric values)
+          final Map<String, double> numericSalesData = {};
+          // For display (formatted strings)
+          final Map<String, String> formattedSalesData = {};
+          double total = 0;
+
+          for (var month in monthlyData) {
+            final monthName = month['month'].substring(0, 3);
+            final value = (month['monthly_total'] as num).toDouble();
+
+            // Store both numeric and formatted values
+            numericSalesData[monthName] = value;
+            formattedSalesData[monthName] = euroFormat.format(value);
+            total += value;
+          }
+
+          // Format the total
+          final formattedTotal = euroFormat.format(total);
+
+          // Update state
+          salesData = numericSalesData;
+          displayData = formattedSalesData;
+
+        });
+      } else {
+        print("Error fetching orders: ${response.statusCode}");
+      }
+    }).catchError((error) {
+      print("Error fetching orders: $error");
+    });
+  }
+
+  Future<void> fetchRecentOrders() async {
+    try {
+      final response = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=29'));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+
+        setState(() {
+          recentOrders = data.map((order) {
+            return {
+              'NPedido': order['NPedido'].toString(),
+              'QPediu': order['QPediu'],
+              'Data': order['Data'],
+              'Total': double.parse(order['Total']).toStringAsFixed(2),
+              'Estado': order['Estado'].toString(),
+            };
+          }).toList();
+        });
+      } else {
+        throw Exception('Failed to load orders');
+      }
+    } catch (e) {
+      print('Error fetching orders: $e');
+      // Fallback to sample data if API fails
+      setState(() {
+        recentOrders = [
+          {
+            'NPedido': '1001',
+            'QPediu': 'João Silva',
+            'Data':
+                DateTime.now().subtract(Duration(hours: 2)).toIso8601String(),
+            'Total': '12.50',
+            'Estado': '2',
+          },
+          // ... other sample data
+        ];
+      });
     }
   }
+void fetchPopularProducts() {
+  http.get(
+    Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=30')
+  ).then((response) {
+    if (response.statusCode == 200) {
+      try {
+        final data = json.decode(response.body);
+        setState(() {
+          popularProducts = List<Map<String, dynamic>>.from(data.map((product) {
+            return {
+              'Nome': product['Nome']?.toString() ?? '',
+              'quantidade_vendida': (product['quantidade_vendida'] is int 
+                  ? product['quantidade_vendida'] 
+                  : int.tryParse(product['quantidade_vendida']?.toString() ?? '0') ?? 0),
+              'Preco': (product['Preco'] is double
+                  ? product['Preco']
+                  : double.tryParse(product['Preco']?.toString() ?? '0') ?? 0.0),
+              'Qtd': product['Qtd']?.toString() ?? '0',
+            };
+          }));
+        });
+      } catch (e) {
+        print('Error parsing products: $e');
+        setState(() {
+          popularProducts = [];
+        });
+      }
+    } else {
+      print("Erro ao obter produtos populares: ${response.statusCode}");
+    }
+  }).catchError((error) {
+    print("Erro ao obter produtos populares: $error");
+    setState(() {
+      popularProducts = [];
+    });
+  });
+}
 
   void _loadSampleData() {
     // Sample statistics
-    totalUsers = 124;
-    totalProducts = 37;
-    totalOrders = 256;
-    totalRevenue = 1285.50;
-    
-    // Sample sales data
-    salesData = {
-      'Jan': 120.5,
-      'Fev': 150.2,
-      'Mar': 200.8,
-      'Abr': 180.3,
-      'Mai': 210.5,
-      'Jun': 250.0,
-    };
-    
-    // Sample recent orders
-    recentOrders = [
-      {
-        'NPedido': '1001',
-        'QPediu': 'João Silva',
-        'Data': DateTime.now().subtract(Duration(hours: 2)).toIso8601String(),
-        'Total': '12.50',
-        'Estado': '2',
-      },
-      {
-        'NPedido': '1002',
-        'QPediu': 'Maria Oliveira',
-        'Data': DateTime.now().subtract(Duration(hours: 3)).toIso8601String(),
-        'Total': '8.75',
-        'Estado': '1',
-      },
-      {
-        'NPedido': '1003',
-        'QPediu': 'Carlos Santos',
-        'Data': DateTime.now().subtract(Duration(hours: 5)).toIso8601String(),
-        'Total': '15.30',
-        'Estado': '0',
-      },
-    ];
-    
-    // Sample popular products
-    popularProducts = [
-      {
-        'Nome': 'Café',
-        'Imagem': '',
-        'quantidade_vendida': '42',
-        'Preco': '1.20',
-        'Qtd': '1',
-      },
-      {
-        'Nome': 'Croissant',
-        'Imagem': '',
-        'quantidade_vendida': '38',
-        'Preco': '1.50',
-        'Qtd': '1',
-      },
-      {
-        'Nome': 'Água',
-        'Imagem': '',
-        'quantidade_vendida': '65',
-        'Preco': '0.80',
-        'Qtd': '1',
-      },
-      {
-        'Nome': 'Sandes Mista',
-        'Imagem': '',
-        'quantidade_vendida': '29',
-        'Preco': '2.50',
-        'Qtd': '0',
-      },
-    ];
+    fetchQuantidadeClientes();
+    fetchQuantidadeProdutos();
+    fetchQuantidadePedidos();
+    fetchAnualReceita();
+    fetchMonthTotalValue();
+    fetchRecentOrders();
+    fetchPopularProducts();
   }
 
   void logout(BuildContext context) {
@@ -212,23 +297,6 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     // Simpler layout that will definitely display
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Dashboard Admin'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: fetchDashboardData,
-            tooltip: 'Atualizar dados',
-          ),
-          IconButton(
-            onPressed: () {
-              logout(context);
-            },
-            icon: Icon(Icons.logout),
-          ),
-        ],
-      ),
-      drawer: DrawerAdmin(),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -237,7 +305,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Visão Geral - $selectedTimeRange',
+                    'Dashboard',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -259,14 +327,14 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildStatisticsCards() {
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: 4,
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),
       children: [
         _buildStatCard(
-          title: 'Usuários',
+          title: 'Clientes',
           value: totalUsers.toString(),
           icon: Icons.people,
           color: Colors.blue,
@@ -284,7 +352,7 @@ class _DashboardPageState extends State<DashboardPage> {
           color: Colors.orange,
         ),
         _buildStatCard(
-          title: 'Receita',
+          title: 'Receita Anual',
           value: '${totalRevenue.toStringAsFixed(2).replaceAll('.', ',')}€',
           icon: Icons.euro,
           color: Colors.purple,
@@ -342,98 +410,190 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
   }
+Widget _buildBasicSalesChart() {
+  // Portuguese month names
+  final Map<int, String> portugueseMonths = {
+    1: 'Janeiro',
+    2: 'Fevereiro',
+    3: 'Março',
+    4: 'Abril',
+    5: 'Maio',
+    6: 'Junho',
+    7: 'Julho',
+    8: 'Agosto',
+    9: 'Setembro',
+    10: 'Outubro',
+    11: 'Novembro',
+    12: 'Dezembro',
+  };
 
-  Widget _buildBasicSalesChart() {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Vendas ($selectedTimeRange)',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+  return Card(
+    elevation: 4,
+    child: Padding(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Vendas por Mês',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-            SizedBox(height: 16),
-            Container(
-              height: 200,
-              child: salesData.isEmpty 
-                ? Center(child: Text('Sem dados de vendas disponíveis'))
-                : Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: BarChart(
-                      BarChartData(
-                        alignment: BarChartAlignment.spaceAround,
-                        maxY: salesData.values.reduce((a, b) => a > b ? a : b) * 1.2,
-                        barTouchData: BarTouchData(enabled: true),
-                        titlesData: FlTitlesData(
-                          show: true,
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 30,
-                              getTitlesWidget: (value, meta) {
-                                if (value.toInt() >= 0 && value.toInt() < salesData.keys.length) {
-                                  var keys = salesData.keys.toList();
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
-                                    child: Text(
-                                      keys[value.toInt()],
-                                      style: TextStyle(fontSize: 12),
-                                    ),
+          ),
+          SizedBox(height: 16),
+          Container(
+            height: 220,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.2),
+                  spreadRadius: 2,
+                  blurRadius: 5,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            padding: EdgeInsets.all(12),
+            child: Column(
+              children: [
+                Text(
+                  'Vendas Mensais',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange[800],
+                  ),
+                ),
+                SizedBox(height: 8),
+                Expanded(
+                  child: salesData.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Sem dados de vendas disponíveis',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      : BarChart(
+                          BarChartData(
+                            alignment: BarChartAlignment.spaceAround,
+                            barTouchData: BarTouchData(
+                              enabled: true,
+                              touchTooltipData: BarTouchTooltipData(
+                                tooltipBgColor: Colors.orange[300],
+                                getTooltipItem:
+                                    (group, groupIndex, rod, rodIndex) {
+                                  final monthNumber = group.x.toInt() + 1;
+                                  final monthName = portugueseMonths[monthNumber] ?? 'Mês $monthNumber';
+                                  final value = salesData.values.elementAt(group.x.toInt());
+                                  return BarTooltipItem(
+                                    '$monthName\n€${value.toStringAsFixed(2).replaceAll('.', ',')}',
+                                    TextStyle(color: Colors.white),
                                   );
-                                }
-                                return Text('');
-                              },
+                                },
+                              ),
                             ),
-                          ),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 40,
-                              getTitlesWidget: (value, meta) {
-                                return Text('${value.toInt()}€', 
-                                  style: TextStyle(fontSize: 10),
-                                );
-                              },
+                            titlesData: FlTitlesData(
+                              show: true,
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 30,
+                                  getTitlesWidget: (value, meta) {
+                                    final monthNumber = value.toInt() + 1;
+                                    final monthName = portugueseMonths[monthNumber] ?? 'Mês $monthNumber';
+                                    if (value.toInt() >= 0 && value.toInt() < salesData.length) {
+                                      return Padding(
+                                        padding: EdgeInsets.only(top: 8),
+                                        child: Text(
+                                          monthName,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    return Text('');
+                                  },
+                                ),
+                              ),
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 40,
+                                  getTitlesWidget: (value, meta) {
+                                    return Text(
+                                      '${value.toInt()}€',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey[700],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              topTitles: AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false)),
+                              rightTitles: AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false)),
                             ),
+                            gridData: FlGridData(
+                              show: true,
+                              drawVerticalLine: false,
+                              getDrawingHorizontalLine: (value) => FlLine(
+                                color: Colors.grey[200],
+                                strokeWidth: 1,
+                              ),
+                            ),
+                            borderData: FlBorderData(
+                              show: true,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: Colors.grey[300]!,
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            barGroups: salesData.entries.map((entry) {
+                              final index = salesData.keys.toList().indexOf(entry.key);
+                              return BarChartGroupData(
+                                x: index,
+                                barRods: [
+                                  BarChartRodData(
+                                    toY: entry.value,
+                                    color: Colors.orange[400],
+                                    width: 16,
+                                    borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(4)),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
                           ),
-                          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                         ),
-                        gridData: FlGridData(show: false),
-                        borderData: FlBorderData(show: false),
-                        barGroups: List.generate(
-                          salesData.length,
-                          (index) {
-                            var keys = salesData.keys.toList();
-                            var values = salesData.values.toList();
-                            return BarChartGroupData(
-                              x: index,
-                              barRods: [
-                                BarChartRodData(
-                                  toY: values[index],
-                                  color: Colors.blue,
-                                  width: 20,
-                                  borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
-                                )
-                              ],
-                            );
-                          },
-                        ),
+                ),
+                if (salesData.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Total: ${totalRevenue.toStringAsFixed(2).replaceAll('.', ',')}€',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[800],
                       ),
                     ),
                   ),
+              ],
             ),
-          ],
-        ),
+          )
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildBasicRecentOrdersTable() {
     return Card(
@@ -464,11 +624,11 @@ class _DashboardPageState extends State<DashboardPage> {
                       style: BorderStyle.solid,
                     ),
                     columnWidths: {
-                      0: FractionColumnWidth(0.1),  // Nº
-                      1: FractionColumnWidth(0.3),  // Cliente
+                      0: FractionColumnWidth(0.1), // Nº
+                      1: FractionColumnWidth(0.3), // Cliente
                       2: FractionColumnWidth(0.25), // Data
                       3: FractionColumnWidth(0.15), // Total
-                      4: FractionColumnWidth(0.2),  // Estado
+                      4: FractionColumnWidth(0.2), // Estado
                     },
                     children: [
                       TableRow(
@@ -477,31 +637,41 @@ class _DashboardPageState extends State<DashboardPage> {
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Text('Nº', style: TextStyle(fontWeight: FontWeight.bold)),
+                              child: Text('Nº',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ),
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Text('Cliente', style: TextStyle(fontWeight: FontWeight.bold)),
+                              child: Text('Cliente',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ),
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Text('Data', style: TextStyle(fontWeight: FontWeight.bold)),
+                              child: Text('Data',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ),
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold)),
+                              child: Text('Total',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ),
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold)),
+                              child: Text('Estado',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
@@ -509,8 +679,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       ...recentOrders.map((order) {
                         String status = '';
                         Color statusColor = Colors.grey;
-                        
-                        switch (order['Estado'].toString()) {
+
+                        switch (order['Estado']?.toString() ?? '0') {
                           case '0':
                             status = 'Pendente';
                             statusColor = Colors.orange;
@@ -526,46 +696,56 @@ class _DashboardPageState extends State<DashboardPage> {
                           default:
                             status = 'Desconhecido';
                         }
-                        
+
+                        // Corrige a formatação do valor total
+                        final totalValue = double.tryParse(
+                                order['Total']?.toString() ?? '0') ??
+                            0;
+                        final formattedTotal = NumberFormat.currency(
+                          symbol: '€',
+                          decimalDigits: 2,
+                          locale: 'pt_PT',
+                        ).format(totalValue);
+
                         return TableRow(
                           children: [
                             TableCell(
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Text(order['NPedido'].toString()),
+                                child: Text(order['NPedido']?.toString() ?? ''),
                               ),
                             ),
                             TableCell(
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Text(order['QPediu'].toString()),
-                              ),
-                            ),
-                            TableCell(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  order['Data'] != null 
-                                    ? DateFormat('dd/MM/yyyy').format(
-                                        DateTime.parse(order['Data'].toString())
-                                      )
-                                    : 'N/A'
-                                ),
+                                child: Text(order['QPediu']?.toString() ?? ''),
                               ),
                             ),
                             TableCell(
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Text(
-                                  '${double.parse(order['Total'].toString()).toStringAsFixed(2).replaceAll('.', ',')}€'
+                                  order['Data'] != null
+                                      ? DateFormat('dd/MM/yyyy').format(
+                                          DateTime.tryParse(
+                                                  order['Data'].toString()) ??
+                                              DateTime.now())
+                                      : 'N/A',
                                 ),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(formattedTotal),
                               ),
                             ),
                             TableCell(
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: statusColor.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(10),
@@ -593,130 +773,145 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildBasicPopularProductsTable() {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Produtos Populares',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+Widget _buildBasicPopularProductsTable() {
+  return Card(
+    elevation: 4,
+    child: Padding(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Produtos Populares',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-            SizedBox(height: 16),
-            popularProducts.isEmpty
-                ? Container(
-                    height: 100,
-                    alignment: Alignment.center,
-                    child: Text('Sem dados de produtos'),
-                  )
-                : Table(
-                    border: TableBorder.all(
-                      color: Colors.grey.shade300,
-                      width: 1,
-                      style: BorderStyle.solid,
+          ),
+          SizedBox(height: 16),
+          popularProducts.isEmpty
+              ? Container(
+                  height: 100,
+                  alignment: Alignment.center,
+                  child: Text('Sem dados de produtos'),
+                )
+              : Table(
+                  border: TableBorder.all(
+                    color: Colors.grey.shade300,
+                    width: 1,
+                    style: BorderStyle.solid,
+                  ),
+                  columnWidths: {
+                    0: FractionColumnWidth(0.4), // Produto
+                    1: FractionColumnWidth(0.2), // Vendidos
+                    2: FractionColumnWidth(0.2), // Receita
+                    3: FractionColumnWidth(0.2), // Disponível
+                  },
+                  children: [
+                    TableRow(
+                      decoration: BoxDecoration(color: Colors.grey.shade200),
+                      children: [
+                        TableCell(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text('Produto',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text('Vendidos',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text('Receita',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text('Disponível',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
                     ),
-                    columnWidths: {
-                      0: FractionColumnWidth(0.4),  // Produto
-                      1: FractionColumnWidth(0.2),  // Vendidos
-                      2: FractionColumnWidth(0.2),  // Receita
-                      3: FractionColumnWidth(0.2),  // Disponível
-                    },
-                    children: [
-                      TableRow(
-                        decoration: BoxDecoration(color: Colors.grey.shade200),
+                    ...popularProducts.map((product) {
+                      // Fix: Ensure values are properly typed
+                      final vezesPedido = int.tryParse(product['quantidade_vendida']?.toString() ?? '0') ?? 0;
+                      final preco = double.tryParse(product['Preco']?.toString() ?? '0') ?? 0.0;
+                      final receitaTotal = vezesPedido * preco;
+                      final isAvailable = product['Qtd']?.toString() == '1';
+
+                      return TableRow(
                         children: [
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Text('Produto', style: TextStyle(fontWeight: FontWeight.bold)),
+                              child: Text(product['Nome']?.toString() ?? ''),
                             ),
                           ),
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Text('Vendidos', style: TextStyle(fontWeight: FontWeight.bold)),
+                              child: Text(
+                                vezesPedido.toString(),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Text('Receita', style: TextStyle(fontWeight: FontWeight.bold)),
+                              child: Text(
+                                '${receitaTotal.toStringAsFixed(2).replaceAll('.', ',')}€',
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Text('Disponível', style: TextStyle(fontWeight: FontWeight.bold)),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isAvailable
+                                      ? Colors.green.withOpacity(0.1)
+                                      : Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isAvailable
+                                        ? Colors.green
+                                        : Colors.red,
+                                  ),
+                                ),
+                                child: Text(
+                                  isAvailable ? 'Sim' : 'Não',
+                                  style: TextStyle(
+                                    color: isAvailable
+                                        ? Colors.green
+                                        : Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                             ),
                           ),
                         ],
-                      ),
-                      ...popularProducts.map((product) {
-                        bool isAvailable = product['Qtd'] == '1';
-                        
-                        return TableRow(
-                          children: [
-                            TableCell(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(product['Nome'].toString()),
-                              ),
-                            ),
-                            TableCell(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  product['quantidade_vendida'].toString(),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
-                            TableCell(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  '${(double.parse(product['Preco'].toString()) * int.parse(product['quantidade_vendida'].toString())).toStringAsFixed(2).replaceAll('.', ',')}€',
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
-                            TableCell(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: isAvailable ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: isAvailable ? Colors.green : Colors.red,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    isAvailable ? 'Sim' : 'Não',
-                                    style: TextStyle(
-                                      color: isAvailable ? Colors.green : Colors.red,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ],
-                  ),
-          ],
-        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
+        ],
       ),
-    );
-  }
-} 
+    ),
+  );
+}
+}

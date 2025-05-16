@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:my_flutter_project/Admin/dashboard.dart';
 import 'package:my_flutter_project/Admin/users.dart';
 import 'package:my_flutter_project/Aluno/formatPWDFirst.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
@@ -418,8 +419,8 @@ void verifylogin(context) async {
           context,
           MaterialPageRoute(
             builder: (context) => AdminDrawer(
-              currentPage: UserTable(),
-              numero: 1,
+              currentPage: DashboardPage(),
+              numero: 0,
             ),
           ),
         );
