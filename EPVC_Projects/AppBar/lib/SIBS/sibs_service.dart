@@ -134,7 +134,7 @@ class SibsService {
         },
         "transaction": {
           "transactionTimestamp": timestamp,
-          "description": "Pedido AppBar - Nº $orderNumber",
+          "description": "Pedido AppBar - $orderNumber",
           "moto": false,
           "paymentType": "PURS",
           "amount": {"value": roundToTwoDecimals(amount), "currency": "EUR"},

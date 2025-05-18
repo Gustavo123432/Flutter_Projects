@@ -459,7 +459,7 @@ class _HomeAlunoState extends State<HomeAluno> {
         }
       },
       child: Container(
-        width: MediaQuery.of(context).size.width / 2,
+        width: MediaQuery.of(context).size.width / 3.2,
         margin: EdgeInsets.symmetric(horizontal: 2.0),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -1522,6 +1522,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     
     return await showDialog<bool>(
       context: context,
+      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Confirmação de Preparação'),
@@ -1578,17 +1579,18 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Future<bool> _showOrderConfirmationDialog() async {
     return await showDialog<bool>(
       context: context,
+      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Confirmar Pedido'),
           content: Text('Deseja confirmar o pedido?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () => Navigator.pop(context, false),
               child: Text('Cancelar'),
             ),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () => Navigator.pop(context, true),
               child: Text('Confirmar'),
             ),
           ],
@@ -1788,6 +1790,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Future<String?> _showPaymentMethodDialog() async {
     return showDialog<String>(
       context: context,
+      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
       builder: (context) => AlertDialog(
         title: Text('Método de Pagamento'),
         content: Column(
@@ -1830,6 +1833,17 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                 ],
               ),
             ),
+            // Botão para cancelar o pedido
+            SizedBox(height: 15),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, null);
+              },
+              child: Text('Cancelar'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+              ),
+            ),
           ],
         ),
       ),
@@ -1838,29 +1852,30 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
   Future<bool> _showNeedsChangeDialog() async {
     return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Troco'),
-            content: Text('Precisa de troco?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text('Não'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text('Sim'),
-              ),
-            ],
+      context: context,
+      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
+      builder: (context) => AlertDialog(
+        title: Text('Troco'),
+        content: Text('Precisa de troco?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Não'),
           ),
-        ) ??
-        false; // Se o usuário fechar o diálogo sem escolher, assume false
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Sim'),
+          ),
+        ],
+      ),
+    ) ?? false; // Mantido como fallback, mas não deve ser necessário com barrierDismissible: false
   }
 
   Future<double?> _showMoneyAmountDialog(double total) async {
     final moneyController = TextEditingController();
     return showDialog<double>(
       context: context,
+      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
       builder: (context) => AlertDialog(
         title: Text('Valor Entregue'),
         content: Column(
@@ -2167,6 +2182,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Future<bool> _showInvoiceRequestDialog() async {
     return await showDialog<bool>(
       context: context,
+      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
       builder: (context) => AlertDialog(
         title: Text('Fatura com NIF'),
         content: Text('Deseja incluir fatura com NIF neste pedido?'),
@@ -2188,6 +2204,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     final nifController = TextEditingController();
     return showDialog<String>(
       context: context,
+      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
       builder: (context) => AlertDialog(
         title: Text('Inserir NIF'),
         content: Column(
@@ -2437,7 +2454,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     final rootContext = context;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Carrinho de Compras'),
+        title: Text(
+          'Carrinho de Compras',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        elevation: 0,
         actions: [
           IconButton(
             onPressed: () {
@@ -2453,102 +2474,353 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         ],
       ),
       drawer: DrawerHome(),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: itemCountMap.length,
-              itemBuilder: (context, index) {
-                final itemName = itemCountMap.keys.toList()[index];
-                final itemCount = itemCountMap[itemName] ?? 0;
-                final item = cartItems.firstWhere(
-                  (element) => element['Nome'] == itemName,
-                );
-                final image =
-                    item != null ? base64.decode(item['Imagem']) : null;
-                return Card(
-                  child: ListTile(
-                    leading: image != null
-                        ? Image.memory(
-                            image,
-                            fit: BoxFit.cover,
-                            height: 50,
-                            width: 50,
-                          )
-                        : SizedBox.shrink(),
-                    title: Text('$itemName'),
-                    subtitle: Text('Quantidade: $itemCount'),
-                    trailing: IconButton(
-                      icon: Icon(Icons.remove_circle),
-                      onPressed: () {
-                        setState(() {
-                          for (int i = 0; i < cartItems.length; i++) {
-                            if (cartItems[i]['Nome'] == itemName) {
-                              cartItems.removeAt(i);
-                              break;
-                            }
-                          }
-                          updateItemCountMap();
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Item removido do carrinho')),
-                        );
-                      },
+      body: cartItems.isEmpty 
+        ? _buildEmptyCart() 
+        : Column(
+          children: [
+            // Resumo do carrinho
+            Container(
+              padding: EdgeInsets.all(16),
+              color: Colors.orange.withOpacity(0.1),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Meu Carrinho', 
+                        style: TextStyle(
+                          fontSize: 18, 
+                          fontWeight: FontWeight.bold
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '${itemCountMap.length} ${itemCountMap.length == 1 ? 'produto' : 'produtos'} diferentes',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      'Total: ${total.toStringAsFixed(2).replaceAll('.', ',')}€',
+                      style: TextStyle(
+                        fontSize: 16, 
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
                     ),
                   ),
-                );
-              },
+                ],
+              ),
+            ),
+            
+            // Lista de produtos
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.only(top: 12),
+                itemCount: itemCountMap.length,
+                itemBuilder: (context, index) {
+                  final itemName = itemCountMap.keys.toList()[index];
+                  final itemCount = itemCountMap[itemName] ?? 0;
+                  final item = cartItems.firstWhere(
+                    (element) => element['Nome'] == itemName,
+                  );
+                  final image = item != null ? base64.decode(item['Imagem']) : null;
+                  
+                  final itemPrice = double.tryParse(item['Preco']?.toString() ?? '0') ?? 0;
+                  final itemTotal = itemPrice * itemCount;
+                  
+                  return Card(
+                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          // Imagem do produto
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              color: Colors.grey[200],
+                            ),
+                            child: image != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Image.memory(
+                                      image,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.fastfood,
+                                    color: Colors.grey[400],
+                                    size: 40,
+                                  ),
+                          ),
+                          SizedBox(width: 16),
+                          
+                          // Detalhes do produto
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  itemName,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '${itemPrice.toStringAsFixed(2).replaceAll('.', ',')}€',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    Text(
+                                      ' × $itemCount',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Spacer(),
+                                    Text(
+                                      '${itemTotal.toStringAsFixed(2).replaceAll('.', ',')}€',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          
+                          // Botão remover
+                          IconButton(
+                            icon: Icon(
+                              Icons.delete_outline,
+                              color: Colors.red[400],
+                            ),
+                            onPressed: () {
+                              // Confirmar remoção
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext dialogContext) {
+                                  return AlertDialog(
+                                    title: Text('Remover Item'),
+                                    content: Text('Deseja remover "$itemName" do carrinho?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(dialogContext),
+                                        child: Text('Cancelar'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(dialogContext);
+                                          setState(() {
+                                            for (int i = 0; i < cartItems.length; i++) {
+                                              if (cartItems[i]['Nome'] == itemName) {
+                                                cartItems.removeAt(i);
+                                                break;
+                                              }
+                                            }
+                                            updateItemCountMap();
+                                          });
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Item removido do carrinho')),
+                                          );
+                                        },
+                                        child: Text('Remover'),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.red,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            
+            // Rodapé com total e botão
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    offset: Offset(0, -2),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Resumo de valores
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total a pagar:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          '${total.toStringAsFixed(2).replaceAll('.', ',')}€',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    
+                    // Botão de confirmar pedido
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (cartItems.isEmpty) {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text('Carrinho Vazio'),
+                                  content: Text(
+                                      'Carrinho Vazio.\nPara continuar adicione produtos.'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text('OK'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          } else {
+                            // First, check for products with Prencado != 0
+                            List<Map<String, dynamic>> prencadoProducts = cartItems.where((item) {
+                              String prencado = item['Prencado'] ?? '0';
+                              return prencado != '0';
+                            }).toList();
+
+                            // If there are products that can be prepared, show the dialog
+                            if (prencadoProducts.isNotEmpty) {
+                              bool confirmPrencado = await _showPrencadoConfirmationDialog(prencadoProducts);
+                              if (!confirmPrencado) return;
+                            }
+
+                            // After preparation options, proceed with availability check and payment
+                            checkAvailabilityBeforeOrder(total);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text(
+                          'Confirmar Pedido',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+    );
+  }
+  
+  // Widget para estado vazio do carrinho
+  Widget _buildEmptyCart() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.shopping_cart_outlined,
+            size: 100,
+            color: Colors.grey[300],
+          ),
+          SizedBox(height: 24),
+          Text(
+            'Seu carrinho está vazio',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
             ),
           ),
-          Container(
-            margin: EdgeInsets.only(bottom: 16.0),
-            child: Column(
-              children: [
-                Text(
-                  'Total: ${total.toStringAsFixed(2).replaceAll('.', ',')}€',
-                  style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+          SizedBox(height: 16),
+          Text(
+            'Adicione produtos para fazer seu pedido',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[500],
+            ),
+          ),
+          SizedBox(height: 32),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HomeAlunoMain(),
                 ),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (cartItems.isEmpty) {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text('Carrinho Vazio'),
-                            content: Text(
-                                'Carrinho Vazio.\nPara continuar adicione produtos.'),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                child: Text('OK'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    } else {
-                      // First, check for products with Prencado != 0
-                      List<Map<String, dynamic>> prencadoProducts = cartItems.where((item) {
-                        String prencado = item['Prencado'] ?? '0';
-                        return prencado != '0';
-                      }).toList();
-
-                      // If there are products that can be prepared, show the dialog
-                      if (prencadoProducts.isNotEmpty) {
-                        bool confirmPrencado = await _showPrencadoConfirmationDialog(prencadoProducts);
-                        if (!confirmPrencado) return;
-                      }
-
-                      // After preparation options, proceed with availability check and payment
-                      checkAvailabilityBeforeOrder(total);
-                    }
-                  },
-                  child: Text('Confirmar Pedido'),
-                ),
-              ],
+              );
+            },
+            icon: Icon(Icons.add_shopping_cart, color: Colors.orange[500]),
+            label: Text('Escolher Produtos', style: TextStyle(color: Colors.orange[500]),),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],

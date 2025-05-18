@@ -49,7 +49,7 @@ dependencies:
   file_picker: ^8.0.6
   image_picker: ^1.0.7
   #http: ^0.13.6
-  permission_handler: ^11.3.0
+  permission_handler: ^12.0.0+1
   #blue_thermal_printer: ^1.2.3
   http_parser: ^4.0.2
   #esc_pos_utils: ^1.1.0
@@ -63,6 +63,11 @@ dependencies:
   flutter_dotenv: ^5.1.0
   #url_launcher: ^6.2.5
   flutter_launcher_icons: "^0.13.1"
+  connectivity_plus: ^6.1.4
+  internet_connection_checker: ^3.0.1
+  battery_plus: ^6.0.2
+  package_info_plus: ^8.3.0
+  device_info_plus: ^10.1.2
 
 
 flutter_launcher_icons:

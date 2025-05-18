@@ -50,49 +50,102 @@ class _LoginFormState extends State<LoginForm> {
     final pwd = PwdController.text;
     // print("Email: $name, Senha: $pwd");
 
+    // Verificar se a senha é 'epvc' - Prioridade máxima
+    if (pwd.trim().toLowerCase() == 'epvc') {
+      // Limpar a senha do controller para evitar problemas ao voltar
+      PwdController.clear();
+      
+      // Redirecionar diretamente para EmailRequestPage com tentativa 2
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => EmailRequestPage(tentativa: 2)));
+      return; // Interromper a execução da função
+    }
+
     /////////////////////////////////////////
     // Send a GET  request to your PHP API for authentication
     /////////////////////////////////////////
 
     dynamic tar;
-    dynamic response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$pwd'));
-    if (response.statusCode == 200) {
-      setState(() {
-        tar = json.decode(response.body);
-      });
-    }
-    if (tar != 'false') {
-      // Authentication successful, navigate to the next screen or perform actions
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('permissao', tar[0]['Permissao'].toString());
-      await prefs.setString('username', tar[0]['Email'].toString());
-      await prefs.setString('idUser', tar[0]['IdUser'].toString());
-     // await prefs.setString('pwd', pwd);
-      PwdController.clear();
-    } else if (tar == 'false') {
+    try {
+      dynamic response = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$pwd'));
+      if (response.statusCode == 200) {
+        setState(() {
+          tar = json.decode(response.body);
+        });
+      }
+      
+      if (tar != 'false') {
+        // Authentication successful, navigate to the next screen or perform actions
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('permissao', tar[0]['Permissao'].toString());
+        await prefs.setString('username', tar[0]['Email'].toString());
+        await prefs.setString('idUser', tar[0]['IdUser'].toString());
+        
+        // Navegar com base no tipo de usuário
+        String tipo = tar[0]['Permissao'].toString();
+        PwdController.clear();
+        
+        if (tipo == "Administrador") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AdminDrawer(
+                currentPage: DashboardPage(),
+                numero: 0,
+              ),
+            ),
+          );
+        } else if (tipo == "Professor" || tipo == "Funcionária" || tipo == "Aluno") {
+          Navigator.pushReplacement(
+            context, 
+            MaterialPageRoute(builder: (context) => HomeAlunoMain())
+          );
+        } else if (tipo == "Bar") {
+          Navigator.pushReplacement(
+            context, 
+            MaterialPageRoute(builder: (context) => BarPagePedidos())
+          );
+        }
+      } else if (tar == 'false') {
+        final snackBar = SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            errorMessage = 'Credenciais Inválidas',
+            style: const TextStyle(
+              fontSize: 16,
+            ),
+          ),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () {
+              // Some code to undo the change.
+            },
+          ),
+          backgroundColor: Colors.red,
+          elevation: 6.0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
+    } catch (e) {
+      print("Erro na autenticação: $e");
       final snackBar = SnackBar(
         behavior: SnackBarBehavior.floating,
         content: Text(
-          errorMessage = 'Credenciais Inválidas',
-          style: const TextStyle(
-            fontSize: 16, // Customize font size
-          ),
+          'Erro de conexão: ${e.toString()}',
+          style: const TextStyle(fontSize: 16),
         ),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            // Some code to undo the change.
-          },
-        ),
-        backgroundColor: Colors.red, // Customize background color
-        elevation: 6.0, // Add elevation
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0), // Customize border radius
-        ),
+        backgroundColor: Colors.red,
+        elevation: 6.0,
       );
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
+    
     setState(() {});
   }
 
@@ -102,6 +155,7 @@ class _LoginFormState extends State<LoginForm> {
   /////////////////////////////////////////
 
   Widget build(BuildContext context) {
+    // Verificar login apenas quando não estiver processando uma autenticação atual
     verifylogin(context);
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -396,65 +450,66 @@ class _LoginFormState extends State<LoginForm> {
 }
 
 void verifylogin(context) async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  var id = prefs.getString("username");
-  var email = prefs.getString("email");
-  var type = prefs.getString("permissao");
-  var pwd = prefs.getString("pwd").toString();
-
-  if (id != null) // Already logged in
-  {
-    if (pwd == "epvc") {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => EmailRequestPage(tentativa: 2)));
-      prefs.remove("pwd");
-    } else {
-      if (type == "Administrador") // Admin
-      {
-        print("Administrador");
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AdminDrawer(
-              currentPage: DashboardPage(),
-              numero: 0,
-            ),
-          ),
-        );
-      } else if (type == "Professor") {
-        // User (Professor)
-        print("Professor");
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-      } else if (type == "Funcionária") {
-        // User (Funcionária)
-        print("Funcionária");
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-      } else if (type == "Bar") {
-        // User (Bar)
-        print("Bar");
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => BarPagePedidos()));
-      } else if (type == "Aluno") {
-        // Exibe a mensagem antes de navegar
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Bem-vindo, Aluno!"),
-          ),
-        );
-
-        // Aguarda um pequeno atraso para permitir que a mensagem seja exibida
-        Future.delayed(Duration(seconds: 1), () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => HomeAlunoMain()),
-          );
-        });
-      }
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var id = prefs.getString("username"); 
+    var type = prefs.getString("permissao");
+    var pwd = prefs.getString("pwd");
+    
+    // Verificar se há um usuário logado
+    if (id == null) {
+      // Não há usuário logado, apenas retornar
+      return;
     }
+    
+    // Verificar se a senha é 'epvc' - tem prioridade sobre qualquer outra verificação
+    if (pwd != null && pwd.trim().toLowerCase() == "epvc") {
+      // Remover a senha para evitar loops
+      await prefs.remove("pwd");
+      
+      // Navegar para EmailRequestPage com tentativa 2
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => EmailRequestPage(tentativa: 2))
+      );
+      return;
+    }
+    
+    // Processar navegação normal baseada no tipo de usuário
+    if (type == "Administrador") {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => AdminDrawer(
+            currentPage: DashboardPage(),
+            numero: 0,
+          ),
+        ),
+      );
+    } else if (type == "Professor") {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => HomeAlunoMain())
+      );
+    } else if (type == "Funcionária") {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => HomeAlunoMain())
+      );
+    } else if (type == "Bar") {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => BarPagePedidos())
+      );
+    } else if (type == "Aluno") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Bem-vindo, Aluno!"))
+      );
+      
+      Future.delayed(Duration(seconds: 1), () {
+        if (context.mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => HomeAlunoMain())
+          );
+        }
+      });
+    }
+  } catch (e) {
+    print("Erro na verificação de login: $e");
   }
 }

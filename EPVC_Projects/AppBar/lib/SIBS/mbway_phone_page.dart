@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'sibs_service.dart';
 import 'mbway_waiting_page.dart';
 import 'order_confirmation_page.dart';
@@ -33,10 +34,13 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isValidPhone = false;
   bool _isProcessing = false;
+  List<dynamic> users = [];
 
   @override
   void initState() {
     super.initState();
+    print('MBWayPhoneNumberPage initialized');
+    fetchUser();
     _phoneController.addListener(_validatePhone);
   }
 
@@ -46,18 +50,120 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
     super.dispose();
   }
 
+  Future<void> fetchUser() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      
+      // Debug: Listar todas as chaves no SharedPreferences
+      print('All SharedPreferences keys: ${prefs.getKeys()}');
+      
+      var idUser = prefs.getString("idUser");
+      print('Retrieved user ID from SharedPreferences: $idUser');
+
+      if (idUser == null || idUser.isEmpty) {
+        print('Error: No user ID found in SharedPreferences');
+        return;
+      }
+
+      print('Making API request with user ID: $idUser');
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        body: {
+          'query_param': '1',
+          'user': idUser,
+        },
+      );
+
+      print('Fetch user response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        print('Parsed response data: $responseData');
+        
+        if (responseData is List && responseData.isNotEmpty) {
+          setState(() {
+            users = responseData;
+            print('Users data set: $users');
+            
+            // Tentar obter o telefone da seguinte ordem:
+            // 1. Do banco de dados (API)
+            // 2. Das SharedPreferences
+            // 3. Deixar vazio para o usuário digitar
+            String phoneNumber = '';
+            
+            // 1. Tentar do banco de dados
+            if (users[0]['Telefone'] != null && users[0]['Telefone'] != '') {
+              phoneNumber = users[0]['Telefone'];
+              print('Phone number from DB: $phoneNumber');
+            } 
+            // 2. Tentar das SharedPreferences
+            else {
+              String? savedPhone = prefs.getString('phone');
+              if (savedPhone != null && savedPhone.isNotEmpty) {
+                phoneNumber = savedPhone;
+                print('Phone number from SharedPreferences: $phoneNumber');
+              } else {
+                print('No phone number found in DB or SharedPreferences');
+              }
+            }
+            
+            // Definir o número no controlador se foi encontrado
+            if (phoneNumber.isNotEmpty) {
+              _phoneController.text = phoneNumber;
+              _validatePhone();
+            }
+          });
+        } else {
+          print('Error: Response data is not a list or is empty: $responseData');
+        }
+      } else {
+        print('Error: API request failed with status ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      print('Error fetching user data: $e');
+      print('Stack trace: $stackTrace');
+    }
+  }
+
   void _validatePhone() {
     setState(() {
       final phoneText = _phoneController.text.trim();
-      _isValidPhone = phoneText.length == 9 &&
-          (phoneText.startsWith('9') ||
-              phoneText.startsWith('2') ||
-              phoneText.startsWith('3'));
+      bool isProperLength = phoneText.length == 9;
+      bool hasCorrectPrefix = phoneText.startsWith('9') || 
+                              phoneText.startsWith('2') || 
+                              phoneText.startsWith('3');
+      
+      _isValidPhone = isProperLength && hasCorrectPrefix;
+      
+      print('Phone validation: Length OK? $isProperLength, Prefix OK? $hasCorrectPrefix, Valid? $_isValidPhone');
     });
   }
 
   Future<void> _processMBWayPayment() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Verificar se temos os dados do usuário
+    if (users.isEmpty) {
+      print('Trying to fetch user data before proceeding...');
+      await fetchUser();
+      
+      if (users.isEmpty) {
+        setState(() {
+          _isProcessing = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text('Erro ao carregar dados do usuário. Tente novamente.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+    }
 
     setState(() {
       _isProcessing = true;
@@ -66,11 +172,36 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
     final String phoneNumber = _phoneController.text.trim();
 
     try {
-      // 1. Iniciar o pagamento para obter credenciais da transação (sem criar o pedido ainda)
+      // Se o usuário não tinha telefone na base de dados ou é diferente, salva
+      if (users[0]['Telefone'] == null || users[0]['Telefone'] == '' || users[0]['Telefone'] != phoneNumber) {
+        print('Saving phone number to database: $phoneNumber');
+        
+        // Salvar no banco de dados
+        final savePhoneResponse = await http.get(
+          Uri.parse(
+              'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=31&tlf=$phoneNumber&id=${users[0]['IdUser']}'),
+        );
+
+        print('Save phone response: ${savePhoneResponse.statusCode}');
+        if (savePhoneResponse.statusCode == 200) {
+          print('Phone number saved successfully to database');
+          
+          // Atualizar dados locais
+          users[0]['Telefone'] = phoneNumber;
+          
+          // Salvar também no SharedPreferences para uso em outras telas
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('phone', phoneNumber);
+          print('Phone number saved to SharedPreferences');
+        } else {
+          print('Warning: Failed to save phone number to database');
+        }
+      }
+
+      // 1. Iniciar o pagamento para obter credenciais da transação
       final paymentInitResponse = await widget.sibsService.initiateMBWayPayment(
         amount: widget.amount,
-        orderNumber: "temp_" +
-            DateTime.now().millisecondsSinceEpoch.toString(), // ID temporário
+        orderNumber: "EPVC",
         phoneNumber: phoneNumber,
       );
 
@@ -98,6 +229,21 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
       // Debug print
       print('Create Payment Response: $createResponse');
 
+      // Verificar se há erro na resposta do createMBWayPayment
+      if (createResponse.containsKey('returnStatus')) {
+        final returnStatus = createResponse['returnStatus'];
+        if (returnStatus != null && returnStatus is Map) {
+          final statusCode = returnStatus['statusCode'];
+          final statusMsg = returnStatus['statusMsg'];
+          final statusDescription = returnStatus['statusDescription'];
+
+          if (statusCode == 'E0506' || 
+              (statusDescription != null && statusDescription.toString().toLowerCase().contains('alias does not exists'))) {
+            throw Exception('Número MB WAY não registado ou inativo');
+          }
+        }
+      }
+
       // 4. Enviar para o webhook para processamento de status
       print('Registering transaction with webhook for status monitoring');
       try {
@@ -105,11 +251,12 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
           transactionId: transactionId,
           transactionSignature: transactionSignature,
         );
-        
+
         if (webhookResponse['status'] == 'success') {
           print('Transaction successfully registered with webhook');
         } else {
-          print('Warning: Webhook registration returned non-success: ${webhookResponse['message']}');
+          print(
+              'Warning: Webhook registration returned non-success: ${webhookResponse['message']}');
           // Continue even if webhook registration fails
         }
       } catch (e) {
@@ -141,7 +288,8 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
               if (success) {
                 // O processamento do pedido agora é feito na página de espera
                 // Apenas informamos o resultado ao chamador
-                widget.onResult(true, 0); // O número do pedido já é exibido na página de confirmação
+                widget.onResult(true,
+                    0); // O número do pedido já é exibido na página de confirmação
               } else {
                 // Retornar falha - nenhum pedido foi criado
                 print('Payment declined - returning to home screen');
@@ -156,33 +304,49 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
     } catch (e) {
       print('Erro ao processar pagamento MBWay: $e');
 
+      setState(() {
+        _isProcessing = false;
+      });
+
       if (mounted) {
-        // Verificar se é um erro relacionado ao número MB WAY
-        bool isPhoneNumberError = e.toString().toLowerCase().contains('número mb way inválido') ||
-                                 e.toString().toLowerCase().contains('número inválido') ||
-                                 e.toString().toLowerCase().contains('e9999');
+        String errorMessage = e.toString().toLowerCase();
+        
+        // Não tratar "Success" como erro
+        if (errorMessage.contains('success')) {
+          return;
+        }
+
+        bool isPhoneNumberError = 
+            errorMessage.contains('número mb way não registado') ||
+            errorMessage.contains('alias does not exists') ||
+            errorMessage.contains('número inválido') ||
+            errorMessage.contains('e0506') ||
+            errorMessage.contains('400') ||
+            errorMessage.contains('e9999') ||
+            errorMessage.contains('failed to create mbway payment') ||
+            (errorMessage.contains('error') && errorMessage.contains('400'));
 
         if (isPhoneNumberError) {
-          // Mostrar diálogo específico para erro de número de telefone
           showDialog(
             context: context,
             barrierDismissible: false,
             builder: (BuildContext dialogContext) {
               return AlertDialog(
-                title: Text('Erro no número MB WAY'),
+                title: Text('Número MB WAY Inválido'),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('O pagamento foi recusado pelo sistema MB WAY.'),
+                    Text('O número de telefone fornecido não está registado no MB WAY ou está inativo.'),
+                    SizedBox(height: 12),
+                    Text('Para utilizar o MB WAY, certifique-se que:'),
                     SizedBox(height: 8),
-                    Text('Possíveis motivos:'),
-                    SizedBox(height: 4),
-                    Text('• Número de telefone incorreto'),
-                    Text('• Conta MB WAY não ativa'),
-                    Text('• Saldo insuficiente'),
-                    SizedBox(height: 8),
-                    Text('Por favor, verifique o número e tente novamente.',
+                    Text('• O número está correto'),
+                    Text('• Tem a app MB WAY instalada'),
+                    Text('• A conta MB WAY está ativa'),
+                    Text('• O número está registado no MB WAY'),
+                    SizedBox(height: 12),
+                    Text('Por favor, verifique e tente novamente.',
                       style: TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
@@ -190,8 +354,7 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
                   TextButton(
                     child: Text('OK'),
                     onPressed: () {
-                      Navigator.of(dialogContext).pop(); // Fecha o diálogo
-                      // Não navegamos para fora - o usuário deve corrigir e tentar novamente
+                      Navigator.of(dialogContext).pop();
                     },
                   ),
                 ],
@@ -199,30 +362,22 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
             },
           );
         } else {
-          // Para outros erros, mostrar uma snackbar
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                  'Erro ao processar pagamento: ${e.toString().replaceAll(RegExp(r'^Exception: '), '')}'),
+              content: Text('Erro ao processar pagamento: ${e.toString().replaceAll(RegExp(r'^Exception: '), '')}'),
               duration: Duration(seconds: 5),
               backgroundColor: Colors.red,
             ),
           );
         }
-
-        setState(() {
-          _isProcessing = false;
-        });
       }
-
-      widget.onResult(false, 0);
     }
   }
 
   Future<void> _updateOrderStatusInAPI(String orderId, String status) async {
     try {
       print('Updating order #$orderId status to: $status');
-      
+
       final response = await http.post(
         Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
         body: {
@@ -234,15 +389,17 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
       );
 
       print('Update status response code: ${response.statusCode}');
-      
+
       if (response.statusCode != 200) {
-        throw Exception('Falha ao atualizar status do pedido (status ${response.statusCode})');
+        throw Exception(
+            'Falha ao atualizar status do pedido (status ${response.statusCode})');
       }
 
       try {
         final responseData = json.decode(response.body);
         if (responseData['status'] != 'success') {
-          throw Exception('API returned non-success status: ${responseData['message'] ?? 'Unknown error'}');
+          throw Exception(
+              'API returned non-success status: ${responseData['message'] ?? 'Unknown error'}');
         }
         print('Status do pedido atualizado com sucesso para: $status');
       } catch (jsonError) {
@@ -259,7 +416,7 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
       int orderId, String cartItemsJson, String transactionId) async {
     try {
       print('Sending order items to API for order #$orderId');
-      
+
       // Decodificar o JSON dos itens do carrinho
       List<dynamic> cartItems = json.decode(cartItemsJson);
       print('Cart items count: ${cartItems.length}');
@@ -279,16 +436,19 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
       print('Send items response body: ${response.body}');
 
       if (response.statusCode != 200) {
-        throw Exception('Falha ao enviar itens do pedido (status ${response.statusCode}): ${response.body}');
+        throw Exception(
+            'Falha ao enviar itens do pedido (status ${response.statusCode}): ${response.body}');
       }
 
       // Verificar resposta para garantir que os itens foram adicionados corretamente
       try {
         final responseData = json.decode(response.body);
         if (responseData['status'] != 'success') {
-          throw Exception('API returned non-success status: ${responseData['message'] ?? 'Unknown error'}');
+          throw Exception(
+              'API returned non-success status: ${responseData['message'] ?? 'Unknown error'}');
         }
-        print('Itens do pedido enviados com sucesso. Resposta: ${response.body}');
+        print(
+            'Itens do pedido enviados com sucesso. Resposta: ${response.body}');
       } catch (jsonError) {
         print('Warning: Could not parse API response: $jsonError');
         // Continue even if response parsing fails
@@ -318,8 +478,9 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
         print('Order system notified successfully');
         return;
       }
-      
-      print('Warning: Order system notification returned status ${response.statusCode}');
+
+      print(
+          'Warning: Order system notification returned status ${response.statusCode}');
     } catch (e) {
       print('Error notifying order system: $e');
       // Don't throw exception, just log the error

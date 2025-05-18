@@ -19,12 +19,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // Controllers for editable fields
   final TextEditingController _nifController = TextEditingController();
+  final TextEditingController _tlfController = TextEditingController();
   final TextEditingController _moradaController = TextEditingController();
   final TextEditingController _cidadeController = TextEditingController();
   final TextEditingController _codigoPostalController = TextEditingController();
 
   // State for editable fields
   bool _isEditingNif = false;
+  bool _isEditingPhone = false;
   bool _isEditingMorada = false;
   bool _isEditingCidade = false;
   bool _isEditingCodigoPostal = false;
@@ -61,8 +63,8 @@ class _SettingsPageState extends State<SettingsPage> {
       _moradaController.text = userData['Rua'] ?? '';
       _cidadeController.text = userData['Cidade'] ?? '';
       _codigoPostalController.text = userData['CodigoPostal'] ?? '';
+      _tlfController.text = userData['Telefone'] ?? '';
     } catch (e) {
-      
     } finally {
       setState(() {
         _isLoading = false;
@@ -101,14 +103,14 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _fetchUserBalance() async {
     // For now, we're using a placeholder since the actual API endpoint for balance wasn't found
     // When the API endpoint is created, this should be updated
-    
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? user = prefs.getString("username");
-    
+
     if (user == null) {
       throw Exception('No user logged in');
     }
-    
+
     // This would be the actual API call once implemented
     // final response = await http.post(
     //   Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
@@ -117,7 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
     //     'user': user,
     //   },
     // );
-    
+
     setState(() {
       // Parse the saldo value and round to 2 decimal places
       double saldoValue = 0.0;
@@ -128,7 +130,7 @@ class _SettingsPageState extends State<SettingsPage> {
       } catch (e) {
         print('Error parsing balance: $e');
       }
-      
+
       // Format the balance to 2 decimal places
       _balance = saldoValue.toStringAsFixed(2);
     });
@@ -191,52 +193,123 @@ class _SettingsPageState extends State<SettingsPage> {
       if (user == null) {
         throw Exception('No user logged in');
       }
+      
+      // Validar NIF
       _validateNIF();
-      if (_isValid) {
+      
+      // Validar telefone
+      bool isPhoneValid = true;
+      String phoneErrorMessage = '';
+      
+      if (_tlfController.text.isNotEmpty) {
+        if (_tlfController.text.length != 9) {
+          isPhoneValid = false;
+          phoneErrorMessage = 'O número de telefone deve ter 9 dígitos';
+        } else if (!_tlfController.text.startsWith('9') && 
+                 !_tlfController.text.startsWith('2') && 
+                 !_tlfController.text.startsWith('3')) {
+          isPhoneValid = false;
+          phoneErrorMessage = 'O número deve começar com 9, 2 ou 3';
+        }
+      }
+      
+      if (_isValid && isPhoneValid) {
+        // Debug: Mostrar o que estamos enviando
+        print('Saving user info:');
+        print('User: $user');
+        print('NIF: ${_nifController.text}');
+        print('Morada: ${_moradaController.text}');
+        print('Cidade: ${_cidadeController.text}');
+        print('Código Postal: ${_codigoPostalController.text}');
+        print('Telefone: ${_tlfController.text}');
+        
         // Make API call to update user information
         final response = await http.post(
           Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
           body: {
-            'query_param':
-                '1.1', // This should be the correct query parameter for updating user info
+            'query_param': '1.1',
             'user': user,
             'nif': _nifController.text,
             'morada': _moradaController.text,
             'cidade': _cidadeController.text,
             'codigo_postal': _codigoPostalController.text,
+            'telefone': _tlfController.text,
           },
         );
 
+        print('API Response status: ${response.statusCode}');
+        print('API Response body: ${response.body}');
+
         if (response.statusCode == 200) {
+          // Atualizar número de telefone via endpoint específico para garantir
+          if (_tlfController.text.isNotEmpty) {
+            print('Saving phone number via dedicated endpoint');
+            final phoneResponse = await http.get(
+              Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=31&tlf=${_tlfController.text}&id=${userData['IdUser']}'),
+            );
+            
+            print('Phone API Response: ${phoneResponse.statusCode}');
+            if (phoneResponse.statusCode == 200) {
+              print('Phone number saved successfully using dedicated endpoint');
+            } else {
+              print('Warning: Failed to save phone using dedicated endpoint');
+            }
+          }
+
           // Update local userData
           setState(() {
             userData['NIF'] = _nifController.text;
             userData['Morada'] = _moradaController.text;
             userData['Cidade'] = _cidadeController.text;
             userData['CodigoPostal'] = _codigoPostalController.text;
+            userData['Telefone'] = _tlfController.text;
+            userData['Rua'] = _moradaController.text; // Campo duplicado no DB
 
             // Reset all editing states
             _isEditingNif = false;
             _isEditingMorada = false;
             _isEditingCidade = false;
             _isEditingCodigoPostal = false;
+            _isEditingPhone = false;
           });
 
+          // Atualizar nas SharedPreferences
+          await prefs.setString('phone', _tlfController.text);
+
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Informações atualizadas com sucesso!')),
+            SnackBar(
+              content: Text('Informações atualizadas com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
           );
+          
+          // Recarregar os dados após salvar para confirmar
+          await _fetchUserInfo();
         } else {
-          throw Exception('Failed to update user info: ${response.statusCode}');
+          throw Exception('Failed to update user info: ${response.statusCode} - ${response.body}');
         }
+      } else if (!isPhoneValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(phoneErrorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${_validationMessage}')),
+          SnackBar(
+            content: Text('${_validationMessage}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } catch (e) {
       print('Error saving user data: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao salvar dados: $e')),
+        SnackBar(
+          content: Text('Erro ao salvar dados: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       setState(() {
@@ -261,9 +334,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   _buildUserInfoCard(),
                   SizedBox(height: 16),
-                  if (userData['AutorizadoSaldo'] == '1' || userData['AutorizadoSaldo'] == 1)
+                  if (userData['AutorizadoSaldo'] == '1' ||
+                      userData['AutorizadoSaldo'] == 1)
                     _buildFinancialInfoCard(),
-                  if (userData['AutorizadoSaldo'] == '1' || userData['AutorizadoSaldo'] == 1)
+                  if (userData['AutorizadoSaldo'] == '1' ||
+                      userData['AutorizadoSaldo'] == 1)
                     SizedBox(height: 16),
                   _buildEditableAddressCard(),
                 ],
@@ -302,6 +377,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 '${userData['Nome'] ?? 'N/A'} ${userData['Apelido'] ?? ''}'),
             _buildInfoRow('Email', userData['Email'] ?? 'N/A'),
             _buildInfoRow('Turma', userData['Turma'] ?? 'N/A'),
+            _buildEditableFieldRow(
+                'Telefone',
+                _tlfController,
+                _isEditingPhone,
+                () => setState(() => _isEditingPhone = !_isEditingPhone),
+                () => _saveUserInfo()),
             _buildEditableFieldRow(
                 'NIF',
                 _nifController,
@@ -488,10 +569,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
+                      hintText: label == 'Telefone' ? '9xxxxxxxx' : null,
                     ),
                     style: TextStyle(
                       fontSize: 14,
                     ),
+                    keyboardType: label == 'Telefone' ? TextInputType.phone : TextInputType.text,
+                    maxLength: label == 'Telefone' ? 9 : null,
+                    buildCounter: label == 'Telefone' ? (context, {required currentLength, required isFocused, maxLength}) => null : null,
                   )
                 : Text(
                     controller.text.isEmpty ? 'N/A' : controller.text,
@@ -503,7 +588,7 @@ class _SettingsPageState extends State<SettingsPage> {
           IconButton(
             icon: Icon(
               isEditing ? Icons.save : Icons.edit,
-              color: isEditing ? Colors.green : Colors.blue,
+              color: isEditing ? Colors.green : Colors.blue[800],
               size: 20,
             ),
             onPressed: isEditing ? onSave : onEdit,

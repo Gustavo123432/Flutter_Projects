@@ -317,6 +317,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       );
     }
   }
+  
 
   Future<void> _markOrderAsCompleted(PurchaseOrder order) async {
     try {
