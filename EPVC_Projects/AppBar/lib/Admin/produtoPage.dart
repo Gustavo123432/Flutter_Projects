@@ -242,12 +242,9 @@ class _ProductCardState extends State<ProductCard> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.product.name);
-    _descriptionController =
-        TextEditingController(text: widget.product.description);
-    _priceController =
-        TextEditingController(text: widget.product.price.toString());
-    _quantityController =
-        TextEditingController(text: widget.product.quantity.toString());
+    _descriptionController = TextEditingController(text: widget.product.description);
+    _priceController = TextEditingController(text: widget.product.price.toString());
+    _quantityController = TextEditingController(text: widget.product.quantity.toString());
     _availability = widget.product.available ? 'Disponível' : 'Indisponível';
     _categoryValue = widget.product.category;
   }
@@ -263,31 +260,80 @@ class _ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
+    Color statusColor = widget.product.available ? Colors.green : Colors.orange;
+    String statusText = widget.product.available ? 'Disponível' : 'Indisponível';
     return Card(
-      margin: EdgeInsets.all(8.0),
-      child: ListTile(
-        leading: Image.memory(
-          base64Decode(widget.product.base64Image),
-          width: 50, // Set width and height as needed
-          height: 50,
-          fit: BoxFit.cover,
-        ),
-        title: _isEditing
-            ? TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(labelText: 'Nome'),
-              )
-            : Text(widget.product.name),
-        subtitle: _isEditing
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
+      elevation: 4,
+      margin: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.memory(
+                  base64Decode(widget.product.base64Image),
+                  height: 100,
+                  width: 100,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: _isEditing
+                      ? TextFormField(
+                          controller: _nameController,
+                          decoration: InputDecoration(labelText: 'Nome'),
+                        )
+                      : Row(
+                          children: [
+                            Icon(Icons.label, size: 18, color: Colors.blueGrey),
+                            SizedBox(width: 6),
+                            Flexible(
+                              child: Text(widget.product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                            ),
+                          ],
+                        ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.15),
+                    border: Border.all(color: statusColor),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _isEditing ? _availability : statusText,
+                    style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            _isEditing
+                ? TextFormField(
                     controller: _priceController,
                     decoration: InputDecoration(labelText: 'Preço'),
                     keyboardType: TextInputType.number,
+                  )
+                : Row(
+                    children: [
+                      Icon(Icons.euro, size: 18, color: Colors.blueGrey),
+                      SizedBox(width: 6),
+                      Text('Preço: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                      Text('${widget.product.price.toStringAsFixed(2).replaceAll('.', ',')}€', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
                   ),
-                  DropdownButtonFormField<String>(
+            SizedBox(height: 4),
+            _isEditing
+                ? DropdownButtonFormField<String>(
                     value: _availability,
                     items: <String>['Disponível', 'Indisponível']
                         .map<DropdownMenuItem<String>>((String value) {
@@ -301,8 +347,18 @@ class _ProductCardState extends State<ProductCard> {
                         _availability = value!;
                       });
                     },
+                  )
+                : Row(
+                    children: [
+                      Icon(Icons.check_circle, size: 18, color: statusColor),
+                      SizedBox(width: 6),
+                      Text('Estado: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                      Text(statusText, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold)),
+                    ],
                   ),
-                  DropdownButtonFormField<String>(
+            SizedBox(height: 4),
+            _isEditing
+                ? DropdownButtonFormField<String>(
                     value: _categoryValue,
                     items: ['Bebidas', 'Café', 'Comidas', 'Snacks', 'Doces']
                         .map<DropdownMenuItem<String>>((String value) {
@@ -316,58 +372,62 @@ class _ProductCardState extends State<ProductCard> {
                         _categoryValue = value!;
                       });
                     },
+                  )
+                : Row(
+                    children: [
+                      Icon(Icons.category, size: 18, color: Colors.blueGrey),
+                      SizedBox(width: 6),
+                      Text('Categoria: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                      Text(widget.product.category, style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
                   ),
-                ],
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nome: ${widget.product.name}'),
-                  Text(
-                      'Preço: ${widget.product.price.toStringAsFixed(2).replaceAll('.', ',')}€'),
-                  Text('Estado: $_availability'),
-                  Text('Categoria: ${widget.product.category}'),
-                ],
-              ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(_isEditing ? Icons.save : Icons.edit),
-              onPressed: () {
-                setState(() {
-                  _isEditing = !_isEditing;
-                  if (!_isEditing) {
-                    // Save changes
-                    widget.product.name = _nameController.text;
-                    widget.product.price = double.parse(_priceController.text);
-                    widget.product.available = _availability == 'Disponível';
-                    widget.product.category = _categoryValue;
-
-                    // Call onUpdate to send updated data to API
-                    widget.onUpdate(
-                        widget.product.id, widget.product); // Passando o ID
-
-                    // Disable editing
-                    _nameController.text = widget.product.name;
-                    _priceController.text = widget.product.price.toString();
-                    _quantityController.text =
-                        widget.product.quantity.toString();
-                    _availability = widget.product.available
-                        ? 'Disponível'
-                        : 'Indisponível';
-                    _categoryValue = widget.product.category;
-                  }
-                });
-              },
-            ),
-            IconButton(
-              icon: Icon(Icons.delete),
-              onPressed: () {
-                removeProduct(widget.product.id);
-
-
-              },
+            SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ElevatedButton.icon(
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(_isEditing ? Colors.green : Color.fromARGB(255, 246, 141, 45)),
+                    shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    )),
+                  ),
+                  icon: Icon(_isEditing ? Icons.save : Icons.edit, color: Colors.white),
+                  label: Text(_isEditing ? 'Guardar' : 'Editar', style: TextStyle(color: Colors.white)),
+                  onPressed: () {
+                    setState(() {
+                      _isEditing = !_isEditing;
+                      if (!_isEditing) {
+                        widget.product.name = _nameController.text;
+                        widget.product.price = double.parse(_priceController.text);
+                        widget.product.available = _availability == 'Disponível';
+                        widget.product.category = _categoryValue;
+                        widget.onUpdate(widget.product.id, widget.product);
+                        _nameController.text = widget.product.name;
+                        _priceController.text = widget.product.price.toString();
+                        _quantityController.text = widget.product.quantity.toString();
+                        _availability = widget.product.available ? 'Disponível' : 'Indisponível';
+                        _categoryValue = widget.product.category;
+                      }
+                    });
+                  },
+                ),
+                SizedBox(width: 8),
+                ElevatedButton.icon(
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(Colors.red),
+                    shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    )),
+                  ),
+                  icon: Icon(Icons.delete, color: Colors.white),
+                  label: Text('Eliminar', style: TextStyle(color: Colors.white)),
+                  onPressed: () {
+                    removeProduct(widget.product.id);
+                    setState(() {});
+                  },
+                ),
+              ],
             ),
           ],
         ),

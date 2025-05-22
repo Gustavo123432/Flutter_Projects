@@ -107,10 +107,12 @@ class _AdminDrawerState extends State<AdminDrawer> {
           key: _key,
           appBar: isSmallScreen
               ? AppBar(
+                  backgroundColor: Color.fromARGB(255, 246, 141, 45),
                   leading: IconButton(
                     onPressed: () {
                       _key.currentState?.openDrawer();
                     },
+                    
                     icon: Icon(Icons.menu),
                   ),
                 )

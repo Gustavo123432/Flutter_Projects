@@ -264,7 +264,7 @@ class _HomeAlunoState extends State<HomeAluno> {
               ),
               Container(
                 margin: EdgeInsets.symmetric(vertical: 5.0),
-                height: 100.0,
+                constraints: BoxConstraints(maxHeight: 120), // altura máxima opcional
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: recentBuysMapped.length,
@@ -486,6 +486,7 @@ class _HomeAlunoState extends State<HomeAluno> {
                 style: TextStyle(
                   fontSize: 11.0,
                   fontWeight: FontWeight.bold,
+                  overflow: TextOverflow.fade,
                 ),
               ),
               Row(
