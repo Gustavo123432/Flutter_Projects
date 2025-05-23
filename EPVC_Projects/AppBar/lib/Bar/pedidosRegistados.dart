@@ -10,7 +10,6 @@ import 'package:my_flutter_project/Bar/drawerBar.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:open_file/open_file.dart';
@@ -131,29 +130,8 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
   }
 
   Future<void> generatePdf(String horaPretendida) async {
-    if (await _requestStoragePermission()) {
-      final pdfBytes = await _generatePdf(horaPretendida);
-      //await _printBluetooth(pdfBytes);
-    } else {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Permissão Necessária'),
-            content: Text(
-                'Por favor, conceda permissão de armazenamento para gerar PDF.'),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    }
+    final pdfBytes = await _generatePdf(horaPretendida);
+    //await _printBluetooth(pdfBytes);
   }
 
   Future<Uint8List> _generatePdf(String horaPretendida) async {
@@ -213,9 +191,8 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
     );
 
     final bytes = await pdf.save();
-    final directory = await getExternalStorageDirectory();
-    final file =
-        File('${directory!.path}/pedido_registado_$horaPretendida.pdf');
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/pedido_registado_$horaPretendida.pdf');
     await file.writeAsBytes(bytes);
 
     OpenFile.open(file.path);
@@ -250,11 +227,6 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
     await PrintBluetoothThermal.writeBytes(Uint8List.fromList(escPosCommands));
     print('Printed successfully.');
   }*/
-
-  Future<bool> _requestStoragePermission() async {
-    PermissionStatus status = await Permission.storage.request();
-    return status.isGranted;
-  }
 
   @override
   Widget build(BuildContext context) {

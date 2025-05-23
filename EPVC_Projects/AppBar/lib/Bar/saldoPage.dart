@@ -131,13 +131,8 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
     });
     
     try {
-      final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-        body: {
-          'query_param': '10', // Assuming this is the endpoint to update AutorizadoSaldo
-          'userId': userId,
-          'autorizadoSaldo': '1',
-        },
+      final response = await http.get(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=33&op=1&id=$userId'),
       );
       
       if (response.statusCode == 200) {
