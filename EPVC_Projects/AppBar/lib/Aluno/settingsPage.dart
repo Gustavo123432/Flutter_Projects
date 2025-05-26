@@ -1,8 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:my_flutter_project/Aluno/home.dart';
+import 'package:my_flutter_project/Aluno/movimentosPage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Aluno/drawerHome.dart';
+import 'package:my_flutter_project/SIBS/Saldo/mbway_phone_page.dart';
+import 'package:my_flutter_project/SIBS/sibs_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -16,6 +20,11 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isSaving = false;
   Map<String, dynamic> userData = {};
   String _balance = "0.00";
+  bool _hasUnsavedChanges = false;
+  bool _autoBillNIF = false;
+
+    SibsService? _sibsService;
+
 
   // Controllers for editable fields
   final TextEditingController _nifController = TextEditingController();
@@ -31,10 +40,18 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isEditingCidade = false;
   bool _isEditingCodigoPostal = false;
 
+  // Original values for comparison
+  String _originalNif = '';
+  String _originalPhone = '';
+  String _originalMorada = '';
+  String _originalCidade = '';
+  String _originalCodigoPostal = '';
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _initializeSibsService();
   }
 
   @override
@@ -43,6 +60,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _moradaController.dispose();
     _cidadeController.dispose();
     _codigoPostalController.dispose();
+    _tlfController.dispose();
     super.dispose();
   }
 
@@ -64,12 +82,65 @@ class _SettingsPageState extends State<SettingsPage> {
       _cidadeController.text = userData['Cidade'] ?? '';
       _codigoPostalController.text = userData['CodigoPostal'] ?? '';
       _tlfController.text = userData['Telefone'] ?? '';
+      _autoBillNIF = userData['FaturacaoAutomatica'] == '1' ||
+          userData['FaturacaoAutomatica'] == 1;
+
+      // Store original values
+      _originalNif = _nifController.text;
+      _originalPhone = _tlfController.text;
+      _originalMorada = _moradaController.text;
+      _originalCidade = _cidadeController.text;
+      _originalCodigoPostal = _codigoPostalController.text;
     } catch (e) {
+      print('Error loading user data: $e');
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  bool _checkForUnsavedChanges() {
+    return _nifController.text != _originalNif ||
+        _tlfController.text != _originalPhone ||
+        _moradaController.text != _originalMorada ||
+        _cidadeController.text != _originalCidade ||
+        _codigoPostalController.text != _originalCodigoPostal;
+  }
+
+  Future<bool> _onWillPop() async {
+    if (_checkForUnsavedChanges()) {
+      final shouldPop = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Alterações não guardadas'),
+          content: Text(
+              'Tem alterações não guardadas. Deseja guardar antes de sair?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => HomeAluno()),
+                );
+              },
+              child: Text('Não guardar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('Guardar'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldPop == true) {
+        await _saveUserInfo();
+      }
+      return shouldPop ?? false;
+    }
+    return true;
   }
 
   Future<void> _fetchUserInfo() async {
@@ -193,26 +264,26 @@ class _SettingsPageState extends State<SettingsPage> {
       if (user == null) {
         throw Exception('No user logged in');
       }
-      
+
       // Validar NIF
       _validateNIF();
-      
+
       // Validar telefone
       bool isPhoneValid = true;
       String phoneErrorMessage = '';
-      
+
       if (_tlfController.text.isNotEmpty) {
         if (_tlfController.text.length != 9) {
           isPhoneValid = false;
           phoneErrorMessage = 'O número de telefone deve ter 9 dígitos';
-        } else if (!_tlfController.text.startsWith('9') && 
-                 !_tlfController.text.startsWith('2') && 
-                 !_tlfController.text.startsWith('3')) {
+        } else if (!_tlfController.text.startsWith('9') &&
+            !_tlfController.text.startsWith('2') &&
+            !_tlfController.text.startsWith('3')) {
           isPhoneValid = false;
           phoneErrorMessage = 'O número deve começar com 9, 2 ou 3';
         }
       }
-      
+
       if (_isValid && isPhoneValid) {
         // Debug: Mostrar o que estamos enviando
         print('Saving user info:');
@@ -222,7 +293,8 @@ class _SettingsPageState extends State<SettingsPage> {
         print('Cidade: ${_cidadeController.text}');
         print('Código Postal: ${_codigoPostalController.text}');
         print('Telefone: ${_tlfController.text}');
-        
+        print('Auto Bill NIF: ${_autoBillNIF ? '1' : '0'}');
+
         // Make API call to update user information
         final response = await http.post(
           Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
@@ -234,6 +306,7 @@ class _SettingsPageState extends State<SettingsPage> {
             'cidade': _cidadeController.text,
             'codigo_postal': _codigoPostalController.text,
             'telefone': _tlfController.text,
+            'auto_bill_nif': _autoBillNIF ? '1' : '0',
           },
         );
 
@@ -245,9 +318,10 @@ class _SettingsPageState extends State<SettingsPage> {
           if (_tlfController.text.isNotEmpty) {
             print('Saving phone number via dedicated endpoint');
             final phoneResponse = await http.get(
-              Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=31&tlf=${_tlfController.text}&id=${userData['IdUser']}'),
+              Uri.parse(
+                  'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=31&tlf=${_tlfController.text}&id=${userData['IdUser']}'),
             );
-            
+
             print('Phone API Response: ${phoneResponse.statusCode}');
             if (phoneResponse.statusCode == 200) {
               print('Phone number saved successfully using dedicated endpoint');
@@ -282,11 +356,12 @@ class _SettingsPageState extends State<SettingsPage> {
               backgroundColor: Colors.green,
             ),
           );
-          
+
           // Recarregar os dados após salvar para confirmar
           await _fetchUserInfo();
         } else {
-          throw Exception('Failed to update user info: ${response.statusCode} - ${response.body}');
+          throw Exception(
+              'Failed to update user info: ${response.statusCode} - ${response.body}');
         }
       } else if (!isPhoneValid) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -320,31 +395,43 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Definições'),
-      ),
-      drawer: DrawerHome(),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildUserInfoCard(),
-                  SizedBox(height: 16),
-                  if (userData['AutorizadoSaldo'] == '1' ||
-                      userData['AutorizadoSaldo'] == 1)
-                    _buildFinancialInfoCard(),
-                  if (userData['AutorizadoSaldo'] == '1' ||
-                      userData['AutorizadoSaldo'] == 1)
+    return MaterialApp(
+        home: WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Definições'),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: () async {
+              if (await _onWillPop()) {
+                Navigator.pop(context);
+              }
+            },
+          ),
+        ),
+        drawer: DrawerHome(),
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildUserInfoCard(),
                     SizedBox(height: 16),
-                  _buildEditableAddressCard(),
-                ],
+                    if (userData['AutorizadoSaldo'] == '1' ||
+                        userData['AutorizadoSaldo'] == 1)
+                      _buildFinancialInfoCard(),
+                    if (userData['AutorizadoSaldo'] == '1' ||
+                        userData['AutorizadoSaldo'] == 1)
+                      SizedBox(height: 16),
+                    _buildEditableAddressCard(),
+                  ],
+                ),
               ),
-            ),
-    );
+      ),
+    ));
   }
 
   Widget _buildUserInfoCard() {
@@ -353,46 +440,128 @@ class _SettingsPageState extends State<SettingsPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.person, size: 24, color: Colors.blueGrey),
-                SizedBox(width: 8),
-                Text(
-                  'Informações Pessoais',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+      child: IntrinsicHeight(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.person, size: 24, color: Color.fromARGB(255, 130, 201, 189)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Informações Pessoais',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Divider(),
+              SizedBox(height: 8),
+              _buildInfoRow('Nome',
+                  '${userData['Nome'] ?? 'N/A'} ${userData['Apelido'] ?? ''}'),
+              _buildInfoRow('Email', userData['Email'] ?? 'N/A'),
+              _buildInfoRow('Turma', userData['Turma'] ?? 'N/A'),
+              _buildEditableFieldRow(
+                  'Telefone',
+                  _tlfController,
+                  _isEditingPhone,
+                  () => setState(() => _isEditingPhone = !_isEditingPhone),
+                  () => _saveUserInfo()),
+              _buildEditableFieldRow(
+                  'NIF',
+                  _nifController,
+                  _isEditingNif,
+                  () => setState(() => _isEditingNif = !_isEditingNif),
+                  () => _saveUserInfo()),
+              if (_nifController.text.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(left: 0, top: 4),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _autoBillNIF,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _autoBillNIF = value ?? false;
+                          });
+                          _saveUserInfo();
+                        },
+                        activeColor: Color.fromARGB(255, 246, 141, 45),
+                        checkColor: Colors.white,
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Usar este NIF para Faturação Automática',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.help_outline,
+                            size: 18, color: Colors.grey[600]),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('Faturação Automática'),
+                              content: Text(
+                                  'Ao ativar esta opção, o seu NIF será automaticamente utilizado '
+                                  'em todas as suas compras, sem necessidade de o introduzir '
+                                  'manualmente em cada fatura. Pode desativar esta opção a '
+                                  'qualquer momento nas definições e a faturação deixará de ser automática.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: Text(
+                                    'Entendi',
+                                    style: TextStyle(
+                                      color: Color.fromARGB(255, 246, 141, 45),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-            Divider(),
-            SizedBox(height: 8),
-            _buildInfoRow('Nome',
-                '${userData['Nome'] ?? 'N/A'} ${userData['Apelido'] ?? ''}'),
-            _buildInfoRow('Email', userData['Email'] ?? 'N/A'),
-            _buildInfoRow('Turma', userData['Turma'] ?? 'N/A'),
-            _buildEditableFieldRow(
-                'Telefone',
-                _tlfController,
-                _isEditingPhone,
-                () => setState(() => _isEditingPhone = !_isEditingPhone),
-                () => _saveUserInfo()),
-            _buildEditableFieldRow(
-                'NIF',
-                _nifController,
-                _isEditingNif,
-                () => setState(() => _isEditingNif = !_isEditingNif),
-                () => _saveUserInfo()),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+  Future<void> _initializeSibsService() async {
+    try {
+      _sibsService = SibsService(
+        accessToken:
+            '0267adfae94c224be1b374be2ce7b298f0.eyJlIjoiMjA1NzkzODk3NTc1MSIsInJvbGVzIjoiTUFOQUdFUiIsInRva2VuQXBwRGF0YSI6IntcIm1jXCI6XCI1MDYzNTBcIixcInRjXCI6XCI4MjE0NFwifSIsImkiOiIxNzQyNDA2MTc1NzUxIiwiaXMiOiJodHRwczovL3FseS5zaXRlMS5zc28uc3lzLnNpYnMucHQvYXV0aC9yZWFsbXMvREVWLlNCTy1JTlQuUE9SVDEiLCJ0eXAiOiJCZWFyZXIiLCJpZCI6IjVXcjN5WkZCSERmNzE4MDgxMGYxYjA0YTg2OTE4OTEwZDBjYzM2ZTRiMSJ9.6a6179e2d76dbe03f41f8252510dcb8a7056d9132a034c26174a6cf5c2ce75b3b5052d85f38fdd8b8765b7dfeb42e2d8aae898dfea1893b217856ef0794ee2f1',
+        merchantId: '506350',
+        merchantName: 'AppBar',
+      );
+      print('Serviço SIBS inicializado com sucesso');
+    } catch (e) {
+      print('Erro ao inicializar serviço SIBS: $e');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao inicializar serviço de pagamento')),
+        );
+      });
+    }
   }
 
   Widget _buildFinancialInfoCard() {
@@ -401,16 +570,17 @@ class _SettingsPageState extends State<SettingsPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      color: Colors.green[50],
+      color: Color.fromARGB(200, 162, 235, 223),
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Icon(Icons.account_balance_wallet,
-                    size: 24, color: Colors.green[700]),
+                    size: 24, color: Color.fromARGB(255, 6, 165, 139)),
                 SizedBox(width: 8),
                 Text(
                   'Saldo',
@@ -421,16 +591,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ],
             ),
-            Divider(color: Colors.green[200]),
+            Divider(color: Color.fromARGB(200, 162, 235, 223)),
             SizedBox(height: 16),
             Center(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Saldo Disponível',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.grey[700],
+                      color: Colors.grey[800],
                     ),
                   ),
                   SizedBox(height: 8),
@@ -439,8 +610,124 @@ class _SettingsPageState extends State<SettingsPage> {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green[700],
+                      color: Color.fromARGB(255, 6, 165, 139),
                     ),
+                  ),
+                  SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 160,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text('Método de Carregamento'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ListTile(
+                                      leading: Icon(Icons.money, color: Colors.green[800]),
+                                      title: Text('Dinheiro'),
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: Text('Carregar com Dinheiro'),
+                                            content: Text(
+                                              'Se deseja carregar com dinheiro, dirija-se ao estabelecimento '
+                                              'e informe o funcionário que deseja carregar a sua conta com dinheiro.'
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: Text(
+                                                  'Fechar',
+                                                  style: TextStyle(
+                                                    color: Color.fromARGB(255, 246, 141, 45),
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    Divider(),
+                                    ListTile(
+                                      leading: Icon(Icons.phone_android, color: Colors.red[900]),
+                                      title: Text('MBWay'),
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                        if (_sibsService != null) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => MBWayPhoneNumberSaldoPage(
+                                                sibsService: _sibsService!,
+                                                onResult: (success, orderNumber) {
+                                                  // Handle result if needed
+                                                },
+                                                onCancel: () {
+                                                  Navigator.pop(context);
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Serviço de pagamento indisponível. Tente mais tarde.')),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          icon: Icon(Icons.add_circle_outline),
+                          label: Text('Carregar Saldo'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color.fromARGB(255, 6, 165, 139),
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 160,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>  TransactionDetailsPage(),
+                              ),
+                            );
+                          },
+                          icon: Icon(Icons.history),
+                          label: Text('Ver Movimentos'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color.fromARGB(255, 246, 141, 45),
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -457,46 +744,49 @@ class _SettingsPageState extends State<SettingsPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.home, size: 24, color: Colors.blueGrey),
-                SizedBox(width: 8),
-                Text(
-                  'Dados de Faturação',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+      child: IntrinsicHeight(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.home, size: 24, color: Color.fromARGB(255, 130, 201, 189)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Dados de Faturação',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            Divider(),
-            SizedBox(height: 8),
-            _buildEditableFieldRow(
-                'Endereço',
-                _moradaController,
-                _isEditingMorada,
-                () => setState(() => _isEditingMorada = !_isEditingMorada),
-                () => _saveUserInfo()),
-            _buildEditableFieldRow(
-                'Cidade',
-                _cidadeController,
-                _isEditingCidade,
-                () => setState(() => _isEditingCidade = !_isEditingCidade),
-                () => _saveUserInfo()),
-            _buildEditableFieldRow(
-                'Código Postal',
-                _codigoPostalController,
-                _isEditingCodigoPostal,
-                () => setState(
-                    () => _isEditingCodigoPostal = !_isEditingCodigoPostal),
-                () => _saveUserInfo()),
-          ],
+                ],
+              ),
+              Divider(),
+              SizedBox(height: 8),
+              _buildEditableFieldRow(
+                  'Endereço',
+                  _moradaController,
+                  _isEditingMorada,
+                  () => setState(() => _isEditingMorada = !_isEditingMorada),
+                  () => _saveUserInfo()),
+              _buildEditableFieldRow(
+                  'Cidade',
+                  _cidadeController,
+                  _isEditingCidade,
+                  () => setState(() => _isEditingCidade = !_isEditingCidade),
+                  () => _saveUserInfo()),
+              _buildEditableFieldRow(
+                  'Código Postal',
+                  _codigoPostalController,
+                  _isEditingCodigoPostal,
+                  () => setState(
+                      () => _isEditingCodigoPostal = !_isEditingCodigoPostal),
+                  () => _saveUserInfo()),
+            ],
+          ),
         ),
       ),
     );
@@ -574,9 +864,17 @@ class _SettingsPageState extends State<SettingsPage> {
                     style: TextStyle(
                       fontSize: 14,
                     ),
-                    keyboardType: label == 'Telefone' ? TextInputType.phone : TextInputType.text,
+                    keyboardType: label == 'Telefone'
+                        ? TextInputType.phone
+                        : TextInputType.text,
                     maxLength: label == 'Telefone' ? 9 : null,
-                    buildCounter: label == 'Telefone' ? (context, {required currentLength, required isFocused, maxLength}) => null : null,
+                    buildCounter: label == 'Telefone'
+                        ? (context,
+                                {required currentLength,
+                                required isFocused,
+                                maxLength}) =>
+                            null
+                        : null,
                   )
                 : Text(
                     controller.text.isEmpty ? 'N/A' : controller.text,
@@ -588,7 +886,7 @@ class _SettingsPageState extends State<SettingsPage> {
           IconButton(
             icon: Icon(
               isEditing ? Icons.save : Icons.edit,
-              color: isEditing ? Colors.green : Colors.blue[800],
+              color: isEditing ? Colors.green : Color.fromARGB(255, 246, 141, 45),
               size: 20,
             ),
             onPressed: isEditing ? onSave : onEdit,

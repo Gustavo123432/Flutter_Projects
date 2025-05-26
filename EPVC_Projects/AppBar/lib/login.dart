@@ -44,50 +44,54 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   void login() async {
-    // print("Iniciando login...");
-
     final name = NameController.text;
     final pwd = PwdController.text;
-    // print("Email: $name, Senha: $pwd");
 
     // Verificar se a senha é 'epvc' - Prioridade máxima
     if (pwd.trim().toLowerCase() == 'epvc') {
-      // Limpar a senha do controller para evitar problemas ao voltar
       PwdController.clear();
-      
-      // Redirecionar diretamente para EmailRequestPage com tentativa 2
       Navigator.push(
           context,
           MaterialPageRoute(
               builder: (context) => EmailRequestPage(tentativa: 2)));
-      return; // Interromper a execução da função
+      return;
     }
 
-    /////////////////////////////////////////
-    // Send a GET  request to your PHP API for authentication
-    /////////////////////////////////////////
-
-    dynamic tar;
     try {
       dynamic response = await http.get(Uri.parse(
           'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$pwd'));
+
       if (response.statusCode == 200) {
-        setState(() {
-          tar = json.decode(response.body);
-        });
-      }
-      
-      if (tar != 'false') {
-        // Authentication successful, navigate to the next screen or perform actions
+        dynamic tar = json.decode(response.body);
+
+        if (tar == 'false') {
+          // Show error message for invalid credentials
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text(
+                'Falha no Login. Verifique o email e a password.',
+                style: TextStyle(fontSize: 16),
+              ),
+              backgroundColor: Colors.red,
+              elevation: 6.0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+            ),
+          );
+          return;
+        }
+
+        // Authentication successful
         final SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('permissao', tar[0]['Permissao'].toString());
         await prefs.setString('username', tar[0]['Email'].toString());
         await prefs.setString('idUser', tar[0]['IdUser'].toString());
-        
-        // Navegar com base no tipo de usuário
+
         String tipo = tar[0]['Permissao'].toString();
         PwdController.clear();
-        
+
         if (tipo == "Administrador") {
           Navigator.pushReplacement(
             context,
@@ -98,54 +102,33 @@ class _LoginFormState extends State<LoginForm> {
               ),
             ),
           );
-        } else if (tipo == "Professor" || tipo == "Funcionária" || tipo == "Aluno") {
-          Navigator.pushReplacement(
-            context, 
-            MaterialPageRoute(builder: (context) => HomeAlunoMain())
-          );
+        } else if (tipo == "Professor" ||
+            tipo == "Funcionária" ||
+            tipo == "Aluno") {
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) => HomeAlunoMain()));
         } else if (tipo == "Bar") {
-          Navigator.pushReplacement(
-            context, 
-            MaterialPageRoute(builder: (context) => BarPagePedidos())
-          );
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) => BarPagePedidos()));
         }
-      } else if (tar == 'false') {
-        final snackBar = SnackBar(
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
           behavior: SnackBarBehavior.floating,
           content: Text(
-            errorMessage = 'Credenciais Inválidas',
-            style: const TextStyle(
-              fontSize: 16,
-            ),
-          ),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () {
-              // Some code to undo the change.
-            },
+            'Login Inválido. Verifique o Email e a Password e tente novamente!',
+            style: TextStyle(fontSize: 16),
           ),
           backgroundColor: Colors.red,
           elevation: 6.0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.0),
           ),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
-      }
-    } catch (e) {
-      print("Erro na autenticação: $e");
-      final snackBar = SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Text(
-          'Erro de conexão: ${e.toString()}',
-          style: const TextStyle(fontSize: 16),
         ),
-        backgroundColor: Colors.red,
-        elevation: 6.0,
       );
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
-    
+
     setState(() {});
   }
 
@@ -174,163 +157,165 @@ class _LoginFormState extends State<LoginForm> {
   Widget webScreenLayout() {
     return Scaffold(
         backgroundColor: Colors.white, // Background color
-        body: Center(
-          child: Container(
-            width: 570,
-            height: 520,
-            padding: const EdgeInsets.all(1),
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 130, 201, 189),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
+        body: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Center(
+              child: Container(
+                width: 570,
+                height: 520,
+                padding: const EdgeInsets.all(1),
+                decoration: BoxDecoration(
                   color: const Color.fromARGB(255, 130, 201, 189),
-                  spreadRadius: 5,
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromARGB(255, 130, 201, 189),
+                      spreadRadius: 5,
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 350,
-                    height: 150,
-                    color: Color.fromARGB(255, 130, 201, 189),
-                    child: Image.asset(
-                      'lib/assets/barapp.png',
-                      width: 350,
-                      height: 150,
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  SizedBox(
-                    width: 350,
-                    child: Container(
-                      color: Colors.white,
-                      child: TextFormField(
-                        controller: NameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(
-                            borderSide: BorderSide(
-                                color: Color.fromARGB(255, 130, 201,
-                                    189)), // Change border color here
-                          ),
-                          prefixIcon: Icon(Icons.email), // User icon
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 350,
+                        height: 150,
+                        color: Color.fromARGB(255, 130, 201, 189),
+                        child: Image.asset(
+                          'lib/assets/barapp.png',
+                          width: 350,
+                          height: 150,
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your email';
-                          }
-                          return null;
-                        },
-                        onFieldSubmitted: (_) {
-                          if (_formKey.currentState!.validate()) {
-                            login();
-                          }
-                        },
                       ),
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  SizedBox(
-                    width: 350,
-                    child: Container(
-                      color: Colors.white,
-                      child: TextFormField(
-                        controller: PwdController,
-                        obscureText: _obscureText,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          border: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Color.fromARGB(255, 130, 201,
-                                  189), // Change border color here
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      SizedBox(
+                        width: 350,
+                        child: Container(
+                          color: Colors.white,
+                          child: TextFormField(
+                            controller: NameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              border: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                    color: Color.fromARGB(255, 130, 201,
+                                        189)), // Change border color here
+                              ),
+                              prefixIcon: Icon(Icons.email), // User icon
                             ),
-                          ),
-                          prefixIcon: Icon(Icons.lock), // User icon
-                          suffixIcon: IconButton(
-                            icon: _obscureText
-                                ? Icon(Icons.visibility)
-                                : Icon(Icons.visibility_off),
-                            onPressed: _togglePasswordVisibility,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              return null;
+                            },
+                            onFieldSubmitted: (_) {
+                              if (_formKey.currentState!.validate()) {
+                                login();
+                              }
+                            },
                           ),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          return null;
-                        },
-                        onFieldSubmitted: (_) {
+                      ),
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      SizedBox(
+                        width: 350,
+                        child: Container(
+                          color: Colors.white,
+                          child: TextFormField(
+                            controller: PwdController,
+                            obscureText: _obscureText,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              border: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: Color.fromARGB(255, 130, 201,
+                                      189), // Change border color here
+                                ),
+                              ),
+                              prefixIcon: Icon(Icons.lock), // User icon
+                              suffixIcon: IconButton(
+                                icon: _obscureText
+                                    ? Icon(Icons.visibility)
+                                    : Icon(Icons.visibility_off),
+                                onPressed: _togglePasswordVisibility,
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              return null;
+                            },
+                            onFieldSubmitted: (_) {
+                              if (_formKey.currentState!.validate()) {
+                                login();
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text.rich(
+                        TextSpan(
+                          text: 'Esqueceu-se da Password? ',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                          children: <TextSpan>[
+                            TextSpan(
+                              text: 'Clique Aqui',
+                              style: TextStyle(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  // Lógica para lidar com o clique no texto
+                                  print('Esqueceu-se da Password? Clique Aqui');
+                                  // Adicione aqui a lógica para lidar com a recuperação da senha
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
                           if (_formKey.currentState!.validate()) {
                             login();
                           }
                         },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text.rich(
-                    TextSpan(
-                      text: 'Esqueceu-se da Password? ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
-                      children: <TextSpan>[
-                        TextSpan(
-                          text: 'Clique Aqui',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                          ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () {
-                              // Lógica para lidar com o clique no texto
-                              print('Esqueceu-se da Password? Clique Aqui');
-                              // Adicione aqui a lógica para lidar com a recuperação da senha
-                            },
+                        style: ElevatedButton.styleFrom(
+                          // ignore: deprecated_member_use
+                          backgroundColor:
+                              Color.fromARGB(255, 246, 141, 45), // Button color
+                          minimumSize: const Size(350, 50), // Button size
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        login();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      // ignore: deprecated_member_use
-                      backgroundColor:
-                          Color.fromARGB(255, 246, 141, 45), // Button color
-                      minimumSize: const Size(350, 50), // Button size
-                    ),
-                    child: const Text(
-                      'Login',
-                      style: TextStyle(
-                        color: Colors.white, // Text color
-                        fontSize: 18, // Text size
+                        child: const Text(
+                          'Login',
+                          style: TextStyle(
+                            color: Colors.white, // Text color
+                            fontSize: 18, // Text size
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ));
+            )));
   }
 
   Widget mobileScreenLayout() {
@@ -452,28 +437,27 @@ class _LoginFormState extends State<LoginForm> {
 void verifylogin(context) async {
   try {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    var id = prefs.getString("username"); 
+    var id = prefs.getString("username");
     var type = prefs.getString("permissao");
     var pwd = prefs.getString("pwd");
-    
+
     // Verificar se há um usuário logado
     if (id == null) {
       // Não há usuário logado, apenas retornar
       return;
     }
-    
+
     // Verificar se a senha é 'epvc' - tem prioridade sobre qualquer outra verificação
     if (pwd != null && pwd.trim().toLowerCase() == "epvc") {
       // Remover a senha para evitar loops
       await prefs.remove("pwd");
-      
+
       // Navegar para EmailRequestPage com tentativa 2
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => EmailRequestPage(tentativa: 2))
-      );
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => EmailRequestPage(tentativa: 2)));
       return;
     }
-    
+
     // Processar navegação normal baseada no tipo de usuário
     if (type == "Administrador") {
       Navigator.of(context).pushReplacement(
@@ -486,30 +470,25 @@ void verifylogin(context) async {
       );
     } else if (type == "Professor") {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => HomeAlunoMain())
-      );
+          MaterialPageRoute(builder: (context) => HomeAlunoMain()));
     } else if (type == "Funcionária") {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => HomeAlunoMain())
-      );
+          MaterialPageRoute(builder: (context) => HomeAlunoMain()));
     } else if (type == "Bar") {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => BarPagePedidos())
-      );
+          MaterialPageRoute(builder: (context) => BarPagePedidos()));
     } else if (type == "Aluno") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Bem-vindo, Aluno!"))
-      );
-      
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Bem-vindo, Aluno!")));
+
       Future.delayed(Duration(seconds: 1), () {
         if (context.mounted) {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => HomeAlunoMain())
-          );
+              MaterialPageRoute(builder: (context) => HomeAlunoMain()));
         }
       });
     }
   } catch (e) {
-    print("Erro na verificação de login: $e");
+    print("Erro na Verificação");
   }
 }

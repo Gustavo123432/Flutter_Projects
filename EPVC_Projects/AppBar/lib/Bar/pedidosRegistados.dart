@@ -130,8 +130,8 @@ class _PedidosRegistadosState extends State<PedidosRegistados> {
   }
 
   Future<void> generatePdf(String horaPretendida) async {
-    final pdfBytes = await _generatePdf(horaPretendida);
-    //await _printBluetooth(pdfBytes);
+      final pdfBytes = await _generatePdf(horaPretendida);
+      //await _printBluetooth(pdfBytes);
   }
 
   Future<Uint8List> _generatePdf(String horaPretendida) async {

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Aluno/drawerHome.dart';
-import 'package:my_flutter_project/SIBS/cash_waiting_page.dart';
+import 'package:my_flutter_project/SIBS/Orders/cash_confirmation_page.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
@@ -13,9 +13,9 @@ import 'package:web_socket_channel/status.dart' as status;
 import 'package:intl/intl.dart';
 import 'package:diacritic/diacritic.dart'; // Import the diacritic package
 import 'package:my_flutter_project/SIBS/sibs_service.dart';
-import '../SIBS/mbway_waiting_page.dart';
-import '../SIBS/order_confirmation_page.dart';
-import '../SIBS/mbway_phone_page.dart';
+import '../SIBS/Orders/mbway_waiting_page.dart';
+import '../SIBS/Orders/order_confirmation_page.dart';
+import '../SIBS/Orders/mbway_phone_page.dart';
 
 void main() {
   runApp(HomeAlunoMain());
@@ -73,6 +73,12 @@ class _HomeAlunoState extends State<HomeAluno> {
     super.initState();
     UserInfo();
     _getAllProducts();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    setState(() {}); // This will refresh the cart count when returning to this page
   }
 
   void UserInfo() async {
@@ -233,191 +239,234 @@ class _HomeAlunoState extends State<HomeAluno> {
             home: Scaffold(
           appBar: AppBar(
             actions: [
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ShoppingCartPage(),
+              Stack(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ShoppingCartPage(),
+                        ),
+                      ).then((_) {
+                        setState(() {});
+                      });
+                    },
+                    icon: Icon(Icons.shopping_cart),
+                  ),
+                  if (cartItems.isNotEmpty)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '${cartItems.length}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     ),
-                  );
-                },
-                icon: Icon(Icons.shopping_cart),
+                ],
               ),
             ],
           ),
           drawer: DrawerHome(),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(height: 20),
-              Container(
-                margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
-                child: Text(
-                  "Comprados Recentemente",
-                  style: TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueGrey[900],
-                  ),
-                ),
-              ),
-              Container(
-                margin: EdgeInsets.symmetric(vertical: 5.0),
-                constraints: BoxConstraints(maxHeight: 120), // altura máxima opcional
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: recentBuysMapped.length,
-                  itemBuilder: (context, index) {
-                    var product = recentBuysMapped[index];
-                    var title = product['Descricao'];
-                    var price = product['Preco'].toString();
-                    var imageBase64 = product['Imagem'];
-                    var prencado = product['Prencado'].toString();
-
-                    return buildProductSection(
-                      imagePath: imageBase64,
-                      title: title,
-                      price: price,
-                      prencado: prencado
-                    );
-                  },
-                ),
-              ),
-              Container(
-                margin: EdgeInsets.only(
-                  left: 16.0,
-                  right: 16.0,
-                  top: 16.0,
-                ),
-                child: Text(
-                  "Categorias",
-                  style: TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueGrey[900],
-                  ),
-                ),
-              ),
-              SizedBox(height: 15),
-              Expanded(
-                child: Container(
-                  child: GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2, // Number of cards per row
-                      childAspectRatio: 1, // Adjust the aspect ratio as needed
-                      crossAxisSpacing: 10, // Space between columns
-                      mainAxisSpacing: 10, // Space between rows
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(height: 20),
+                if (recentBuysMapped.isNotEmpty) ...[
+                  Container(
+                    margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+                    child: Text(
+                      "Comprados Recentemente",
+                      style: TextStyle(
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueGrey[900],
+                      ),
                     ),
-                    itemCount: 6, // Total number of items
-                    itemBuilder: (context, index) {
-                      switch (index) {
-                        case 0:
-                          return buildCategoryCard(
-                            title: 'Bebidas',
-                            backgroundImagePath: 'lib/assets/bebida.png',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CategoryPage(
-                                    title: 'Bebidas',
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        case 1:
-                          return buildCategoryCard(
-                            title: 'Quentes',
-                            backgroundImagePath: 'lib/assets/cafe.JPG',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CategoryPage(
-                                    title: 'Quentes',
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        case 2:
-                          return buildCategoryCard(
-                            title: 'Comidas',
-                            backgroundImagePath: 'lib/assets/comida.jpg',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CategoryPage(
-                                    title: 'Comidas',
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        case 3:
-                          return buildCategoryCard(
-                            title: 'Snacks',
-                            backgroundImagePath: 'lib/assets/snacks.jpg',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CategoryPage(
-                                    title: 'Snacks',
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        case 4:
-                          return buildCategoryCard(
-                            title: 'Doces',
-                            backgroundImagePath: 'lib/assets/doces.jpg',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CategoryPage(
-                                    title: 'Doces',
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        case 5:
-                          return buildCategoryCard(
-                            title: 'Restaurante',
-                            backgroundImagePath:
-                                'lib/assets/monteRestaurante.jpg',
-                            isAvailable: false, // Add this parameter
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: Text('Em Desenvolvimento'),
-                                  content: Text(
-                                      'O Restaurante não está disponível no momento.'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: Text('OK'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          );
-                        default:
-                          return Container(); // Fallback for safety
-                      }
-                    },
+                  ),
+                  Container(
+                    margin: EdgeInsets.symmetric(vertical: 5.0),
+                    constraints: BoxConstraints(maxHeight: 120),
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: recentBuysMapped.length,
+                      itemBuilder: (context, index) {
+                        var product = recentBuysMapped[index];
+                        var title = product['Descricao'];
+                        var price = product['Preco'].toString();
+                        var imageBase64 = product['Imagem'];
+                        var prencado = product['Prencado'].toString();
+
+                        return buildProductSection(
+                          imagePath: imageBase64,
+                          title: title,
+                          price: price,
+                          prencado: prencado
+                        );
+                      },
+                    ),
+                  ),
+                ],
+                Container(
+                  margin: EdgeInsets.only(
+                    left: 16.0,
+                    right: 16.0,
+                    top: 16.0,
+                  ),
+                  child: Text(
+                    "Categorias",
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueGrey[900],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: 15),
+                Expanded(
+                  child: Container(
+                    child: GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 1,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                      ),
+                      itemCount: 6,
+                      itemBuilder: (context, index) {
+                        switch (index) {
+                          case 0:
+                            return buildCategoryCard(
+                              title: 'Bebidas',
+                              backgroundImagePath: 'lib/assets/bebida.png',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryPage(
+                                      title: 'Bebidas',
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  setState(() {});
+                                });
+                              },
+                            );
+                          case 1:
+                            return buildCategoryCard(
+                              title: 'Quentes',
+                              backgroundImagePath: 'lib/assets/cafe.JPG',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryPage(
+                                      title: 'Quentes',
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  setState(() {});
+                                });
+                              },
+                            );
+                          case 2:
+                            return buildCategoryCard(
+                              title: 'Comidas',
+                              backgroundImagePath: 'lib/assets/comida.jpg',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryPage(
+                                      title: 'Comidas',
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  setState(() {});
+                                });
+                              },
+                            );
+                          case 3:
+                            return buildCategoryCard(
+                              title: 'Snacks',
+                              backgroundImagePath: 'lib/assets/snacks.jpg',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryPage(
+                                      title: 'Snacks',
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  setState(() {});
+                                });
+                              },
+                            );
+                          case 4:
+                            return buildCategoryCard(
+                              title: 'Doces',
+                              backgroundImagePath: 'lib/assets/doces.jpg',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryPage(
+                                      title: 'Doces',
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  setState(() {});
+                                });
+                              },
+                            );
+                          case 5:
+                            return buildCategoryCard(
+                              title: 'Restaurante',
+                              backgroundImagePath: 'lib/assets/monteRestaurante.jpg',
+                              isAvailable: false,
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Em Desenvolvimento'),
+                                    content: Text('O Restaurante não está disponível no momento.'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: Text('OK'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          default:
+                            return Container();
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         )));
   }
@@ -727,6 +776,12 @@ class _CategoryPageState extends State<CategoryPage> {
     super.dispose();
   }
 
+  void addToCart(Map<String, dynamic> item) {
+    setState(() {
+      cartItems.add(item);
+    });
+  }
+
   Future<void> fetchData(String categoria) async {
     try {
       final response = await http.post(
@@ -778,18 +833,6 @@ class _CategoryPageState extends State<CategoryPage> {
       }).toList();
 
       _streamController.add(filteredItems);
-    });
-  }
-
-  void addToCart(Map<String, dynamic> item) {
-    setState(() {
-      cartItems.add(item);
-    });
-  }
-
-  void removeFromCart(Map<String, dynamic> item) {
-    setState(() {
-      cartItems.remove(item);
     });
   }
 
@@ -917,134 +960,184 @@ class _CategoryPageState extends State<CategoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          IconButton(
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => HomeAluno(),
+          ),
+        );
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
             onPressed: () {
-              Navigator.push(
-                context,
+              Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
-                  builder: (context) => ShoppingCartPage(),
+                  builder: (context) => HomeAluno(),
                 ),
               );
             },
-            icon: Icon(Icons.shopping_cart),
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      labelText: 'Procurar...',
-                      border: OutlineInputBorder(),
+          actions: [
+            Stack(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ShoppingCartPage(),
+                      ),
+                    ).then((_) {
+                      setState(() {});
+                    });
+                  },
+                  icon: Icon(Icons.shopping_cart),
+                ),
+                if (cartItems.isNotEmpty)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '${cartItems.length}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                    onChanged: (value) {
-                      _filterItems(); // Call filter on text change
-                    },
+                  ),
+              ],
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: 'Procurar...',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        _filterItems(); // Call filter on text change
+                      },
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                icon: Icon(Icons.filter_list),
-                onPressed: _showFilterDialog,
-              ),
-            ],
-          ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _onRefresh,
-              child: StreamBuilder<List<dynamic>>(
-                stream: _streamController.stream,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    List<dynamic> items = snapshot.data!;
-                    return ListView.builder(
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        final double preco = double.parse(item['Preco']);
-                        return Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ListTile(
-                                leading: Image.memory(
-                                  base64.decode(item['Imagem']),
-                                  fit: BoxFit.cover,
-                                  height: 50,
-                                  width: 50,
-                                ),
-                                title: Text(item['Nome']),
-                                subtitle: Text(
-                                  item['Qtd'] == "1"
-                                      ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
-                                      : "Indisponível",
-                                ),
-                                trailing: cartItems.any((cartItem) =>
-                                        cartItem['Nome'] == item['Nome'])
-                                    ? Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          /*IconButton(
-                                            onPressed: () {
-                                              removeFromCart(item);
-                                            },
-                                            icon: Icon(Icons.remove),
-                                          ),*/
-                                          Text(
-                                            cartItems
-                                                .where((element) =>
-                                                    element['Nome'] ==
-                                                    item['Nome'])
-                                                .length
-                                                .toString(),
-                                            style: TextStyle(fontSize: 15.0),
-                                          ),
-                                          IconButton(
+                IconButton(
+                  icon: Icon(Icons.filter_list),
+                  onPressed: _showFilterDialog,
+                ),
+              ],
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _onRefresh,
+                child: StreamBuilder<List<dynamic>>(
+                  stream: _streamController.stream,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      List<dynamic> items = snapshot.data!;
+                      return ListView.builder(
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          final double preco = double.parse(item['Preco']);
+                          return Card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ListTile(
+                                  leading: Image.memory(
+                                    base64.decode(item['Imagem']),
+                                    fit: BoxFit.cover,
+                                    height: 50,
+                                    width: 50,
+                                  ),
+                                  title: Text(item['Nome']),
+                                  subtitle: Text(
+                                    item['Qtd'] == "1"
+                                        ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
+                                        : "Indisponível",
+                                  ),
+                                  trailing: cartItems.any((cartItem) =>
+                                          cartItem['Nome'] == item['Nome'])
+                                      ? Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            /*IconButton(
+                                              onPressed: () {
+                                                removeFromCart(item);
+                                              },
+                                              icon: Icon(Icons.remove),
+                                            ),*/
+                                            Text(
+                                              cartItems
+                                                  .where((element) =>
+                                                      element['Nome'] ==
+                                                      item['Nome'])
+                                                  .length
+                                                  .toString(),
+                                              style: TextStyle(fontSize: 15.0),
+                                            ),
+                                            IconButton(
+                                              onPressed: () {
+                                                addToCart(item);
+                                              },
+                                              icon: Icon(Icons.add),
+                                            ),
+                                          ],
+                                        )
+                                      : Visibility(
+                                          visible: item['Qtd'] == "1",
+                                          child: ElevatedButton(
                                             onPressed: () {
                                               addToCart(item);
                                             },
-                                            icon: Icon(Icons.add),
+                                            child: Text('Comprar'),
                                           ),
-                                        ],
-                                      )
-                                    : Visibility(
-                                        visible: item['Qtd'] == "1",
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            addToCart(item);
-                                          },
-                                          child: Text('Comprar'),
                                         ),
-                                      ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  } else if (snapshot.hasError) {
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    } else if (snapshot.hasError) {
+                      return Center(
+                        child: Text('Error: ${snapshot.error}'),
+                      );
+                    }
                     return Center(
-                      child: Text('Error: ${snapshot.error}'),
+                      child: CircularProgressIndicator(),
                     );
-                  }
-                  return Center(
-                    child: CircularProgressIndicator(),
-                  );
-                },
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1082,6 +1175,15 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
     UserInfo();
   }
 
+  @override
+  void dispose() {
+    _streamController.close();
+    _searchController.dispose();
+    _dateController.dispose();
+    _timeController.dispose();
+    super.dispose();
+  }
+
   void UserInfo() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     var user = prefs.getString("username");
@@ -1098,15 +1200,6 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
         users = json.decode(response.body);
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _streamController.close();
-    _searchController.dispose();
-    _dateController.dispose();
-    _timeController.dispose();
-    super.dispose();
   }
 
   Future<void> fetchData(String categoria) async {
@@ -1399,65 +1492,75 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(50.0),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Procurar...',
-                border: OutlineInputBorder(),
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => HomeAluno(),
+          ),
+        );
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          bottom: PreferredSize(
+            preferredSize: Size.fromHeight(50.0),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Procurar...',
+                  border: OutlineInputBorder(),
+                ),
               ),
             ),
           ),
         ),
-      ),
-      body: StreamBuilder<List<dynamic>>(
-        stream: _streamController.stream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('Pratos não Encontrados'));
-          }
+        body: StreamBuilder<List<dynamic>>(
+          stream: _streamController.stream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(child: Text('Pratos não Encontrados'));
+            }
 
-          final items = snapshot.data!;
-          return ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return Card(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListTile(
-                          leading: Image.memory(
-                            base64.decode(item['imagem']),
-                            fit: BoxFit.cover,
-                            height: 50,
-                            width: 50,
-                          ),
-                          title: Text(item['nome']),
-                          trailing: Visibility(
-                            visible: item['estado'] == "1",
-                            child: ElevatedButton(
-                              onPressed: () {
-                                _showReservationDialog(item);
-                              },
-                              child: Text('Reservar'),
+            final items = snapshot.data!;
+            return ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return Card(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ListTile(
+                            leading: Image.memory(
+                              base64.decode(item['imagem']),
+                              fit: BoxFit.cover,
+                              height: 50,
+                              width: 50,
                             ),
-                          ))
-                    ]),
-              );
-            },
-          );
-        },
+                            title: Text(item['nome']),
+                            trailing: Visibility(
+                              visible: item['estado'] == "1",
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  _showReservationDialog(item);
+                                },
+                                child: Text('Reservar'),
+                              ),
+                            ))
+                      ]),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -1789,65 +1892,45 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Future<String?> _showPaymentMethodDialog() async {
-    return showDialog<String>(
+    return showModalBottomSheet<String>(
       context: context,
-      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
-      builder: (context) => AlertDialog(
-        title: Text('Método de Pagamento'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, 'dinheiro');
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, 50), // width, height
-                backgroundColor: Colors.green[700],
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                'Escolha o método de pagamento',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.attach_money, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text('Dinheiro',
-                      style: TextStyle(fontSize: 16, color: Colors.white)),
-                ],
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.phone_android),
+                title: const Text('MBWay'),
+                onTap: () => Navigator.pop(context, 'mbway'),
               ),
-            ),
-            SizedBox(height: 15),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, 'mbway');
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, 50), // width, height
-                backgroundColor: Colors.red[800],
+              ListTile(
+                leading: const Icon(Icons.money),
+                title: const Text('Dinheiro'),
+                onTap: () => Navigator.pop(context, 'dinheiro'),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.phone_android, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text('MBWay',
-                      style: TextStyle(fontSize: 16, color: Colors.white)),
-                ],
-              ),
-            ),
-            // Botão para cancelar o pedido
-            SizedBox(height: 15),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context, null);
-              },
-              child: Text('Cancelar'),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.grey[700],
-              ),
-            ),
-          ],
-        ),
-      ),
+              if (users != null && users.isNotEmpty && users[0]['AutorizadoSaldo'] == '1')
+                ListTile(
+                  leading: const Icon(Icons.account_balance_wallet, color: Colors.orange),
+                  title: const Text(
+                    'Saldo',
+                    style: TextStyle(color: Colors.orange),
+                  ),
+                  onTap: () => Navigator.pop(context, 'saldo'),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -2156,6 +2239,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           await _handleMBWayPayment(total, requestInvoice: requestInvoice, nif: nif);
         } else if (paymentMethod == 'dinheiro') {
           await _handleCashPayment(total, requestInvoice: requestInvoice, nif: nif);
+        } else if (paymentMethod == 'saldo') { // Add case for Saldo payment
+           await _handleSaldoPayment(total, requestInvoice: requestInvoice, nif: nif); // Call a new handler for Saldo
         }
       } else {
         showDialog(
@@ -2449,6 +2534,111 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
+  // Method for Saldo payment
+  Future<void> _handleSaldoPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
+    // Implement balance check, deduction, and transaction recording here
+    if (users == null || users.isEmpty || users[0]['Saldo'] == null) {
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text('Erro ao obter saldo do usuário.')),
+         );
+       }
+       return; // Cannot proceed without user data or balance
+    }
+
+    double currentBalance = double.tryParse(users[0]['Saldo'].toString()) ?? 0.0;
+
+    if (currentBalance >= total) {
+        // Sufficient balance, proceed with payment
+         try {
+            // Create the description string with proper formatting
+            List<String> formattedNames = cartItems.map((item) {
+              String name = item['Nome'] as String;
+              bool prepararPrencado = item['PrepararPrencado'] ?? false;
+              String prencado = item['Prencado'] ?? '0';
+
+              if (prepararPrencado && prencado != '0') {
+                if (prencado == '1') {
+                  return '$name - Prensado';
+                } else if (prencado == '2') {
+                  return '$name - Aquecido';
+                }
+              }
+              return name;
+            }).toList();
+
+            String descricao = formattedNames.join(', ');
+
+            // Extract user information
+            var turma = users[0]['Turma'] ?? '';
+            var nome = users[0]['Nome'] ?? '';
+            var apelido = users[0]['Apelido'] ?? '';
+            var permissao = users[0]['Permissao'] ?? '';
+            var imagem = users[0]['Imagem'] ?? '';
+             var userId = users[0]['IdUser'] ?? ''; // Assuming IdUser is available
+
+            // Call API to deduct balance and record transaction
+            // This will require a new or modified API endpoint in appBarAPI_Post.php
+            final response = await http.post(
+              Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+              body: {
+                'query_param': 'process_saldo_payment', // New query param
+                'userId': userId, // Use userId instead of username if that's what your API expects
+                'amount': total.toString(),
+                'description': descricao, // Description of the purchase
+                'type': '2', // 2 for used
+                 'requestInvoice': requestInvoice ? '1' : '0',
+                 'nif': nif,
+              },
+            );
+             print('Saldo payment API response status: ${response.statusCode}');
+             print('Saldo payment API response body: ${response.body}');
+
+             if (response.statusCode == 200) {
+                 final responseData = json.decode(response.body);
+                 if (responseData['success'] == true) {
+                     // Order processed successfully
+                      int newOrderNumber = int.tryParse(responseData['orderNumber'].toString()) ?? 0; // Assuming API returns orderNumber
+                    //Continuar implementaç\ao saldo
+                     // Clear cart and update UI (handled by onResult callback if implemented there)
+                 } else {
+                     // API reported an error
+                     String errorMsg = responseData['error'] ?? 'Erro desconhecido ao processar pagamento com Saldo';
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(errorMsg)),
+                         );
+                      }
+                 }
+             } else {
+                 // HTTP status code is not 200
+                  if (mounted) {
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       SnackBar(content: Text('Erro na comunicação com a API: ${response.statusCode}')),
+                     );
+                  }
+             }
+
+         } catch (e) {
+            print('Error processing Saldo payment: $e');
+             if (mounted) {
+               ScaffoldMessenger.of(context).showSnackBar(
+                 SnackBar(content: Text('Erro ao processar pagamento com Saldo: ${e.toString()}')),
+               );
+             }
+         }
+
+    } else {
+        // Insufficient balance
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Saldo insuficiente. Por favor, carregue o seu saldo.')),
+          );
+        }
+    }
+     // Ensure isProcessing is set to false if you have a loading indicator for this payment method
+  }
+
   @override
   Widget build(BuildContext context) {
     double total = calculateTotal();
@@ -2619,47 +2809,55 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                           // Botão remover
                           IconButton(
                             icon: Icon(
-                              Icons.delete_outline,
+                              itemCount > 1 ? Icons.remove_circle_outline : Icons.delete_outline,
                               color: Colors.red[400],
                             ),
                             onPressed: () {
-                              // Confirmar remoção
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext dialogContext) {
-                                  return AlertDialog(
-                                    title: Text('Remover Item'),
-                                    content: Text('Deseja remover "$itemName" do carrinho?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(dialogContext),
-                                        child: Text('Cancelar'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(dialogContext);
-                                          setState(() {
-                                            for (int i = 0; i < cartItems.length; i++) {
-                                              if (cartItems[i]['Nome'] == itemName) {
-                                                cartItems.removeAt(i);
-                                                break;
-                                              }
-                                            }
-                                            updateItemCountMap();
-                                          });
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Item removido do carrinho')),
-                                          );
-                                        },
-                                        child: Text('Remover'),
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: Colors.red,
+                              if (itemCount == 1) {
+                                // Se for o último item, mostrar diálogo de confirmação
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext dialogContext) {
+                                    return AlertDialog(
+                                      title: Text('Remover Item'),
+                                      content: Text('Deseja remover "$itemName" do carrinho?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(dialogContext),
+                                          child: Text('Cancelar'),
                                         ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(dialogContext);
+                                            setState(() {
+                                              // Encontrar o primeiro item com este nome
+                                              int index = cartItems.indexWhere((item) => item['Nome'] == itemName);
+                                              if (index != -1) {
+                                                cartItems.removeAt(index);
+                                              }
+                                              updateItemCountMap();
+                                            });
+                                          },
+                                          child: Text('Remover'),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.red,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              } else {
+                                // Se não for o último item, remover diretamente
+                                setState(() {
+                                  // Encontrar o primeiro item com este nome
+                                  int index = cartItems.indexWhere((item) => item['Nome'] == itemName);
+                                  if (index != -1) {
+                                    cartItems.removeAt(index);
+                                  }
+                                  updateItemCountMap();
+                                });
+                              }
                             },
                           ),
                         ],

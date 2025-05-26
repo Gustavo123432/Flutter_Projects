@@ -31,8 +31,23 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: false,
         scaffoldBackgroundColor: Colors.white,
+        primaryColor: Color.fromARGB(255, 246, 141, 45), // Orange color
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Color.fromARGB(255, 246, 141, 45), // Orange color
+          primary: Color.fromARGB(255, 246, 141, 45), // Orange color
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Color.fromARGB(255, 246, 141, 45), // Orange color
+          foregroundColor: Colors.white,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color.fromARGB(255, 246, 141, 45), // Orange color
+            foregroundColor: Colors.white,
+          ),
+        ),
       ),
-      home: const ConnectionCheckScreen(),
+      home: Center(child: const ConnectionCheckScreen()),
     );
   }
 }
@@ -142,7 +157,7 @@ class _ConnectionCheckScreenState extends State<ConnectionCheckScreen> {
               children: [
                 // Logo ou imagem da app
                 Image.asset(
-                  'lib/assets/logo.png',
+                  'lib/assets/barapp.png',
                   height: 120,
                   errorBuilder: (context, error, stackTrace) {
                     return const Icon(
