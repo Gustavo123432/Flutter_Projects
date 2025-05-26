@@ -131,18 +131,27 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
     });
     
     try {
+      print('Attempting to authorize user with ID: $userId'); // Debug print
+      
       final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=33&op=1&id=$userId'),
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=33&op=0&id=$userId'),
       );
+      
+      print('Authorization response status: ${response.statusCode}'); // Debug print
+      print('Authorization response body: ${response.body}'); // Debug print
       
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Utilizador autorizado com sucesso')),
         );
-        // Refresh the list of authorized users
+        // Refresh both lists
         await _fetchAuthorizedUsers();
+        if (_selectedTurma != null) {
+          final String turmaName = _selectedTurma!.split(':').last;
+          await _fetchStudentsByTurma(turmaName);
+        }
       } else {
-        throw Exception('Failed to authorize user');
+        throw Exception('Failed to authorize user: ${response.statusCode}');
       }
     } catch (e) {
       print('Error authorizing user: $e');
@@ -150,8 +159,12 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao autorizar utilizador')),
+        SnackBar(content: Text('Erro ao autorizar utilizador: ${e.toString()}')),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
   
@@ -161,23 +174,29 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
     });
     
     try {
-      final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-        body: {
-          'query_param': '10', // Assuming this is the endpoint to update AutorizadoSaldo
-          'userId': userId,
-          'autorizadoSaldo': '0',
-        },
+      final response = await http.get(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=33&op=1&id=$userId'),
       );
       
+      print('Revoke response: ${response.body}'); // Debug print
+      
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Autorização revogada com sucesso')),
-        );
-        // Refresh the list of authorized users
-        await _fetchAuthorizedUsers();
+        String responseBody = response.body.trim();
+        if (responseBody == "Saldo Desautorizado com sucesso.") {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Autorização revogada com sucesso')),
+          );
+          // Refresh both lists
+          await _fetchAuthorizedUsers();
+          if (_selectedTurma != null) {
+            final String turmaName = _selectedTurma!.split(':').last;
+            await _fetchStudentsByTurma(turmaName);
+          }
+        } else {
+          throw Exception(responseBody);
+        }
       } else {
-        throw Exception('Failed to revoke authorization');
+        throw Exception('Failed to revoke authorization: ${response.statusCode}');
       }
     } catch (e) {
       print('Error revoking authorization: $e');
@@ -185,10 +204,18 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao revogar autorização')),
+        SnackBar(
+          content: Text('Erro ao revogar autorização: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
+  
   
   Future<void> _pickImage() async {
     try {
@@ -324,26 +351,39 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
       // Convert comma to dot if necessary
       String formattedAmount = amount.replaceAll(',', '.');
       
+      // Generate a unique transaction ID using timestamp and random number
+      String transactionId = DateTime.now().millisecondsSinceEpoch.toString() + 
+                           (1000 + (DateTime.now().microsecond % 9000)).toString();
+      
+      // Update balance and record transaction in one call
       final response = await http.post(
         Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
         body: {
-          'query_param': '23', // Assuming this is the endpoint to add saldo
-          'userId': userId,
-          'valor': formattedAmount,
+          'query_param': '9',
+          'email': userId,
+          'amount': formattedAmount,
+          'transaction_id': transactionId,
+          'type': '1', // 1 for credit/load
+          'description': 'Carregamento Manual',
         },
       );
       
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Saldo adicionado com sucesso')),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-        // Refresh the list after adding saldo
-        _fetchAuthorizedUsers();
+        final responseData = json.decode(response.body);
+        if (responseData['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Saldo adicionado com sucesso')),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+          // Refresh the list after adding saldo
+          _fetchAuthorizedUsers();
+        } else {
+          throw Exception('Failed to process balance update: ${responseData['error'] ?? 'Unknown error'}');
+        }
       } else {
-        throw Exception('Failed to add saldo');
+        throw Exception('Failed to process balance update: ${response.statusCode}');
       }
     } catch (e) {
       print('Error adding saldo: $e');
@@ -351,7 +391,7 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao adicionar saldo')),
+        SnackBar(content: Text('Erro ao adicionar saldo: ${e.toString()}')),
       );
     }
   }
@@ -406,7 +446,7 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
           return Card(
             margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: ListTile(
-              onTap: () => _addSaldo(user['IdUser'], user['Nome']),
+              onTap: () => _addSaldo(user['Email'], user['Nome']),
               leading: user['Imagem'] != null && user['Imagem'].toString().isNotEmpty
                 ? Container(
                     width: 50,
@@ -633,28 +673,46 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
       itemCount: _studentsByTurma.length,
       itemBuilder: (context, index) {
         final student = _studentsByTurma[index];
-        final bool isAuthorized = _authorizedUsers.any(
-            (user) => user['IdUser'] == student['IdUser']);
+        print('Student ${student['Nome']} - AutorizadoSaldo: ${student['AutorizadoSaldo']}');
+        
+        final bool isAuthorized = student['AutorizadoSaldo'] == '1' || student['AutorizadoSaldo'] == 1;
+        final double saldo = double.tryParse(student['Saldo'].toString()) ?? 0.0;
         
         return Card(
           margin: EdgeInsets.symmetric(vertical: 8),
           child: ListTile(
             title: Text('${student['Nome']} ${student['Apelido']}'),
-            subtitle: Text(student['Email']),
-            trailing: isAuthorized
-                ? Chip(
-                    label: Text('Autorizado'),
-                    backgroundColor: Color.fromARGB(255, 255, 220, 190),
-                    labelStyle: TextStyle(color: Color.fromARGB(255, 246, 141, 45)),
-                  )
-                : ElevatedButton(
-                    onPressed: () => _authorizeUser(student['IdUser']),
-                    child: Text('Autorizar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color.fromARGB(255, 246, 141, 45),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(student['Email']),
+              ],
+            ),
+            trailing: ElevatedButton(
+              onPressed: () {
+                if (isAuthorized) {
+                  if (saldo > 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Não é possível revogar autorização. O utilizador ainda tem saldo disponível.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  } else {
+                    _revokeAuthorization(student['IdUser'].toString());
+                  }
+                } else {
+                  _authorizeUser(student['IdUser'].toString());
+                }
+              },
+              child: Text(isAuthorized ? 'Não Autorizar' : 'Autorizar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isAuthorized 
+                  ? Colors.red[400] 
+                  : Color.fromARGB(255, 246, 141, 45),
+                foregroundColor: Colors.white,
+              ),
+            ),
           ),
         );
       },

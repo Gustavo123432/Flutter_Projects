@@ -111,6 +111,7 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
                       
                       return Card(
                         margin: EdgeInsets.only(bottom: 8),
+                        color: transaction['Tipo'].toString() == '2' ? Colors.red[50] : null,
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor: isCredit ? Colors.green[100] : Colors.red[100],
@@ -123,17 +124,23 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
                             transaction['Descricao'] ?? (isCredit ? 'Carregamento' : 'Compra'),
                             style: TextStyle(
                               fontWeight: FontWeight.w500,
+                              color: transaction['Tipo'].toString() == '2' ? Colors.red[900] : null,
                             ),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(formattedDate),
+                              Text(
+                                formattedDate,
+                                style: TextStyle(
+                                  color: transaction['Tipo'].toString() == '2' ? Colors.red[700] : null,
+                                ),
+                              ),
                               if (transaction['local'] != null)
                                 Text(
                                   'Local: ${transaction['local']}',
                                   style: TextStyle(
-                                    color: Colors.grey[600],
+                                    color: transaction['Tipo'].toString() == '2' ? Colors.red[700] : Colors.grey[600],
                                   ),
                                 ),
                             ],
@@ -141,7 +148,7 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
                           trailing: Text(
                             '${isCredit ? '+' : '-'}${amount.toStringAsFixed(2)}€',
                             style: TextStyle(
-                              color: isCredit ? Colors.green : Colors.red,
+                              color: transaction['Tipo'].toString() == '2' ? Colors.red[900] : (isCredit ? Colors.green : Colors.red),
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),

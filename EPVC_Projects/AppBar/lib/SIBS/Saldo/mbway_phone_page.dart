@@ -27,11 +27,13 @@ class MBWayPhoneNumberSaldoPage extends StatefulWidget {
 
 class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _customAmountController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isValidPhone = false;
   bool _isProcessing = false;
   List<dynamic> users = [];
   double _selectedAmount = 5.0; // Default amount
+  bool _isCustomAmount = false;
 
   final List<double> _availableAmounts = [2.0, 5.0, 10.0, 20.0];
 
@@ -39,20 +41,19 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
   void initState() {
     super.initState();
     print('MBWayPhoneNumberPage initialized');
-    fetchUser();
-    _phoneController.addListener(_validatePhone);
+    _initializeData();
   }
 
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    super.dispose();
+  Future<void> _initializeData() async {
+    print('Initializing data...');
+    await fetchUser();
+    _phoneController.addListener(_validatePhone);
   }
 
   Future<void> fetchUser() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      var idUser = prefs.getString("idUser");
+      var idUser = prefs.getString("username");
       print('Retrieved user ID from SharedPreferences: $idUser');
 
       if (idUser == null || idUser.isEmpty) {
@@ -60,6 +61,7 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
         return;
       }
 
+      print('Fetching user data from API...');
       final response = await http.post(
         Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
         body: {
@@ -68,30 +70,44 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
         },
       );
 
+      print('API Response status: ${response.statusCode}');
+      print('API Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
+        print('Decoded response data: $responseData');
         
         if (responseData is List && responseData.isNotEmpty) {
-          setState(() {
-            users = responseData;
-            
-            String phoneNumber = '';
-            
-            if (users[0]['Telefone'] != null && users[0]['Telefone'] != '') {
-              phoneNumber = users[0]['Telefone'];
-            } else {
-              String? savedPhone = prefs.getString('phone');
-              if (savedPhone != null && savedPhone.isNotEmpty) {
-                phoneNumber = savedPhone;
+          print('User data found in response');
+          
+          if (mounted) {
+            setState(() {
+              users = responseData;
+              
+              // Verifica se há número de telefone no banco
+              if (responseData[0]['Telefone'] != null && responseData[0]['Telefone'].toString().isNotEmpty) {
+                print(responseData);
+                String phoneNumber = responseData[0]['Telefone'].toString();
+                print('Setting phone from database: $phoneNumber');
+                _phoneController.text = phoneNumber;
+                _validatePhone();
+              } 
+              // Se não houver no banco, verifica nas preferências
+              else {
+                String? savedPhone = prefs.getString('phone');
+                if (savedPhone != null && savedPhone.isNotEmpty) {
+                  print('Setting phone from preferences: $savedPhone');
+                  _phoneController.text = savedPhone;
+                  _validatePhone();
+                }
               }
-            }
-            
-            if (phoneNumber.isNotEmpty) {
-              _phoneController.text = phoneNumber;
-              _validatePhone();
-            }
-          });
+            });
+          }
+        } else {
+          print('No user data found in response');
         }
+      } else {
+        print('API request failed with status: ${response.statusCode}');
       }
     } catch (e, stackTrace) {
       print('Error fetching user data: $e');
@@ -100,15 +116,28 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
   }
 
   void _validatePhone() {
-    setState(() {
-      final phoneText = _phoneController.text.trim();
-      bool isProperLength = phoneText.length == 9;
-      bool hasCorrectPrefix = phoneText.startsWith('9') || 
-                              phoneText.startsWith('2') || 
-                              phoneText.startsWith('3');
-      
-      _isValidPhone = isProperLength && hasCorrectPrefix;
-    });
+    final phoneText = _phoneController.text.trim();
+    print('Validating phone: $phoneText');
+    bool isProperLength = phoneText.length == 9;
+    bool hasCorrectPrefix = phoneText.startsWith('9') || 
+                          phoneText.startsWith('2') || 
+                          phoneText.startsWith('3');
+    
+    bool isValid = isProperLength && hasCorrectPrefix;
+    print('Phone validation result: $isValid');
+    
+    if (mounted) {
+      setState(() {
+        _isValidPhone = isValid;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _customAmountController.dispose();
+    super.dispose();
   }
 
   Future<void> _processMBWayPayment() async {
@@ -141,19 +170,6 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
     final String phoneNumber = _phoneController.text.trim();
 
     try {
-      if (users[0]['Telefone'] == null || users[0]['Telefone'] == '' || users[0]['Telefone'] != phoneNumber) {
-        final savePhoneResponse = await http.get(
-          Uri.parse(
-              'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=31&tlf=$phoneNumber&id=${users[0]['IdUser']}'),
-        );
-
-        if (savePhoneResponse.statusCode == 200) {
-          users[0]['Telefone'] = phoneNumber;
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('phone', phoneNumber);
-        }
-      }
-
       final paymentInitResponse = await widget.sibsService.initiateMBWayPayment(
         amount: _selectedAmount,
         orderNumber: "EPVC",
@@ -182,33 +198,52 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
 
           if (statusCode == 'E0506' ||
               (statusDescription != null && statusDescription.toString().toLowerCase().contains('alias does not exists'))) {
-            // Show dialog for invalid MBWay number
             if (mounted) {
-              showDialog( // Use showDialog from flutter/material
+              showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
                   title: Text('Erro de Carregamento'),
-                  content: Text('Número MB WAY não registado ou inativo.'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 48,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Número MB WAY não registado ou inativo.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ],
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('OK'),
+                      child: Text(
+                        'OK',
+                        style: TextStyle(
+                          color: Colors.red[900],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               );
             }
-             if (mounted) {
+            if (mounted) {
               setState(() {
                 _isProcessing = false;
               });
             }
-            return; // Exit the function after showing dialog
+            return;
           }
         }
       }
 
-      // 4. Enviar para o webhook para processamento de status
       print('Registering transaction with webhook for status monitoring');
       try {
         final webhookResponse = await widget.sibsService.SendToWebhook(
@@ -219,22 +254,16 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
         if (webhookResponse['status'] == 'success') {
           print('Transaction successfully registered with webhook');
         } else {
-          print(
-              'Warning: Webhook registration returned non-success: ${webhookResponse['message']}');
-          // Continue even if webhook registration fails
+          print('Warning: Webhook registration returned non-success: ${webhookResponse['message']}');
         }
       } catch (e) {
         print('Warning: Error during webhook registration: $e');
-        // Continue the process even if webhook registration fails
       }
 
-      // 5. Verificar resposta da criação do pagamento
       if (!createResponse.containsKey('transactionID') &&
           createResponse['statusCode'] != "000") {
         throw Exception('Resposta de pagamento inválida: $createResponse');
       }
-
-
 
       if (mounted) {
         Navigator.push(
@@ -256,7 +285,7 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()), // Show the general error message for other exceptions
+            content: Text(e.toString()),
             backgroundColor: Colors.red,
           ),
         );
@@ -317,35 +346,35 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
               const SizedBox(height: 24),
 
               // Valor a pagar section
-               Container(
-                 padding: EdgeInsets.all(16),
-                 decoration: BoxDecoration(
-                   color: Colors.grey[200],
-                   borderRadius: BorderRadius.circular(8),
-                 ),
-                 child: Row(
-                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                   children: [
-                     Text(
-                       'Valor a carregar:',
-                       style: TextStyle(
-                         fontSize: 18,
-                         fontWeight: FontWeight.bold,
-                         color: Colors.grey[800],
-                       ),
-                     ),
-                     Text(
-                       '${_selectedAmount.toStringAsFixed(2)}€',
-                       style: TextStyle(
-                         fontSize: 18,
-                         fontWeight: FontWeight.bold,
-                         color: Colors.red[900],
-                       ),
-                     ),
-                   ],
-                 ),
-               ),
-               const SizedBox(height: 24),
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Valor a carregar:',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    Text(
+                      '${_selectedAmount.toStringAsFixed(2)}€',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[900],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
 
               Text(
                 'Selecione o valor a carregar:',
@@ -359,29 +388,86 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
                 spacing: 8,
                 runSpacing: 8,
                 alignment: WrapAlignment.center,
-                children: _availableAmounts.map((amount) {
-                  final isSelected = _selectedAmount == amount;
-                  return ChoiceChip(
+                children: [
+                  ..._availableAmounts.map((amount) {
+                    final isSelected = _selectedAmount == amount && !_isCustomAmount;
+                    return ChoiceChip(
+                      label: Text(
+                        '${amount.toStringAsFixed(2)}€',
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.grey[800],
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() {
+                            _selectedAmount = amount;
+                            _isCustomAmount = false;
+                            _customAmountController.clear();
+                          });
+                        }
+                      },
+                      backgroundColor: Colors.grey[200],
+                      selectedColor: Colors.red[900],
+                    );
+                  }),
+                  ChoiceChip(
                     label: Text(
-                      '${amount.toStringAsFixed(2)}€',
+                      'Outro',
                       style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.grey[800],
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: _isCustomAmount ? Colors.white : Colors.grey[800],
+                        fontWeight: _isCustomAmount ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
-                    selected: isSelected,
+                    selected: _isCustomAmount,
                     onSelected: (selected) {
-                      if (selected) {
-                        setState(() {
-                          _selectedAmount = amount;
-                        });
-                      }
+                      setState(() {
+                        _isCustomAmount = true;
+                        _selectedAmount = 0.0;
+                      });
                     },
                     backgroundColor: Colors.grey[200],
                     selectedColor: Colors.red[900],
-                  );
-                }).toList(),
+                  ),
+                ],
               ),
+              if (_isCustomAmount) ...[
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _customAmountController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    hintText: '0.00',
+                    suffixText: '€',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                  ],
+                  onChanged: (value) {
+                    if (value.isNotEmpty) {
+                      setState(() {
+                        _selectedAmount = double.tryParse(value) ?? 0.0;
+                      });
+                    }
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, insira um valor';
+                    }
+                    double? amount = double.tryParse(value);
+                    if (amount == null || amount <= 0) {
+                      return 'Por favor, insira um valor válido';
+                    }
+                    return null;
+                  },
+                ),
+              ],
               SizedBox(height: 24),
               Text(
                 'Introduza o seu número de telemóvel:',
@@ -430,7 +516,7 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
               ),
               SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _isValidPhone && !_isProcessing ? _processMBWayPayment : null,
+                onPressed: _isValidPhone && !_isProcessing && (!_isCustomAmount || _selectedAmount > 0) ? _processMBWayPayment : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red[900],
                   foregroundColor: Colors.white,
@@ -453,7 +539,7 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
                   'Cancelar',
                   style: TextStyle(
                     fontSize: 16,
-                     color: Colors.red[900],
+                    color: Colors.red[900],
                   ),
                 ),
               ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Aluno/drawerHome.dart';
 import 'package:my_flutter_project/SIBS/Orders/cash_confirmation_page.dart';
+import 'package:my_flutter_project/SIBS/Orders/order_declined_page.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
@@ -1573,6 +1574,7 @@ class ShoppingCartPage extends StatefulWidget {
 
 class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Map<String, int> itemCountMap = {};
+  List<String> orderedItems = []; // Nova lista para manter a ordem dos itens
   dynamic users;
   double dinheiroAtual = 0;
   SibsService? _sibsService;
@@ -1621,86 +1623,212 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
+  Future<bool> _showOrderConfirmationDialog() async {
+    return await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                'Confirmar Pedido',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.check_circle, color: Colors.green),
+                title: const Text('Confirmar', style: TextStyle(color: Colors.green)),
+                onTap: () => Navigator.pop(context, true),
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel, color: Colors.red),
+                title: const Text('Cancelar', style: TextStyle(color: Colors.red)),
+                onTap: () => Navigator.pop(context, false),
+              ),
+            ],
+          ),
+        );
+      },
+    ) ?? false;
+  }
+
   Future<bool> _showPrencadoConfirmationDialog(List<Map<String, dynamic>> prencadoProducts) async {
     Map<String, bool> selectedProducts = {};
     
-    return await showDialog<bool>(
+    return await showModalBottomSheet<bool>(
       context: context,
-      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
+      isScrollControlled: true,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Confirmação de Preparação'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: prencadoProducts.map((product) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                'Preparação dos Produtos',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...prencadoProducts.map((product) {
                 String prencado = product['Prencado'] ?? '0';
                 String preparationType = prencado == '1' ? 'Prensado' : 'Aquecido';
                 selectedProducts[product['Nome']] = false;
                 
                 return StatefulBuilder(
                   builder: (context, setState) {
-                    return CheckboxListTile(
+                    return ListTile(
+                      leading: Icon(
+                        Icons.restaurant,
+                        color: Colors.orange,
+                      ),
                       title: Text(product['Nome']),
                       subtitle: Text('Deseja $preparationType?'),
-                      value: selectedProducts[product['Nome']],
-                      onChanged: (bool? value) {
-                        setState(() {
-                          selectedProducts[product['Nome']] = value ?? false;
-                          product['PrepararPrencado'] = value ?? false;
-                        });
-                      },
+                      trailing: Checkbox(
+                        value: selectedProducts[product['Nome']],
+                        onChanged: (bool? value) {
+                          setState(() {
+                            selectedProducts[product['Nome']] = value ?? false;
+                            product['PrepararPrencado'] = value ?? false;
+                          });
+                        },
+                      ),
                     );
                   },
                 );
               }).toList(),
-            ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      for (var product in prencadoProducts) {
+                        int index = cartItems.indexWhere((item) => item['Nome'] == product['Nome']);
+                        if (index != -1) {
+                          cartItems[index]['PrepararPrencado'] = selectedProducts[product['Nome']];
+                        }
+                      }
+                      Navigator.pop(context, true);
+                    },
+                    child: Text('Confirmar', style: TextStyle(color: Colors.green)),
+                  ),
+                ],
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                // Update cartItems with selected preferences
-                for (var product in prencadoProducts) {
-                  int index = cartItems.indexWhere((item) => item['Nome'] == product['Nome']);
-                  if (index != -1) {
-                    cartItems[index]['PrepararPrencado'] = selectedProducts[product['Nome']];
-                  }
-                }
-                Navigator.of(context).pop(true);
-              },
-              child: Text('Confirmar'),
-            ),
-          ],
         );
       },
     ) ?? false;
   }
 
-  Future<bool> _showOrderConfirmationDialog() async {
-    return await showDialog<bool>(
+  Future<bool> _showNeedsChangeDialog() async {
+    return await showModalBottomSheet<bool>(
       context: context,
-      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Confirmar Pedido'),
-          content: Text('Deseja confirmar o pedido?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancelar'),
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Text(
+              'Troco',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text('Confirmar'),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.check_circle, color: Colors.green),
+              title: const Text('Sim', style: TextStyle(color: Colors.green)),
+              onTap: () => Navigator.pop(context, true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.cancel, color: Colors.red),
+              title: const Text('Não', style: TextStyle(color: Colors.red)),
+              onTap: () => Navigator.pop(context, false),
             ),
           ],
-        );
-      },
+        ),
+      ),
     ) ?? false;
+  }
+
+  Future<double?> _showMoneyAmountDialog(double total) async {
+    final moneyController = TextEditingController();
+    return showModalBottomSheet<double>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Text(
+              'Valor Entregue',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Total a pagar: ${total.toStringAsFixed(2).replaceAll('.', ',')}€',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: moneyController,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                hintText: 'Digite o valor que será entregue',
+                suffixText: '€',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    double? amount = double.tryParse(moneyController.text.replaceAll(',', '.'));
+                    if (amount != null && amount >= total) {
+                      Navigator.pop(context, amount);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Valor inválido ou menor que o total')),
+                      );
+                    }
+                  },
+                  child: Text('Confirmar', style: TextStyle(color: Colors.green)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> sendOrderToApi() async {
@@ -1909,13 +2037,13 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.phone_android),
-                title: const Text('MBWay'),
+                leading: const Icon(Icons.phone_android, color: Color.fromARGB(255, 177, 2, 2),),
+                title: const Text('MBWay', style: TextStyle(color: Color.fromARGB(255, 177, 2, 2)),),
                 onTap: () => Navigator.pop(context, 'mbway'),
               ),
               ListTile(
-                leading: const Icon(Icons.money),
-                title: const Text('Dinheiro'),
+                leading: const Icon(Icons.money, color: Color.fromARGB(255, 27, 94, 32),),
+                title: const Text('Dinheiro', style: TextStyle(color: Color.fromARGB(255, 27, 94, 32)),),
                 onTap: () => Navigator.pop(context, 'dinheiro'),
               ),
               if (users != null && users.isNotEmpty && users[0]['AutorizadoSaldo'] == '1')
@@ -1934,77 +2062,13 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     );
   }
 
-  Future<bool> _showNeedsChangeDialog() async {
-    return await showDialog<bool>(
-      context: context,
-      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
-      builder: (context) => AlertDialog(
-        title: Text('Troco'),
-        content: Text('Precisa de troco?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Não'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Sim'),
-          ),
-        ],
-      ),
-    ) ?? false; // Mantido como fallback, mas não deve ser necessário com barrierDismissible: false
-  }
-
-  Future<double?> _showMoneyAmountDialog(double total) async {
-    final moneyController = TextEditingController();
-    return showDialog<double>(
-      context: context,
-      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
-      builder: (context) => AlertDialog(
-        title: Text('Valor Entregue'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-                'Total a pagar: ${total.toStringAsFixed(2).replaceAll('.', ',')}€'),
-            SizedBox(height: 10),
-            TextField(
-              controller: moneyController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                hintText: 'Digite o valor que será entregue',
-                suffixText: '€',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              double? amount =
-                  double.tryParse(moneyController.text.replaceAll(',', '.'));
-              if (amount != null && amount >= total) {
-                Navigator.pop(context, amount);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text('Valor inválido ou menor que o total')),
-                );
-              }
-            },
-            child: Text('Confirmar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> sendOrderToWebSocket(
-      List<Map<String, dynamic>> cartItems, String total, {String paymentMethod = 'dinheiro', bool requestInvoice = false, String nif = ''}) async {
+      List<Map<String, dynamic>> cartItems, 
+      String total, 
+      {String paymentMethod = 'dinheiro', 
+      bool requestInvoice = false, 
+      String nif = '',
+      double? dinheiroAtual}) async {
     try {
       // Format item names with preparation preferences
       List<String> formattedNames = cartItems.map((item) {
@@ -2028,7 +2092,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       var nome = users[0]['Nome'];
       var permissao = users[0]['Permissao'];
       var imagem = users[0]['Imagem'];
-      var troco = dinheiroAtual - double.parse(total);
+      
+      // Calcular o troco usando o dinheiroAtual passado como parâmetro
+      double troco = (dinheiroAtual ?? double.parse(total)) - double.parse(total);
       String trocos = troco.toStringAsFixed(2);
 
       final channel = WebSocketChannel.connect(
@@ -2047,6 +2113,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         'Total': total,
         'Imagem': imagem,
         'MetodoDePagamento': paymentMethod,
+        'DinheiroAtual': dinheiroAtual?.toString() ?? total, // Incluir o valor do dinheiro atual
       };
 
       // Add invoice information if requested
@@ -2098,15 +2165,170 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
+  Future<void> _handleCashPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
+    try {
+      // Create the description string with proper formatting
+      List<String> formattedNames = cartItems.map((item) {
+        String name = item['Nome'] as String;
+        bool prepararPrencado = item['PrepararPrencado'] ?? false;
+        String prencado = item['Prencado'] ?? '0';
+        
+        if (prepararPrencado && prencado != '0') {
+          if (prencado == '1') {
+            return '$name - Prensado';
+          } else if (prencado == '2') {
+            return '$name - Aquecido';
+          }
+        }
+        return name;
+      }).toList();
+
+      String descricao = formattedNames.join(', ');
+
+      // Extract user information
+      var turma = users[0]['Turma'] ?? '';
+      var nome = users[0]['Nome'] ?? '';
+      var apelido = users[0]['Apelido'] ?? '';
+      var permissao = users[0]['Permissao'] ?? '';
+      var imagem = users[0]['Imagem'] ?? '';
+
+      // Se for dinheiro, perguntar sobre o troco
+      bool needsChange = await _showNeedsChangeDialog();
+      if (needsChange == null) return; // Se o usuário cancelar o diálogo de troco, retorna
+
+      double? dinheiroAtualNullable;
+      if (needsChange) {
+        dinheiroAtualNullable = await _showMoneyAmountDialog(total);
+        if (dinheiroAtualNullable == null) return; // Se o usuário cancelar o diálogo de valor, retorna
+      } else {
+        dinheiroAtualNullable = total;
+      }
+
+      // Agora podemos usar dinheiroAtualNullable com segurança
+      double dinheiroAtual = dinheiroAtualNullable;
+
+      // Criar o pedido com as informações de pagamento em dinheiro
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        body: {
+          'query_param': '5',
+          'nome': nome,
+          'apelido': apelido,
+          'orderNumber': '0',
+          'turma': turma,
+          'descricao': descricao,
+          'permissao': permissao,
+          'total': total.toString(),
+          'valor': dinheiroAtual.toString(),
+          'imagem': imagem,
+          'payment_method': 'dinheiro',
+          'phone_number': '--',
+          'requestInvoice': requestInvoice ? '1' : '0',
+          'nif': nif,
+        },
+      );
+
+      print(response);
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        if (response.body.isEmpty) {
+          throw Exception('Empty response from server');
+        }
+
+        try {
+          final data = json.decode(response.body);
+
+          if (data['status'] == 'success') {
+            orderNumber = int.parse(data['orderNumber'].toString());
+            
+            // Calcular o troco antes de enviar para o WebSocket
+            double troco = dinheiroAtual - total;
+            String trocos = troco.toStringAsFixed(2);
+
+            // Enviar para o WebSocket com o valor correto do dinheiro
+            await sendOrderToWebSocket(
+              cartItems, 
+              total.toString(), 
+              paymentMethod: 'dinheiro', 
+              requestInvoice: requestInvoice, 
+              nif: nif,
+              dinheiroAtual: dinheiroAtual // Passar o valor do dinheiro para o WebSocket
+            );
+            
+            await sendRecentOrderToApi(cartItems);
+
+            setState(() {
+              cartItems.clear();
+              updateItemCountMap();
+            });
+
+            String changeMsg = troco > 0
+                ? ' Troco: ${troco.toStringAsFixed(2).replaceAll('.', ',')}€'
+                : '';
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
+              );
+
+            // Navegar para a página de confirmação de pedido
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CashConfirmationPage(
+                  change: troco,
+                  orderNumber: orderNumber,
+                  amount: total,
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
+              );
+          }
+        } catch (e) {
+          print('JSON decode error: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro ao processar resposta do servidor')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      print('Erro ao processar pagamento em dinheiro: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
+      );
+    }
+  }
+
   void updateItemCountMap() {
     itemCountMap.clear();
+    // Manter apenas os itens que ainda existem no carrinho
+    orderedItems = orderedItems.where((itemName) => 
+      cartItems.any((item) => item['Nome'] == itemName)
+    ).toList();
+    
+    // Adicionar novos itens que não estão na lista ordenada
     for (var item in cartItems) {
       final itemName = item['Nome'];
-      // Verifica se o itemName não é nulo antes de tentar incrementar o contador
-      if (itemName != null) {
-        // Se o itemName já estiver no mapa, incrementa o contador; senão, define o contador como 1
-        itemCountMap[itemName] = (itemCountMap[itemName] ?? 0) + 1;
+      if (itemName != null && !orderedItems.contains(itemName)) {
+        orderedItems.add(itemName);
       }
+    }
+    
+    // Atualizar a contagem de itens
+    for (var itemName in orderedItems) {
+      itemCountMap[itemName] = cartItems.where((item) => item['Nome'] == itemName).length;
     }
   }
 
@@ -2266,36 +2488,64 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Future<bool> _showInvoiceRequestDialog() async {
-    return await showDialog<bool>(
+    return await showModalBottomSheet<bool>(
       context: context,
-      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
-      builder: (context) => AlertDialog(
-        title: Text('Fatura com NIF'),
-        content: Text('Deseja incluir fatura com NIF neste pedido?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Não'),
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                'Fatura com NIF',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.check_circle, color: Colors.green),
+                title: const Text('Sim', style: TextStyle(color: Colors.green)),
+                onTap: () => Navigator.pop(context, true),
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel, color: Colors.red),
+                title: const Text('Não', style: TextStyle(color: Colors.red)),
+                onTap: () => Navigator.pop(context, false),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Sim'),
-          ),
-        ],
-      ),
+        );
+      },
     ) ?? false;
   }
 
   Future<String?> _showNifInputDialog() async {
     final nifController = TextEditingController();
-    return showDialog<String>(
+    
+    // Verifica se o usuário já tem NIF cadastrado
+    if (users != null && users.isNotEmpty && users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
+      nifController.text = users[0]['NIF'].toString();
+    }
+
+    return showModalBottomSheet<String>(
       context: context,
-      barrierDismissible: false, // Impede fechar ao clicar fora do diálogo
-      builder: (context) => AlertDialog(
-        title: Text('Inserir NIF'),
-        content: Column(
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
+          children: <Widget>[
+            const Text(
+              'Inserir NIF',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: nifController,
               keyboardType: TextInputType.number,
@@ -2303,29 +2553,66 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               decoration: InputDecoration(
                 hintText: 'Digite o NIF',
                 counterText: '',
+                border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    String nif = nifController.text.trim();
+                    if (nif.length == 9 && int.tryParse(nif) != null) {
+                      // Se o NIF for diferente do cadastrado, atualiza na base de dados
+                      if (users[0]['NIF'] == null || users[0]['NIF'].toString() != nif) {
+                        try {
+                          final response = await http.post(
+                            Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+                            body: {
+                              'query_param': 'update_nif',
+                              'user_id': users[0]['IdUser'].toString(),
+                              'nif': nif,
+                            },
+                          );
+
+                          if (response.statusCode == 200) {
+                            // Atualiza o NIF localmente
+                            setState(() {
+                              users[0]['NIF'] = nif;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('NIF atualizado com sucesso!')),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Erro ao atualizar NIF')),
+                            );
+                          }
+                        } catch (e) {
+                          print('Erro ao atualizar NIF: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erro ao atualizar NIF')),
+                          );
+                        }
+                      }
+                      Navigator.pop(context, nif);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('NIF inválido. O NIF deve ter 9 dígitos numéricos.')),
+                      );
+                    }
+                  },
+                  child: Text('Confirmar', style: TextStyle(color: Colors.green)),
+                ),
+              ],
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              String nif = nifController.text.trim();
-              if (nif.length == 9 && int.tryParse(nif) != null) {
-                Navigator.pop(context, nif);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('NIF inválido. O NIF deve ter 9 dígitos numéricos.')),
-                );
-              }
-            },
-            child: Text('Confirmar'),
-          ),
-        ],
       ),
     );
   }
@@ -2405,135 +2692,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  // Method for Cash payment
-  Future<void> _handleCashPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
-    try {
-      // Create the description string with proper formatting
-      List<String> formattedNames = cartItems.map((item) {
-        String name = item['Nome'] as String;
-        bool prepararPrencado = item['PrepararPrencado'] ?? false;
-        String prencado = item['Prencado'] ?? '0';
-        
-        if (prepararPrencado && prencado != '0') {
-          if (prencado == '1') {
-            return '$name - Prensado';
-          } else if (prencado == '2') {
-            return '$name - Aquecido';
-          }
-        }
-        return name;
-      }).toList();
-
-      String descricao = formattedNames.join(', ');
-
-      // Extract user information
-      var turma = users[0]['Turma'] ?? '';
-      var nome = users[0]['Nome'] ?? '';
-      var apelido = users[0]['Apelido'] ?? '';
-      var permissao = users[0]['Permissao'] ?? '';
-      var imagem = users[0]['Imagem'] ?? '';
-
-      // Se for dinheiro, perguntar sobre o troco
-      bool needsChange = await _showNeedsChangeDialog();
-
-      if (needsChange) {
-        dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
-      } else {
-        dinheiroAtual = total;
-      }
-
-      // Criar o pedido com as informações de pagamento em dinheiro
-      final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
-        body: {
-          'query_param': '5',
-          'nome': nome,
-          'apelido': apelido,
-          'orderNumber': '0',
-          'turma': turma,
-          'descricao': descricao,
-          'permissao': permissao,
-          'total': total.toString(),
-          'valor': dinheiroAtual.toString(),
-          'imagem': imagem,
-          'payment_method': 'dinheiro',
-          'phone_number': '--',
-          'requestInvoice': requestInvoice ? '1' : '0',
-          'nif': nif,
-        },
-      );
-
-      print(response);
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          throw Exception('Empty response from server');
-        }
-
-        try {
-          final data = json.decode(response.body);
-
-          if (data['status'] == 'success') {
-            orderNumber = int.parse(data['orderNumber'].toString());
-            // Enviar para o WebSocket e limpar o carrinho
-            await sendOrderToWebSocket(cartItems, total.toString(), paymentMethod: 'dinheiro', requestInvoice: requestInvoice, nif: nif);
-            await sendRecentOrderToApi(cartItems);
-
-            setState(() {
-              cartItems.clear();
-              updateItemCountMap();
-            });
-
-            double change = dinheiroAtual - total;
-            String changeMsg = change > 0
-                ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
-                : '';
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
-              );
-
-            // Navegar para a página de confirmação de pedido
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => CashConfirmationPage(
-                  change: change,
-                  orderNumber: orderNumber,
-                  amount: total,
-                ),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
-              );
-          }
-        } catch (e) {
-          print('JSON decode error: $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao processar resposta do servidor')),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
-        );
-      }
-    } catch (e) {
-      print('Erro ao processar pagamento em dinheiro: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
-      );
-    }
-  }
-
   // Method for Saldo payment
   Future<void> _handleSaldoPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
     // Implement balance check, deduction, and transaction recording here
@@ -2575,68 +2733,160 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             var apelido = users[0]['Apelido'] ?? '';
             var permissao = users[0]['Permissao'] ?? '';
             var imagem = users[0]['Imagem'] ?? '';
-             var userId = users[0]['IdUser'] ?? ''; // Assuming IdUser is available
+            var userEmail = users[0]['Email'] ?? '';
 
-            // Call API to deduct balance and record transaction
-            // This will require a new or modified API endpoint in appBarAPI_Post.php
-            final response = await http.post(
-              Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+            // Primeiro, criar o pedido para obter o número do pedido
+            final orderResponse = await http.post(
+              Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
               body: {
-                'query_param': 'process_saldo_payment', // New query param
-                'userId': userId, // Use userId instead of username if that's what your API expects
-                'amount': total.toString(),
-                'description': descricao, // Description of the purchase
-                'type': '2', // 2 for used
-                 'requestInvoice': requestInvoice ? '1' : '0',
-                 'nif': nif,
+                'query_param': '5',
+                'nome': nome,
+                'apelido': apelido,
+                'orderNumber': '0',
+                'turma': turma,
+                'descricao': descricao,
+                'permissao': permissao,
+                'total': total.toString(),
+                'valor': total.toString(),
+                'imagem': imagem,
+                'payment_method': 'saldo',
+                'phone_number': '--',
+                'requestInvoice': requestInvoice ? '1' : '0',
+                'nif': nif,
               },
             );
-             print('Saldo payment API response status: ${response.statusCode}');
-             print('Saldo payment API response body: ${response.body}');
 
-             if (response.statusCode == 200) {
-                 final responseData = json.decode(response.body);
-                 if (responseData['success'] == true) {
-                     // Order processed successfully
-                      int newOrderNumber = int.tryParse(responseData['orderNumber'].toString()) ?? 0; // Assuming API returns orderNumber
-                    //Continuar implementaç\ao saldo
-                     // Clear cart and update UI (handled by onResult callback if implemented there)
-                 } else {
-                     // API reported an error
-                     String errorMsg = responseData['error'] ?? 'Erro desconhecido ao processar pagamento com Saldo';
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(errorMsg)),
-                         );
-                      }
-                 }
-             } else {
-                 // HTTP status code is not 200
-                  if (mounted) {
-                     ScaffoldMessenger.of(context).showSnackBar(
-                       SnackBar(content: Text('Erro na comunicação com a API: ${response.statusCode}')),
-                     );
+            if (orderResponse.statusCode == 200 && orderResponse.body.isNotEmpty) {
+              final orderData = json.decode(orderResponse.body);
+              if (orderData['status'] == 'success') {
+                orderNumber = int.parse(orderData['orderNumber'].toString());
+                
+                // Agora que temos o número do pedido, usar apenas ele na descrição
+                String descricaoComPedido = 'Pedido Nº$orderNumber';
+
+                // Call API to deduct balance and record transaction
+                final response = await http.post(
+                  Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+                  body: {
+                    'query_param': '9.1',
+                    'email': userEmail,
+                    'amount': total.toString(),
+                    'description': descricaoComPedido,
+                    'type': '2', // 2 for used
+                  },
+                );
+
+                print('Saldo payment API response status: ${response.statusCode}');
+                print('Saldo payment API response body: ${response.body}');
+
+                if (response.statusCode == 200) {
+                  final responseData = json.decode(response.body);
+                  if (responseData['success'] == true) {
+                    // Enviar para o WebSocket
+                    await sendOrderToWebSocket(
+                      cartItems,
+                      total.toString(),
+                      paymentMethod: 'saldo',
+                      requestInvoice: requestInvoice,
+                      nif: nif,
+                    );
+
+                    // Limpar o carrinho e atualizar a UI
+                    setState(() {
+                      cartItems.clear();
+                      updateItemCountMap();
+                    });
+
+                    // Mostrar mensagem de sucesso
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Pedido Nº $orderNumber realizado com sucesso!')),
+                    );
+
+                    // Navegar para a página de confirmação de sucesso
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CashConfirmationPage(
+                          change: 0.0, // Não há troco no pagamento com saldo
+                          orderNumber: orderNumber,
+                          amount: total,
+                        ),
+                      ),
+                    );
+                  } else {
+                    String errorMsg = responseData['error'] ?? 'Erro desconhecido ao processar pagamento com Saldo';
+                    // Navegar para a página de declínio com a mensagem de erro
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OrderDeclinedPage(
+                          reason: errorMsg,
+                          amount: total,
+                        ),
+                      ),
+                    );
                   }
-             }
-
+                } else {
+                  // Navegar para a página de declínio com erro de comunicação
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OrderDeclinedPage(
+                        reason: 'Erro na comunicação com o servidor',
+                        amount: total,
+                      ),
+                    ),
+                  );
+                }
+              } else {
+                // Navegar para a página de declínio com erro ao criar pedido
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OrderDeclinedPage(
+                      reason: 'Erro ao criar pedido: ${orderData['message'] ?? "Erro desconhecido"}',
+                      amount: total,
+                    ),
+                  ),
+                );
+              }
+            } else {
+              // Navegar para a página de declínio com erro ao criar pedido
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OrderDeclinedPage(
+                    reason: 'Erro ao criar pedido',
+                    amount: total,
+                  ),
+                ),
+              );
+            }
          } catch (e) {
             print('Error processing Saldo payment: $e');
-             if (mounted) {
-               ScaffoldMessenger.of(context).showSnackBar(
-                 SnackBar(content: Text('Erro ao processar pagamento com Saldo: ${e.toString()}')),
-               );
-             }
+            // Navegar para a página de declínio com erro de processamento
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OrderDeclinedPage(
+                  reason: 'Erro ao processar pagamento: ${e.toString()}',
+                  amount: total,
+                ),
+              ),
+            );
          }
-
     } else {
-        // Insufficient balance
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Saldo insuficiente. Por favor, carregue o seu saldo.')),
-          );
-        }
+        // Saldo insuficiente - navegar para a página de declínio
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OrderDeclinedPage(
+              reason: 'Saldo insuficiente. Saldo atual: ${currentBalance.toStringAsFixed(2)}€',
+              amount: total,
+            ),
+          ),
+        );
     }
-     // Ensure isProcessing is set to false if you have a loading indicator for this payment method
   }
 
   @override
@@ -2719,9 +2969,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             Expanded(
               child: ListView.builder(
                 padding: EdgeInsets.only(top: 12),
-                itemCount: itemCountMap.length,
+                itemCount: orderedItems.length, // Usar orderedItems.length
                 itemBuilder: (context, index) {
-                  final itemName = itemCountMap.keys.toList()[index];
+                  final itemName = orderedItems[index]; // Usar orderedItems para ordem
                   final itemCount = itemCountMap[itemName] ?? 0;
                   final item = cartItems.firstWhere(
                     (element) => element['Nome'] == itemName,
@@ -2814,7 +3064,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                             ),
                             onPressed: () {
                               if (itemCount == 1) {
-                                // Se for o último item, mostrar diálogo de confirmação
                                 showDialog(
                                   context: context,
                                   builder: (BuildContext dialogContext) {
@@ -2830,11 +3079,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                           onPressed: () {
                                             Navigator.pop(dialogContext);
                                             setState(() {
-                                              // Encontrar o primeiro item com este nome
-                                              int index = cartItems.indexWhere((item) => item['Nome'] == itemName);
-                                              if (index != -1) {
-                                                cartItems.removeAt(index);
-                                              }
+                                              // Remover todos os itens com este nome
+                                              cartItems.removeWhere((item) => item['Nome'] == itemName);
+                                              // Não remover da lista ordenada para manter a posição
                                               updateItemCountMap();
                                             });
                                           },
@@ -2848,9 +3095,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                   },
                                 );
                               } else {
-                                // Se não for o último item, remover diretamente
                                 setState(() {
-                                  // Encontrar o primeiro item com este nome
+                                  // Remover apenas um item
                                   int index = cartItems.indexWhere((item) => item['Nome'] == itemName);
                                   if (index != -1) {
                                     cartItems.removeAt(index);
@@ -3027,3 +3273,4 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     );
   }
 }
+

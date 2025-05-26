@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
+
+// Utility function to generate MD5 hash
+String generateMD5(String input) {
+  return md5.convert(utf8.encode(input)).toString();
+}
 
 class FirstLogin extends StatefulWidget {
   @override
@@ -36,10 +43,12 @@ class _FirstLoginState extends State<FirstLogin> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final email = prefs.getString("username");
     final pwd = passwordController.text;
+    // Encrypt password with MD5
+    final encryptedPwd = generateMD5(pwd);
 
     try {
       final response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=16&password=$pwd&email=$email'));
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=16&password=$encryptedPwd&email=$email'));
 
       if (response.statusCode == 200) {
         // Delay navigation for 1 second to show the login screen briefly

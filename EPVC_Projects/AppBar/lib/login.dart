@@ -13,8 +13,14 @@ import 'package:my_flutter_project/PasswordRecovery/esqueciPWD.dart';
 import 'package:my_flutter_project/PasswordRecovery/reenserirPWD.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart';
 
 String errorMessage = '';
+
+// Utility function to generate MD5 hash
+String generateMD5(String input) {
+  return md5.convert(utf8.encode(input)).toString();
+}
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -57,9 +63,12 @@ class _LoginFormState extends State<LoginForm> {
       return;
     }
 
+    // Encrypt password with MD5
+    final encryptedPwd = generateMD5(pwd);
+    
     try {
       dynamic response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$pwd'));
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$encryptedPwd'));
 
       if (response.statusCode == 200) {
         dynamic tar = json.decode(response.body);

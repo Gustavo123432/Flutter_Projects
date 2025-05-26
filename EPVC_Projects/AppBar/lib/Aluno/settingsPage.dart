@@ -116,7 +116,11 @@ class _SettingsPageState extends State<SettingsPage> {
           title: Text('Alterações não guardadas'),
           content: Text(
               'Tem alterações não guardadas. Deseja guardar antes de sair?'),
-          actions: [
+          actions: [ TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+
             TextButton(
               onPressed: () {
                 Navigator.pop(context, false);
@@ -130,7 +134,8 @@ class _SettingsPageState extends State<SettingsPage> {
             TextButton(
               onPressed: () => Navigator.pop(context, true),
               child: Text('Guardar'),
-            ),
+            ) ,
+
           ],
         ),
       );
