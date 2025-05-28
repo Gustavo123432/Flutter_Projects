@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'login.dart';
 
 void main() async {
@@ -87,6 +89,66 @@ class _ConnectionCheckScreenState extends State<ConnectionCheckScreen> {
     super.dispose();
   }
 
+  Future<bool> _checkAppVersion() async {
+    try {
+      PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      String currentVersion = packageInfo.version;
+      print('Current app version: $currentVersion');
+
+      final response = await http.get(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=settings'),
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = response.body;
+        print('Settings response: $data');
+        
+        try {
+          // Parse the response as JSON array
+          final List<dynamic> settingsList = json.decode(data);
+          
+          // Find the app version setting
+          final appVersionSetting = settingsList.firstWhere(
+            (setting) => setting['type'] == 'App Version',
+            orElse: () => {'min_version': '0.0.0'},
+          );
+          
+          final String minVersion = appVersionSetting['min_version'] ?? '0.0.0';
+          
+          // Compare versions
+          bool isVersionValid = _compareVersions(currentVersion, minVersion);
+          print('Version check: Current=$currentVersion, Minimum=$minVersion, Valid=$isVersionValid');
+          
+          return isVersionValid;
+        } catch (e) {
+          print('Error parsing version data: $e');
+          return false;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('Error checking app version: $e');
+      return false;
+    }
+  }
+
+  bool _compareVersions(String currentVersion, String minVersion) {
+    List<int> current = currentVersion.split('.').map(int.parse).toList();
+    List<int> minimum = minVersion.split('.').map(int.parse).toList();
+    
+    // Pad the shorter version with zeros
+    while (current.length < minimum.length) current.add(0);
+    while (minimum.length < current.length) minimum.add(0);
+    
+    // Compare each segment
+    for (int i = 0; i < current.length; i++) {
+      if (current[i] > minimum[i]) return true;
+      if (current[i] < minimum[i]) return false;
+    }
+    
+    return true; // Versions are equal
+  }
+
   Future<void> _checkConnectionAndProceed() async {
     setState(() {
       _isChecking = true;
@@ -115,8 +177,19 @@ class _ConnectionCheckScreenState extends State<ConnectionCheckScreen> {
       return;
     }
 
-    // Verificar conexão com o servidor
+    // Verificar conexão com o servidor e versão do app
     try {
+      // Primeiro verifica a versão do app
+      bool isVersionValid = await _checkAppVersion();
+      if (!isVersionValid) {
+        setState(() {
+          _isChecking = false;
+          _errorMessage = 'Por favor, atualize o aplicativo para a versão mais recente.';
+        });
+        return;
+      }
+
+      // Depois verifica a conexão com o servidor
       final response = await http
           .get(Uri.parse(
               'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=ping'))

@@ -487,18 +487,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 Padding(
                   padding: EdgeInsets.only(left: 0, top: 4),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Checkbox(
-                        value: _autoBillNIF,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            _autoBillNIF = value ?? false;
-                          });
-                          _saveUserInfo();
-                        },
-                        activeColor: Color.fromARGB(255, 246, 141, 45),
-                        checkColor: Colors.white,
-                      ),
                       Expanded(
                         child: Text(
                           'Usar este NIF para Faturação Automática',
@@ -508,6 +498,16 @@ class _SettingsPageState extends State<SettingsPage> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                      ),
+                      Switch(
+                        value: _autoBillNIF,
+                        onChanged: (bool value) {
+                          setState(() {
+                            _autoBillNIF = value;
+                          });
+                          _saveUserInfo();
+                        },
+                        activeColor: Color.fromARGB(255, 246, 141, 45),
                       ),
                       IconButton(
                         icon: Icon(Icons.help_outline,

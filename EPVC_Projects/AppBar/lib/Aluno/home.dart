@@ -1066,6 +1066,7 @@ class _CategoryPageState extends State<CategoryPage> {
                           final item = items[index];
                           final double preco = double.parse(item['Preco']);
                           return Card(
+                            key: ValueKey(item['Nome']), // Use a chave para ajudar o Flutter a otimizar a reconstrução
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -1536,6 +1537,7 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
               itemBuilder: (context, index) {
                 final item = items[index];
                 return Card(
+                  key: ValueKey(item['Nome']), // Use a chave para ajudar o Flutter a otimizar a reconstrução
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1659,7 +1661,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Future<bool> _showPrencadoConfirmationDialog(List<Map<String, dynamic>> prencadoProducts) async {
-    Map<String, bool> selectedProducts = {};
+    Map<String, bool> selectedProducts = {}; // Para Prensado (type 1) e Fresco (type 3)
+    Map<String, bool> freshOptionForAquecido = {}; // Para Fresco/Aquecido (type 2)
     
     return await showModalBottomSheet<bool>(
       context: context,
@@ -1680,28 +1683,74 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               const SizedBox(height: 16),
               ...prencadoProducts.map((product) {
                 String prencado = product['Prencado'] ?? '0';
-                String preparationType = prencado == '1' ? 'Prensado' : 'Aquecido';
-                selectedProducts[product['Nome']] = false;
+                selectedProducts[product['Nome']] = false; // Default to not selected
+                freshOptionForAquecido[product['Nome']] = false; // Default to not fresh for type 2
                 
                 return StatefulBuilder(
                   builder: (context, setState) {
-                    return ListTile(
-                      leading: Icon(
-                        Icons.restaurant,
-                        color: Colors.orange,
-                      ),
-                      title: Text(product['Nome']),
-                      subtitle: Text('Deseja $preparationType?'),
-                      trailing: Checkbox(
-                        value: selectedProducts[product['Nome']],
-                        onChanged: (bool? value) {
-                          setState(() {
-                            selectedProducts[product['Nome']] = value ?? false;
-                            product['PrepararPrencado'] = value ?? false;
-                          });
-                        },
-                      ),
-                    );
+                    // Logic for Prensado (type 1)
+                    if (prencado == '1') {
+                      return ListTile(
+                        leading: Icon(
+                          Icons.restaurant,
+                          color: Colors.orange,
+                        ),
+                        title: Text(product['Nome']),
+                        subtitle: Text('Deseja Prensado?'),
+                        trailing: Checkbox(
+                          value: selectedProducts[product['Nome']],
+                          onChanged: (bool? value) {
+                            setState(() {
+                              selectedProducts[product['Nome']] = value ?? false;
+                              product['PrepararPrencado'] = value ?? false;
+                            });
+                          },
+                        ),
+                      );
+                    }
+                    // Logic for Fresco/Aquecido (type 2)
+                    else if (prencado == '2') {
+                      return ListTile(
+                        leading: Icon(
+                          Icons.severe_cold,
+                          color: Colors.green,
+                        ),
+                        title: Text(product['Nome']),
+                        subtitle: Text('Deseja Fresco?'),
+                        trailing: Checkbox(
+                          value: selectedProducts[product['Nome']],
+                          onChanged: (bool? value) {
+                            setState(() {
+                              selectedProducts[product['Nome']] = value ?? false;
+                              product['PrepararPrencado'] = value ?? false;
+                              freshOptionForAquecido[product['Nome']] = value ?? false;
+                            });
+                          },
+                        ),
+                      );
+                    }
+                    // Logic for Fresco (type 3)
+                    else if (prencado == '3') {
+                      return ListTile(
+                        leading: Icon(
+                          Icons.local_cafe,
+                          color: Colors.brown,
+                        ),
+                        title: Text(product['Nome']),
+                        subtitle: Text('Deseja Fresco?'),
+                        trailing: Checkbox(
+                          value: selectedProducts[product['Nome']],
+                          onChanged: (bool? value) {
+                            setState(() {
+                              selectedProducts[product['Nome']] = value ?? false;
+                              product['PrepararPrencado'] = value ?? false;
+                              freshOptionForAquecido[product['Nome']] = value ?? false;
+                            });
+                          },
+                        ),
+                      );
+                    }
+                    return Container(); // This should never be reached
                   },
                 );
               }).toList(),
@@ -1719,6 +1768,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                         int index = cartItems.indexWhere((item) => item['Nome'] == product['Nome']);
                         if (index != -1) {
                           cartItems[index]['PrepararPrencado'] = selectedProducts[product['Nome']];
+                          cartItems[index]['Fresh'] = freshOptionForAquecido[product['Nome']];
                         }
                       }
                       Navigator.pop(context, true);
@@ -1865,15 +1915,19 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         String name = item['Nome'] as String;
         bool prepararPrencado = item['PrepararPrencado'] ?? false;
         String prencado = item['Prencado'] ?? '0';
+        bool isFresh = item['Fresh'] ?? false;
         
-        if (prepararPrencado && prencado != '0') {
-          if (prencado == '1') {
-            return '$name - Prensado';
-          } else if (prencado == '2') {
-            return '$name - Aquecido';
-          }
+        String suffix = '';
+        
+        if (prencado == '1' && prepararPrencado) {
+          suffix = ' - Prensado';
+        } else if (prencado == '2' && prepararPrencado) {
+          suffix = ' - Aquecido';
+        } else if (prencado == '3' && isFresh) {
+          suffix = ' - Fresco';
         }
-        return name;
+        
+        return '$name$suffix';
       }).toList();
 
       String descricao = formattedNames.join(', ');
@@ -2073,17 +2127,22 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       // Format item names with preparation preferences
       List<String> formattedNames = cartItems.map((item) {
         String name = item['Nome'] as String;
-        bool prepararPrencado = item['PrepararPrencado'] ?? false;
+        bool prepararPrencado = item['PrepararPrencado'] ?? false; // Indica se alguma opção de preparação foi marcada no diálogo (usado para tipos 1 e 2)
         String prencado = item['Prencado'] ?? '0';
+        bool isFresh = item['Fresh'] ?? false; // Usado para a opção "Fresco" (tipo 3)
         
-        if (prepararPrencado && prencado != '0') {
-          if (prencado == '1') {
-            return '$name - Prensado';
-          } else if (prencado == '2') {
-            return '$name - Aquecido';
-          }
+        String suffix = '';
+        
+        if (prencado == '1' && prepararPrencado) {
+          suffix = ' - Prensado';
+        } else if (prencado == '2' && prepararPrencado) {
+          suffix = ' - Aquecido';
+        } else if (prencado == '3' && isFresh) {
+          suffix = ' - Fresco';
         }
-        return name;
+        
+        return '$name$suffix';
+
       }).toList();
       
       String descricao = formattedNames.join(', ');
@@ -2126,42 +2185,68 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
       channel.stream.listen(
         (message) {
-          var serverResponse = json.decode(message);
-          if (serverResponse['status'] == 'success') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content:
-                    Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
-              ),
-            );
+          // Add a basic check to see if the message looks like JSON
+          if (message != null && message.startsWith('{') && message.endsWith('}')) {
+            try {
+              var serverResponse = json.decode(message);
+              if (serverResponse['status'] == 'success') {
+                if (mounted) { // Check if the widget is still mounted
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Pedido enviado com sucesso! Pedido Nº $orderNumber'),
+                    ),
+                  );
+                }
+              } else {
+                 if (mounted) { // Check if the widget is still mounted
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
+                    ),
+                  );
+                 }
+              }
+            } catch (e) {
+              print('Erro ao processar a mensagem WebSocket: $e');
+              if (mounted) { // Check if the widget is still mounted
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        'Erro ao processar resposta do WebSocket. Contacte o Administrador!'),
+                  ),
+                );
+              }
+            }
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
-              ),
-            );
+             print('Received non-JSON message from WebSocket: $message');
+             // Optionally, you can show a different message to the user for non-JSON responses
           }
           channel.sink.close();
         },
         onError: (error) {
           print('Erro ao fazer a requisição WebSocket: $error');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-            ),
-          );
+          if (mounted) { // Check if the widget is still mounted
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+              ),
+            );
+          }
         },
       );
     } catch (e) {
       print('Erro ao estabelecer conexão WebSocket: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-        ),
-      );
+      if (mounted) { // Check if the widget is still mounted
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+          ),
+        );
+      }
     }
   }
 
@@ -2172,15 +2257,19 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         String name = item['Nome'] as String;
         bool prepararPrencado = item['PrepararPrencado'] ?? false;
         String prencado = item['Prencado'] ?? '0';
+        bool isFresh = item['Fresh'] ?? false;
         
-        if (prepararPrencado && prencado != '0') {
-          if (prencado == '1') {
-            return '$name - Prensado';
-          } else if (prencado == '2') {
-            return '$name - Aquecido';
-          }
+        String suffix = '';
+        
+        if (prencado == '1' && prepararPrencado) {
+          suffix = ' - Prensado';
+        } else if (prencado == '2' && prepararPrencado) {
+          suffix = ' - Aquecido';
+        } else if (prencado == '3' && isFresh) {
+          suffix = ' - Fresco';
         }
-        return name;
+        
+        return '$name$suffix';
       }).toList();
 
       String descricao = formattedNames.join(', ');
@@ -2249,15 +2338,16 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
             // Enviar para o WebSocket com o valor correto do dinheiro
             await sendOrderToWebSocket(
-              cartItems, 
-              total.toString(), 
-              paymentMethod: 'dinheiro', 
-              requestInvoice: requestInvoice, 
+              cartItems,
+              total.toString(),
+              paymentMethod: 'dinheiro',
+              requestInvoice: requestInvoice,
               nif: nif,
               dinheiroAtual: dinheiroAtual // Passar o valor do dinheiro para o WebSocket
             );
             
-            await sendRecentOrderToApi(cartItems);
+            // --- MOVER ESTA CHAMADA PARA ANTES DE LIMPAR O CARRINHO ---
+            await sendRecentOrderToApi(cartItems); // Envia os itens do pedido para adicionar aos recentes
 
             setState(() {
               cartItems.clear();
@@ -2445,10 +2535,19 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           requestInvoice = await _showInvoiceRequestDialog();
           
           if (requestInvoice) {
-            nif = await _showNifInputDialog() ?? '';
-            if (nif.isEmpty) {
-              // User cancelled NIF input
-              return;
+            // Verifica se tem faturação automática ativa
+            bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1;
+            
+            if (autoBillNIF && users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
+              // Se tiver faturação automática e NIF, usa o NIF cadastrado
+              nif = users[0]['NIF'].toString();
+            } else {
+              // Se não tiver faturação automática ou NIF, pede para inserir
+              nif = await _showNifInputDialog() ?? '';
+              if (nif.isEmpty) {
+                // User cancelled NIF input
+                return;
+              }
             }
           }
         }
@@ -2461,8 +2560,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           await _handleMBWayPayment(total, requestInvoice: requestInvoice, nif: nif);
         } else if (paymentMethod == 'dinheiro') {
           await _handleCashPayment(total, requestInvoice: requestInvoice, nif: nif);
-        } else if (paymentMethod == 'saldo') { // Add case for Saldo payment
-           await _handleSaldoPayment(total, requestInvoice: requestInvoice, nif: nif); // Call a new handler for Saldo
+        } else if (paymentMethod == 'saldo') {
+          await _handleSaldoPayment(total, requestInvoice: requestInvoice, nif: nif);
         }
       } else {
         showDialog(
@@ -2488,6 +2587,15 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Future<bool> _showInvoiceRequestDialog() async {
+    // Verifica se o usuário tem faturação automática ativa e NIF cadastrado
+    bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1;
+    bool hasNIF = users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty;
+
+    // Se tiver faturação automática e NIF, retorna true diretamente
+    if (autoBillNIF && hasNIF) {
+      return true;
+    }
+
     return await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -2525,8 +2633,16 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Future<String?> _showNifInputDialog() async {
     final nifController = TextEditingController();
     
-    // Verifica se o usuário já tem NIF cadastrado
-    if (users != null && users.isNotEmpty && users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
+    // Verifica se o usuário tem faturação automática ativa
+    bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1;
+    
+    // Se tiver faturação automática, retorna o NIF diretamente
+    if (autoBillNIF && users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
+      return users[0]['NIF'].toString();
+    }
+
+    // Se não tiver faturação automática, verifica se já tem NIF cadastrado
+    if (users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
       nifController.text = users[0]['NIF'].toString();
     }
 
@@ -2625,15 +2741,19 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         String name = item['Nome'] as String;
         bool prepararPrencado = item['PrepararPrencado'] ?? false;
         String prencado = item['Prencado'] ?? '0';
+        bool isFresh = item['Fresh'] ?? false;
         
-        if (prepararPrencado && prencado != '0') {
-          if (prencado == '1') {
-            return '$name - Prensado';
-          } else if (prencado == '2') {
-            return '$name - Aquecido';
-          }
+        String suffix = '';
+        
+        if (prencado == '1' && prepararPrencado) {
+          suffix = ' - Prensado';
+        } else if (prencado == '2' && prepararPrencado) {
+          suffix = ' - Aquecido';
+        } else if (prencado == '3' && isFresh) {
+          suffix = ' - Fresco';
         }
-        return name;
+        
+        return '$name$suffix';
       }).toList();
 
       String descricao = formattedNames.join(', ');
@@ -2672,6 +2792,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               if (success) {
                 setState(() {
                   orderNumber = newOrderNumber;
+                  // Envia os itens do pedido para adicionar aos recentes ANTES de limpar
+                  sendRecentOrderToApi(cartItems);
                   // Clear cart items after all processing is complete
                   cartItems.clear();
                   updateItemCountMap();
@@ -2686,9 +2808,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       );
     } catch (e) {
       print('Erro ao processar pagamento MBWay: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -2714,15 +2838,19 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               String name = item['Nome'] as String;
               bool prepararPrencado = item['PrepararPrencado'] ?? false;
               String prencado = item['Prencado'] ?? '0';
+              bool isFresh = item['Fresh'] ?? false;
 
-              if (prepararPrencado && prencado != '0') {
-                if (prencado == '1') {
-                  return '$name - Prensado';
-                } else if (prencado == '2') {
-                  return '$name - Aquecido';
-                }
+              String suffix = '';
+              
+              if (prencado == '1' && prepararPrencado) {
+                suffix = ' - Prensado';
+              } else if (prencado == '2' && prepararPrencado) {
+                suffix = ' - Aquecido';
+              } else if (prencado == '3' && isFresh) {
+                suffix = ' - Fresco';
               }
-              return name;
+              
+              return '$name$suffix';
             }).toList();
 
             String descricao = formattedNames.join(', ');
@@ -2790,6 +2918,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                       requestInvoice: requestInvoice,
                       nif: nif,
                     );
+
+                    // Envia os itens do pedido para adicionar aos recentes ANTES de limpar
+                    await sendRecentOrderToApi(cartItems);
 
                     // Limpar o carrinho e atualizar a UI
                     setState(() {
