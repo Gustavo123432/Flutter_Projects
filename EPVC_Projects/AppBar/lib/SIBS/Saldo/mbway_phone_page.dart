@@ -81,8 +81,8 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
           print('User data found in response');
           
           if (mounted) {
-            setState(() {
-              users = responseData;
+          setState(() {
+            users = responseData;
               
               // Verifica se há número de telefone no banco
               if (responseData[0]['Telefone'] != null && responseData[0]['Telefone'].toString().isNotEmpty) {
@@ -91,17 +91,17 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
                 print('Setting phone from database: $phoneNumber');
                 _phoneController.text = phoneNumber;
                 _validatePhone();
-              } 
+            } 
               // Se não houver no banco, verifica nas preferências
-              else {
-                String? savedPhone = prefs.getString('phone');
-                if (savedPhone != null && savedPhone.isNotEmpty) {
+            else {
+              String? savedPhone = prefs.getString('phone');
+              if (savedPhone != null && savedPhone.isNotEmpty) {
                   print('Setting phone from preferences: $savedPhone');
                   _phoneController.text = savedPhone;
-                  _validatePhone();
+              _validatePhone();
                 }
-              }
-            });
+            }
+          });
           }
         } else {
           print('No user data found in response');
@@ -116,20 +116,20 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
   }
 
   void _validatePhone() {
-    final phoneText = _phoneController.text.trim();
+      final phoneText = _phoneController.text.trim();
     print('Validating phone: $phoneText');
-    bool isProperLength = phoneText.length == 9;
-    bool hasCorrectPrefix = phoneText.startsWith('9') || 
-                          phoneText.startsWith('2') || 
-                          phoneText.startsWith('3');
-    
+      bool isProperLength = phoneText.length == 9;
+      bool hasCorrectPrefix = phoneText.startsWith('9') || 
+                              phoneText.startsWith('2') || 
+                              phoneText.startsWith('3');
+      
     bool isValid = isProperLength && hasCorrectPrefix;
     print('Phone validation result: $isValid');
     
     if (mounted) {
       setState(() {
         _isValidPhone = isValid;
-      });
+    });
     }
   }
 
@@ -196,7 +196,7 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
           final statusCode = returnStatus['statusCode'];
           final statusDescription = returnStatus['statusDescription'];
 
-          if (statusCode == 'E0506' ||
+          if (statusCode == 'E0506' || 
               (statusDescription != null && statusDescription.toString().toLowerCase().contains('alias does not exists'))) {
             if (mounted) {
               showDialog(
@@ -266,30 +266,30 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
       }
 
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
+      Navigator.push(
+        context,
+        MaterialPageRoute(
             builder: (context) => MBWayWaitingSaldoPage(
-              transactionId: transactionId,
+            transactionId: transactionId,
               transactionSignature: transactionSignature,
               sibsService: widget.sibsService,
               onResult: widget.onResult,
               onCancel: widget.onCancel,
               amount: _selectedAmount,
-            ),
           ),
-        );
+        ),
+      );
       }
     } catch (e) {
       print('Error processing MBWay payment: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
             content: Text(e.toString()),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
     } finally {
       if (mounted) {
         setState(() {
@@ -302,39 +302,39 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+          appBar: AppBar(
         title: Text('Pagamento MB WAY', style: TextStyle(color: Colors.black),),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
-      ),
-      body: SingleChildScrollView(
+          ),
+          body: SingleChildScrollView(
         padding: EdgeInsets.all(25),
-        child: Form(
-          key: _formKey,
-          child: Column(
+              child: Form(
+                key: _formKey,
+                child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+                  children: [
               // MB WAY Logo
               Image.asset(
-                'lib/assets/mbway_logo.png',
+                        'lib/assets/mbway_logo.png',
                 height: 60,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
                     height: 60,
-                    color: Colors.red[800],
-                    child: Center(
-                      child: Text(
-                        'MB WAY',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
-                        ),
+                            color: Colors.red[800],
+                            child: Center(
+                              child: Text(
+                                'MB WAY',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 24,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  );
-                },
-              ),
               const SizedBox(height: 16),
 
               // Instruction text
@@ -346,37 +346,37 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
               const SizedBox(height: 24),
 
               // Valor a pagar section
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
                       'Valor a carregar:',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                         color: Colors.grey[800],
-                      ),
-                    ),
-                    Text(
+                            ),
+                          ),
+                          Text(
                       '${_selectedAmount.toStringAsFixed(2)}€',
-                      style: TextStyle(
+                            style: TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                         color: Colors.red[900],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 24),
 
-              Text(
+                    Text(
                 'Selecione o valor a carregar:',
                 style: TextStyle(
                   fontSize: 16,
@@ -466,21 +466,21 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
                     }
                     return null;
                   },
-                ),
+                              ),
               ],
               SizedBox(height: 24),
               Text(
                 'Introduza o seu número de telemóvel:',
-                style: TextStyle(
+                              style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[800],
-                ),
-              ),
+                              ),
+                            ),
               SizedBox(height: 8),
               TextFormField(
-                controller: _phoneController,
+                              controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                maxLength: 9,
+                              maxLength: 9,
                 decoration: InputDecoration(
                   hintText: '9xxxxxxxx',
                   border: OutlineInputBorder(
@@ -490,60 +490,60 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
                   prefixStyle: TextStyle(fontSize: 16, color: Colors.black),
                   prefixIcon: Icon(Icons.phone),
                 ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
-                validator: (value) {
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor, introduza o seu número de telemóvel';
                   }
                   if (value.length != 9) {
                     return 'O número deve ter 9 dígitos';
-                  }
+                                }
                   if (!value.startsWith('9') && !value.startsWith('2') && !value.startsWith('3')) {
                     return 'O número deve começar com 9, 2 ou 3';
-                  }
-                  return null;
-                },
-              ),
+                                }
+                                return null;
+                              },
+                            ),
               SizedBox(height: 24),
-              Text(
-                'O número deve ter 9 dígitos e começar com 9, 2 ou 3',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
+                    Text(
+                      'O número deve ter 9 dígitos e começar com 9, 2 ou 3',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
               SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isValidPhone && !_isProcessing && (!_isCustomAmount || _selectedAmount > 0) ? _processMBWayPayment : null,
-                style: ElevatedButton.styleFrom(
+                            style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red[900],
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
+                              shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+                              ),
+                            ),
                 child: _isProcessing
                     ? CircularProgressIndicator(color: Colors.white)
                     : Text(
-                        'Continuar',
+                              'Continuar',
                         style: TextStyle(fontSize: 16),
-                      ),
-              ),
+                            ),
+                          ),
               SizedBox(height: 16),
               TextButton(
                 onPressed: _isProcessing ? null : () => Navigator.pop(context),
-                child: Text(
-                  'Cancelar',
-                  style: TextStyle(
-                    fontSize: 16,
+                            child: Text(
+                              'Cancelar',
+                              style: TextStyle(
+                                fontSize: 16,
                     color: Colors.red[900],
-                  ),
-                ),
-              ),
-            ],
+                              ),
+                            ),
+                          ),
+                  ],
           ),
         ),
       ),

@@ -269,26 +269,26 @@ class _SettingsPageState extends State<SettingsPage> {
       if (user == null) {
         throw Exception('No user logged in');
       }
-
+      
       // Validar NIF
       _validateNIF();
-
+      
       // Validar telefone
       bool isPhoneValid = true;
       String phoneErrorMessage = '';
-
+      
       if (_tlfController.text.isNotEmpty) {
         if (_tlfController.text.length != 9) {
           isPhoneValid = false;
           phoneErrorMessage = 'O número de telefone deve ter 9 dígitos';
-        } else if (!_tlfController.text.startsWith('9') &&
-            !_tlfController.text.startsWith('2') &&
-            !_tlfController.text.startsWith('3')) {
+        } else if (!_tlfController.text.startsWith('9') && 
+                 !_tlfController.text.startsWith('2') && 
+                 !_tlfController.text.startsWith('3')) {
           isPhoneValid = false;
           phoneErrorMessage = 'O número deve começar com 9, 2 ou 3';
         }
       }
-
+      
       if (_isValid && isPhoneValid) {
         // Debug: Mostrar o que estamos enviando
         print('Saving user info:');
@@ -299,7 +299,7 @@ class _SettingsPageState extends State<SettingsPage> {
         print('Código Postal: ${_codigoPostalController.text}');
         print('Telefone: ${_tlfController.text}');
         print('Auto Bill NIF: ${_autoBillNIF ? '1' : '0'}');
-
+        
         // Make API call to update user information
         final response = await http.post(
           Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
@@ -326,7 +326,7 @@ class _SettingsPageState extends State<SettingsPage> {
               Uri.parse(
                   'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=31&tlf=${_tlfController.text}&id=${userData['IdUser']}'),
             );
-
+            
             print('Phone API Response: ${phoneResponse.statusCode}');
             if (phoneResponse.statusCode == 200) {
               print('Phone number saved successfully using dedicated endpoint');
@@ -361,7 +361,7 @@ class _SettingsPageState extends State<SettingsPage> {
               backgroundColor: Colors.green,
             ),
           );
-
+          
           // Recarregar os dados após salvar para confirmar
           await _fetchUserInfo();
         } else {
@@ -404,8 +404,8 @@ class _SettingsPageState extends State<SettingsPage> {
         home: WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text('Definições'),
+      appBar: AppBar(
+        title: Text('Definições'),
           leading: IconButton(
             icon: Icon(Icons.arrow_back),
             onPressed: () async {
@@ -414,27 +414,27 @@ class _SettingsPageState extends State<SettingsPage> {
               }
             },
           ),
-        ),
-        drawer: DrawerHome(),
-        body: _isLoading
-            ? Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                padding: EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildUserInfoCard(),
+      ),
+      drawer: DrawerHome(),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildUserInfoCard(),
+                  SizedBox(height: 16),
+                  if (userData['AutorizadoSaldo'] == '1' ||
+                      userData['AutorizadoSaldo'] == 1)
+                    _buildFinancialInfoCard(),
+                  if (userData['AutorizadoSaldo'] == '1' ||
+                      userData['AutorizadoSaldo'] == 1)
                     SizedBox(height: 16),
-                    if (userData['AutorizadoSaldo'] == '1' ||
-                        userData['AutorizadoSaldo'] == 1)
-                      _buildFinancialInfoCard(),
-                    if (userData['AutorizadoSaldo'] == '1' ||
-                        userData['AutorizadoSaldo'] == 1)
-                      SizedBox(height: 16),
-                    _buildEditableAddressCard(),
-                  ],
-                ),
+                  _buildEditableAddressCard(),
+                ],
               ),
+            ),
       ),
     ));
   }
@@ -446,43 +446,43 @@ class _SettingsPageState extends State<SettingsPage> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: IntrinsicHeight(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
                   Icon(Icons.person, size: 24, color: Color.fromARGB(255, 130, 201, 189)),
-                  SizedBox(width: 8),
-                  Text(
-                    'Informações Pessoais',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                SizedBox(width: 8),
+                Text(
+                  'Informações Pessoais',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
-              ),
-              Divider(),
-              SizedBox(height: 8),
-              _buildInfoRow('Nome',
-                  '${userData['Nome'] ?? 'N/A'} ${userData['Apelido'] ?? ''}'),
-              _buildInfoRow('Email', userData['Email'] ?? 'N/A'),
-              _buildInfoRow('Turma', userData['Turma'] ?? 'N/A'),
-              _buildEditableFieldRow(
-                  'Telefone',
-                  _tlfController,
-                  _isEditingPhone,
-                  () => setState(() => _isEditingPhone = !_isEditingPhone),
-                  () => _saveUserInfo()),
-              _buildEditableFieldRow(
-                  'NIF',
-                  _nifController,
-                  _isEditingNif,
-                  () => setState(() => _isEditingNif = !_isEditingNif),
-                  () => _saveUserInfo()),
+                ),
+              ],
+            ),
+            Divider(),
+            SizedBox(height: 8),
+            _buildInfoRow('Nome',
+                '${userData['Nome'] ?? 'N/A'} ${userData['Apelido'] ?? ''}'),
+            _buildInfoRow('Email', userData['Email'] ?? 'N/A'),
+            _buildInfoRow('Turma', userData['Turma'] ?? 'N/A'),
+            _buildEditableFieldRow(
+                'Telefone',
+                _tlfController,
+                _isEditingPhone,
+                () => setState(() => _isEditingPhone = !_isEditingPhone),
+                () => _saveUserInfo()),
+            _buildEditableFieldRow(
+                'NIF',
+                _nifController,
+                _isEditingNif,
+                () => setState(() => _isEditingNif = !_isEditingNif),
+                () => _saveUserInfo()),
               if (_nifController.text.isNotEmpty)
                 Padding(
                   padding: EdgeInsets.only(left: 0, top: 4),
@@ -750,47 +750,47 @@ class _SettingsPageState extends State<SettingsPage> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: IntrinsicHeight(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
                   Icon(Icons.home, size: 24, color: Color.fromARGB(255, 130, 201, 189)),
-                  SizedBox(width: 8),
-                  Text(
-                    'Dados de Faturação',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                SizedBox(width: 8),
+                Text(
+                  'Dados de Faturação',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
-              ),
-              Divider(),
-              SizedBox(height: 8),
-              _buildEditableFieldRow(
-                  'Endereço',
-                  _moradaController,
-                  _isEditingMorada,
-                  () => setState(() => _isEditingMorada = !_isEditingMorada),
-                  () => _saveUserInfo()),
-              _buildEditableFieldRow(
-                  'Cidade',
-                  _cidadeController,
-                  _isEditingCidade,
-                  () => setState(() => _isEditingCidade = !_isEditingCidade),
-                  () => _saveUserInfo()),
-              _buildEditableFieldRow(
-                  'Código Postal',
-                  _codigoPostalController,
-                  _isEditingCodigoPostal,
-                  () => setState(
-                      () => _isEditingCodigoPostal = !_isEditingCodigoPostal),
-                  () => _saveUserInfo()),
-            ],
+                ),
+              ],
+            ),
+            Divider(),
+            SizedBox(height: 8),
+            _buildEditableFieldRow(
+                'Endereço',
+                _moradaController,
+                _isEditingMorada,
+                () => setState(() => _isEditingMorada = !_isEditingMorada),
+                () => _saveUserInfo()),
+            _buildEditableFieldRow(
+                'Cidade',
+                _cidadeController,
+                _isEditingCidade,
+                () => setState(() => _isEditingCidade = !_isEditingCidade),
+                () => _saveUserInfo()),
+            _buildEditableFieldRow(
+                'Código Postal',
+                _codigoPostalController,
+                _isEditingCodigoPostal,
+                () => setState(
+                    () => _isEditingCodigoPostal = !_isEditingCodigoPostal),
+                () => _saveUserInfo()),
+          ],
           ),
         ),
       ),

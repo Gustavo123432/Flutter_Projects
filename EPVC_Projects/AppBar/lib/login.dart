@@ -55,17 +55,32 @@ class _LoginFormState extends State<LoginForm> {
 
     // Verificar se a senha é 'epvc' - Prioridade máxima
     if (pwd.trim().toLowerCase() == 'epvc') {
-      PwdController.clear();
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => EmailRequestPage(tentativa: 2)));
-      return;
+      if (name != null || name != "") {
+        PwdController.clear();
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => EmailRequestPage(
+                      tentativa: 2,
+                      email: name,
+                    )));
+        return;
+      } else {
+        PwdController.clear();
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => EmailRequestPage(
+                      tentativa: 2,
+                      email: "",
+                    )));
+        return;
+      }
     }
 
     // Encrypt password with MD5
     final encryptedPwd = generateMD5(pwd);
-    
+
     try {
       dynamic response = await http.get(Uri.parse(
           'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$encryptedPwd'));
@@ -415,6 +430,7 @@ class _LoginFormState extends State<LoginForm> {
                               MaterialPageRoute(
                                   builder: (context) => EmailRequestPage(
                                         tentativa: 0,
+                                        email: "",
                                       )));
 
                           // Adicione aqui a lógica para lidar com a recuperação da senha
@@ -460,11 +476,22 @@ void verifylogin(context) async {
     if (pwd != null && pwd.trim().toLowerCase() == "epvc") {
       // Remover a senha para evitar loops
       await prefs.remove("pwd");
-
+      if (id != null || id != "") {
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => EmailRequestPage(
+                  tentativa: 2,
+                  email: id,
+                )));
+        return;
+      } else {
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => EmailRequestPage(
+                  tentativa: 2,
+                  email: "",
+                )));
+        return;
+      }
       // Navegar para EmailRequestPage com tentativa 2
-      Navigator.of(context).push(MaterialPageRoute(
-          builder: (context) => EmailRequestPage(tentativa: 2)));
-      return;
     }
 
     // Processar navegação normal baseada no tipo de usuário

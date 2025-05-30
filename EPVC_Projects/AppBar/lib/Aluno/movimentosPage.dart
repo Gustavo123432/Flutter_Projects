@@ -67,9 +67,9 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-      return Scaffold(
+    return Scaffold(
       appBar: AppBar(
-          title: Text('Movimentos'),
+        title: Text('Movimentos'),
           leading: IconButton(
             icon: Icon(Icons.arrow_back),
             onPressed: () async {
@@ -77,7 +77,7 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
               
             },
           ),
-        ),
+      ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : _transactions.isEmpty

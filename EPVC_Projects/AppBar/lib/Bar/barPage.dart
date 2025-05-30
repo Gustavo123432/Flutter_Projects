@@ -588,25 +588,53 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
                                           color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                              ? Color.fromARGB(255, 232, 240, 254) 
-                                              : Color.fromARGB(255, 239, 249, 239),
+                                              ? Color.fromARGB(255, 232, 240, 254)
+                                              : order.paymentMethod.toLowerCase() == 'saldo'
+                                                  ? Colors.orange[50]
+                                                  : Color.fromARGB(255, 239, 249, 239),
                                           borderRadius: BorderRadius.circular(12),
                                           border: Border.all(
                                             color: order.paymentMethod.toLowerCase() == 'mbway' 
                                                 ? Colors.red
-                                                : Color.fromARGB(255, 76, 175, 80),
+                                                : order.paymentMethod.toLowerCase() == 'saldo'
+                                                    ? Colors.orange[700]!
+                                                    : Color.fromARGB(255, 76, 175, 80),
                                             width: 1,
                                           ),
                                         ),
-                                        child: Text(
-                                          order.paymentMethod.toLowerCase() == 'mbway' ? 'MBWay' : 'Dinheiro',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                                ? Colors.red
-                                                : Color.fromARGB(255, 76, 175, 80),
-                                          ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              order.paymentMethod.toLowerCase() == 'mbway'
+                                                  ? Icons.phone_android
+                                                  : order.paymentMethod.toLowerCase() == 'saldo'
+                                                      ? Icons.account_balance_wallet
+                                                      : Icons.money,
+                                              size: 16,
+                                              color: order.paymentMethod.toLowerCase() == 'mbway'
+                                                  ? Colors.red
+                                                  : order.paymentMethod.toLowerCase() == 'saldo'
+                                                      ? Colors.orange[700]
+                                                      : Color.fromARGB(255, 76, 175, 80),
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              order.paymentMethod.toLowerCase() == 'mbway'
+                                                  ? 'MBWay'
+                                                  : order.paymentMethod.toLowerCase() == 'saldo'
+                                                      ? 'Saldo'
+                                                      : 'Dinheiro',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: order.paymentMethod.toLowerCase() == 'mbway'
+                                                    ? Colors.red
+                                                    : order.paymentMethod.toLowerCase() == 'saldo'
+                                                        ? Colors.orange[700]
+                                                        : Color.fromARGB(255, 76, 175, 80),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
@@ -782,25 +810,53 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                        ? Color.fromARGB(255, 232, 240, 254) 
-                                        : Color.fromARGB(255, 239, 249, 239),
+                                        ? Color.fromARGB(255, 232, 240, 254)
+                                        : order.paymentMethod.toLowerCase() == 'saldo'
+                                            ? Colors.orange[50]
+                                            : Color.fromARGB(255, 239, 249, 239),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: order.paymentMethod.toLowerCase() == 'mbway' 
                                           ? Colors.red
-                                          : Color.fromARGB(255, 76, 175, 80),
+                                          : order.paymentMethod.toLowerCase() == 'saldo'
+                                              ? Colors.orange[700]!
+                                              : Color.fromARGB(255, 76, 175, 80),
                                       width: 1,
                                     ),
                                   ),
-                                  child: Text(
-                                    order.paymentMethod.toLowerCase() == 'mbway' ? 'MBWay' : 'Dinheiro',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                          ? Colors.red
-                                          : Color.fromARGB(255, 76, 175, 80),
-                                    ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        order.paymentMethod.toLowerCase() == 'mbway'
+                                            ? Icons.phone_android
+                                            : order.paymentMethod.toLowerCase() == 'saldo'
+                                                ? Icons.account_balance_wallet
+                                                : Icons.money,
+                                        size: 16,
+                                        color: order.paymentMethod.toLowerCase() == 'mbway'
+                                            ? Colors.red
+                                            : order.paymentMethod.toLowerCase() == 'saldo'
+                                                ? Colors.orange[700]
+                                                : Color.fromARGB(255, 76, 175, 80),
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        order.paymentMethod.toLowerCase() == 'mbway'
+                                            ? 'MBWay'
+                                            : order.paymentMethod.toLowerCase() == 'saldo'
+                                                ? 'Saldo'
+                                                : 'Dinheiro',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: order.paymentMethod.toLowerCase() == 'mbway'
+                                              ? Colors.red
+                                              : order.paymentMethod.toLowerCase() == 'saldo'
+                                                  ? Colors.orange[700]
+                                                  : Color.fromARGB(255, 76, 175, 80),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],

@@ -8,8 +8,9 @@ import 'package:my_flutter_project/login.dart';
 
 class EmailRequestPage extends StatefulWidget {
   final int tentativa;
+  final String email;
 
-  const EmailRequestPage({super.key, required this.tentativa});
+  const EmailRequestPage({super.key, required this.tentativa, required this.email});
 
   @override
   _EmailRequestPageState createState() => _EmailRequestPageState();
@@ -22,6 +23,7 @@ class _EmailRequestPageState extends State<EmailRequestPage> {
   @override
   void initState() {
     super.initState();
+    emailController.text = widget.email;
     // Não é necessário chamar SystemNavigator.pop aqui, pode causar problemas
   }
 
