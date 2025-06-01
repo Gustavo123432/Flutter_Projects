@@ -1035,34 +1035,6 @@ class _RobotMenuState extends State<RobotMenu> {
                 ),
                 const SizedBox(height: 24),
 
-                // Debug information - Only show in debug mode
-               /* if (debugInfo.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[400]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Debug Information:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text('Robot ID: ${widget.robot.robotIdd}'),
-                        Text('Device ID: ${widget.robot.idDevice}'),
-                        Text('IP: ${widget.robot.ip}'),
-                        const SizedBox(height: 4),
-                        Text(debugInfo, style: const TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],*/
-
                 // Destination Selection
                 const Text(
                   'Selecione o destino:',

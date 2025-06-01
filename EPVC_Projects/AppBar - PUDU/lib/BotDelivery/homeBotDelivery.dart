@@ -194,22 +194,22 @@ class _HomePuduState extends State<HomePudu> {
             children: [
               ListTile(
                 leading: const Icon(Icons.wifi, color: Colors.black),
-                title: const Text('IP Address'),
+                title: const Text('Endereço IP'),
                 subtitle: Text(robot.ip),
               ),
               ListTile(
                 leading: const Icon(Icons.devices, color: Colors.black),
-                title: const Text('Device ID'),
+                title: const Text('ID do Robot'),
                 subtitle: Text(robot.idDevice),
               ),
               ListTile(
                 leading: const Icon(Icons.location_on, color: Colors.black),
-                title: const Text('Region'),
+                title: const Text('Região'),
                 subtitle: Text(robot.region),
               ),
               ListTile(
                 leading: const Icon(Icons.category, color: Colors.black),
-                title: const Text('Type'),
+                title: const Text('Modelo do Robot'),
                 subtitle: Text(robot.type),
               ),
             ],
