@@ -114,7 +114,7 @@ class _UserTableState extends State<UserTable> {
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       setState(() {
-        countSuppliers = data['supplier_count'].toString();
+        countSuppliers = data['clients_count'].toString();
       });
     }
   }
@@ -131,14 +131,8 @@ class _UserTableState extends State<UserTable> {
       setState(() {
         tableUsers =
             List<Map<String, dynamic>>.from(json.decode(response.body));
-        displayedSuppliers = rowsPerPage == -1
-            ? tableUsers
-            : tableUsers
-                .skip(currentPage * rowsPerPage)
-                .take(rowsPerPage)
-                .toList();
-        filteredUsers =
-            tableUsers; // Inicialmente, os usuários filtrados são iguais a todos os usuários
+        filteredUsers = tableUsers;
+        displayedSuppliers = tableUsers;
       });
     }
   }
@@ -531,250 +525,85 @@ class _UserTableState extends State<UserTable> {
 
   @override
   Widget build(BuildContext context) {
-    int countSupplier = int.parse(countSuppliers.toString());
-    totalPages = (countSupplier / rowsPerPage).ceil();
+    int countSupplier = int.tryParse(countSuppliers ?? '0') ?? 0;
+    int totalPages = (countSupplier / rowsPerPage).ceil();
+    if (currentPage >= totalPages && totalPages > 0) currentPage = totalPages - 1;
+    if (currentPage < 0) currentPage = 0;
+    final usersToShow = filteredUsers;
     return MaterialApp(
-        home: Scaffold(
-      /*appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 246, 141, 45),
-        title: Row(
-          children: [
-            ClipOval(
-              child: users != null && users.toString() != "null"
-                  ? users[0]['Imagem'] != null &&
-                          users[0]['Imagem'].toString() != "null"
-                      ? Image.memory(
-                          base64.decode(users[0]['Imagem']),
-                          fit: BoxFit.cover,
-                          height: 50,
-                          width: 50,
-                        )
-                      : Icon(
-                          Icons.person,
-                          size: 47,
-                        )
-                  : Icon(
-                      Icons.person,
-                      size: 47,
+      home: Scaffold(
+        drawer: DrawerAdmin(),
+        body: SingleChildScrollView(
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('lib/assets/epvc.png'),
+                // fit: BoxFit.cover,
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Imagem de fundo
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 255, 255, 255)
+                          .withOpacity(0.80), // Cor branca com opacidade de 80%
                     ),
-            ),
-            SizedBox(
-              width: 8,
-            ),
-            users != null && users.toString() != "null"
-                ? Text(
-                    'Bem Vindo(a): ' +
-                        users[0]['Nome'] +
-                        " " +
-                        users[0]['Apelido'],
-                    style: TextStyle(color: Colors.white), // Texto será branco
-                  )
-                : Text(""),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              logout(context);
-            },
-            icon: Icon(Icons.logout),
-          ),
-        ],
-      ),*/
-      drawer: DrawerAdmin(),
-      body: SingleChildScrollView(
-        child: Container(
-          width: double.infinity, // Usar toda a largura disponível
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(
-                  'lib/assets/epvc.png'), // Caminho para a sua imagem de fundo
-              // fit: BoxFit.cover,
-            ),
-          ),
-          child: Stack(
-            children: [
-              // Imagem de fundo
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 255, 255, 255)
-                        .withOpacity(0.80), // Cor branca com opacidade de 80%
                   ),
                 ),
-              ),
-
-              // Sua tabela aqui
-              Padding(
-                padding: EdgeInsets.all(10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: searchController,
-                        decoration: InputDecoration(
-                          labelText: 'Search',
-                          suffixIcon: IconButton(
-                            icon: Icon(Icons.search),
-                            onPressed: _filterUsers,
+                // Barra de pesquisa
+                Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: searchController,
+                          decoration: InputDecoration(
+                            labelText: 'Search',
+                            suffixIcon: IconButton(
+                              icon: Icon(Icons.search),
+                              onPressed: _filterUsers,
+                            ),
+                            border: OutlineInputBorder(),
                           ),
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: (value) {
-                          _filterUsers();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 50),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columns: const [
-                        DataColumn(label: Text('ID')),
-                        DataColumn(label: Text('Email')),
-                        DataColumn(label: Text('Nome')),
-                        DataColumn(label: Text('Turma')),
-                        DataColumn(label: Text('Permissão')),
-                        DataColumn(label: Text('Editar')),
-                        DataColumn(label: Text('Remover')),
-                      ],
-                      rows: filteredUsers.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final user = entry.value;
-
-                        return DataRow(
-                          onSelectChanged: (selected) {
-                            if (selected != null && selected) {
-                              showDialog(
-                                context: context,
-                                builder: (context) {
-                                  return AlertDialog(
-                                    title: const Text('Editar'),
-                                    content: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        TextFormField(
-                                          controller: getNomeController(
-                                              index, user['Nome']),
-                                          decoration: const InputDecoration(
-                                              labelText: 'Nome'),
-                                          onChanged: (newValue) {
-                                            setState(() {
-                                              user['Nome'] = newValue;
-                                            });
-                                          },
-                                        ),
-                                        TextFormField(
-                                          controller: getTurmaController(
-                                              index, user['Turma']),
-                                          decoration: const InputDecoration(
-                                              labelText: 'Turma'),
-                                          onChanged: (newValue) {
-                                            setState(() {
-                                              user['Turma'] = newValue;
-                                            });
-                                          },
-                                        ),
-                                        DropdownButtonFormField<String>(
-                                          value: user['Permissao'],
-                                          onChanged: (newValue) {
-                                            setState(() {
-                                              user['Permissao'] = newValue;
-                                            });
-                                          },
-                                          items: [
-                                            'Administrador',
-                                            'Professor',
-                                            'Funcionária',
-                                            'Bar',
-                                            'Aluno'
-                                          ].map((String value) {
-                                            return DropdownMenuItem<String>(
-                                              value: value,
-                                              child: Text(value),
-                                            );
-                                          }).toList(),
-                                          decoration: const InputDecoration(
-                                              labelText: 'Permissão'),
-                                        ),
-                                        DropdownButtonFormField<String>(
-                                          value: user['Estado'] == '1'
-                                              ? 'Ativo'
-                                              : 'Desativo', // Show the correct string based on numeric value
-                                          onChanged: (newValue) {
-                                            setState(() {
-                                              // Map the selected string to the numeric value
-                                              user['Estado'] =
-                                                  newValue == 'Ativo'
-                                                      ? '1'
-                                                      : '0';
-                                            });
-                                          },
-                                          items: [
-                                            'Ativo',
-                                            'Desativo',
-                                          ].map((String value) {
-                                            return DropdownMenuItem<String>(
-                                              value: value,
-                                              child: Text(value),
-                                            );
-                                          }).toList(),
-                                          decoration: const InputDecoration(
-                                            labelText: 'Estado',
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    actions: [
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          updateUser(
-                                              user['IdUser'],
-                                              user['Email'],
-                                              user['Nome'],
-                                              user['Apelido'],
-                                              user['Turma'],
-                                              user['Permissao'],
-                                              user['Estado']);
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: const Text('Guardar'),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: const Text('Cancelar'),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
-                            }
+                          onChanged: (value) {
+                            _filterUsers();
                           },
-                          cells: [
-                            DataCell(Text(user['IdUser'])),
-                            DataCell(Text(user['Email'].toString().length > 14
-                                ? '${user['Email'].toString().substring(0, 11)}...'
-                                : user['Email'])),
-                            DataCell(Text(user['Nome'].toString().length > 18
-                                ? '${user['Nome'].toString().substring(0, 11)}...'
-                                : user['Nome'])),
-                            DataCell(Text(user['Turma'])),
-                            DataCell(Text(user['Permissao'])),
-                            DataCell(ElevatedButton(
-                              onPressed: () {
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Tabela de utilizadores
+                Center(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 50),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columns: const [
+                          DataColumn(label: Text('ID')),
+                          DataColumn(label: Text('Email')),
+                          DataColumn(label: Text('Nome')),
+                          DataColumn(label: Text('Turma')),
+                          DataColumn(label: Text('Permissão')),
+                          DataColumn(label: Text('Editar')),
+                          DataColumn(label: Text('Remover')),
+                        ],
+                        rows: usersToShow.asMap().entries.map((entry) {
+                          final index = entry.key + currentPage * rowsPerPage;
+                          final user = entry.value;
+                          return DataRow(
+                            onSelectChanged: (selected) {
+                              if (selected != null && selected) {
                                 showDialog(
                                   context: context,
                                   builder: (context) {
                                     return AlertDialog(
-                                      title: const Text('Editar Usuário'),
+                                      title: const Text('Editar'),
                                       content: Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -825,10 +654,9 @@ class _UserTableState extends State<UserTable> {
                                           DropdownButtonFormField<String>(
                                             value: user['Estado'] == '1'
                                                 ? 'Ativo'
-                                                : 'Desativo', // Show the correct string based on numeric value
+                                                : 'Desativo',
                                             onChanged: (newValue) {
                                               setState(() {
-                                                // Map the selected string to the numeric value
                                                 user['Estado'] =
                                                     newValue == 'Ativo'
                                                         ? '1'
@@ -854,14 +682,13 @@ class _UserTableState extends State<UserTable> {
                                         ElevatedButton(
                                           onPressed: () {
                                             updateUser(
-                                              user['IdUser'],
-                                              user['Email'],
-                                              user['Nome'],
-                                              user['Apelido'],
-                                              user['Turma'],
-                                              user['Permissao'],
-                                              user['Estado'],
-                                            );
+                                                user['IdUser'],
+                                                user['Email'],
+                                                user['Nome'],
+                                                user['Apelido'],
+                                                user['Turma'],
+                                                user['Permissao'],
+                                                user['Estado']);
                                             Navigator.of(context).pop();
                                           },
                                           child: const Text('Guardar'),
@@ -876,145 +703,266 @@ class _UserTableState extends State<UserTable> {
                                     );
                                   },
                                 );
-                              },
-                              child: const Text('Editar'),
-                            )),
-                            DataCell(ElevatedButton(
-                              onPressed: () {
-                                removeUser(user['IdUser']);
-                              },
-                              child: const Text('Eliminar'),
-                            )),
-                          ],
-                        );
-                      }).toList(),
+                              }
+                            },
+                            cells: [
+                              DataCell(Text(user['IdUser'])),
+                              DataCell(Text(user['Email'].toString().length > 14
+                                  ? '${user['Email'].toString().substring(0, 11)}...'
+                                  : user['Email'])),
+                              DataCell(Text(user['Nome'].toString().length > 18
+                                  ? '${user['Nome'].toString().substring(0, 11)}...'
+                                  : user['Nome'])),
+                              DataCell(Text(user['Turma'])),
+                              DataCell(Text(user['Permissao'])),
+                              DataCell(ElevatedButton(
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: const Text('Editar Usuário'),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            TextFormField(
+                                              controller: getNomeController(
+                                                  index, user['Nome']),
+                                              decoration: const InputDecoration(
+                                                  labelText: 'Nome'),
+                                              onChanged: (newValue) {
+                                                setState(() {
+                                                  user['Nome'] = newValue;
+                                                });
+                                              },
+                                            ),
+                                            TextFormField(
+                                              controller: getTurmaController(
+                                                  index, user['Turma']),
+                                              decoration: const InputDecoration(
+                                                  labelText: 'Turma'),
+                                              onChanged: (newValue) {
+                                                setState(() {
+                                                  user['Turma'] = newValue;
+                                                });
+                                              },
+                                            ),
+                                            DropdownButtonFormField<String>(
+                                              value: user['Permissao'],
+                                              onChanged: (newValue) {
+                                                setState(() {
+                                                  user['Permissao'] = newValue;
+                                                });
+                                              },
+                                              items: [
+                                                'Administrador',
+                                                'Professor',
+                                                'Funcionária',
+                                                'Bar',
+                                                'Aluno'
+                                              ].map((String value) {
+                                                return DropdownMenuItem<String>(
+                                                  value: value,
+                                                  child: Text(value),
+                                                );
+                                              }).toList(),
+                                              decoration: const InputDecoration(
+                                                  labelText: 'Permissão'),
+                                            ),
+                                            DropdownButtonFormField<String>(
+                                              value: user['Estado'] == '1'
+                                                  ? 'Ativo'
+                                                  : 'Desativo',
+                                              onChanged: (newValue) {
+                                                setState(() {
+                                                  user['Estado'] =
+                                                      newValue == 'Ativo'
+                                                          ? '1'
+                                                          : '0';
+                                                });
+                                              },
+                                              items: [
+                                                'Ativo',
+                                                'Desativo',
+                                              ].map((String value) {
+                                                return DropdownMenuItem<String>(
+                                                  value: value,
+                                                  child: Text(value),
+                                                );
+                                              }).toList(),
+                                              decoration: const InputDecoration(
+                                                labelText: 'Estado',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        actions: [
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              updateUser(
+                                                user['IdUser'],
+                                                user['Email'],
+                                                user['Nome'],
+                                                user['Apelido'],
+                                                user['Turma'],
+                                                user['Permissao'],
+                                                user['Estado'],
+                                              );
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: const Text('Guardar'),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: const Text('Cancelar'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                                 style: ButtonStyle(
+                                  backgroundColor:
+                                      MaterialStateProperty.all(Colors.orange),
+                                ),
+                                child: const Text('Editar', style: TextStyle(color:  Colors.white),),
+                              )),
+                              DataCell(ElevatedButton(
+                                style: ButtonStyle(
+                                  backgroundColor:
+                                      MaterialStateProperty.all(Colors.orange),
+                                ),
+                                onPressed: () {
+                                  removeUser(user['IdUser']);
+                                },
+                                child: const Text('Eliminar', style: TextStyle(color:  Colors.white),),
+                              )),
+                            ],
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.white, // Set the background color to white
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Text("Utilizadores por Página: "),
-                    DropdownButton<int>(
-                      value: rowsPerPage,
-                      items: [25, 50, 100].map((int value) {
-                        return DropdownMenuItem<int>(
-                          value: value,
-                          child: Text(value == -1 ? 'Todos' : value.toString()),
-                        );
-                      }).toList(),
-                      onChanged: (newValue) {
-                        setState(() {
-                          rowsPerPage = newValue!;
-                          currentPage = 0; // Reset to the first page
-                          fetchCountSuppliers();
-                          _getTableData();
-                        });
-                      },
-                    ),
-                    SizedBox(width: 16.0),
-                    Text("Página: ${currentPage + 1} de $totalPages"),
-                    IconButton(
-                      icon: Icon(Icons.first_page),
-                      onPressed: currentPage > 0
-                          ? () {
-                              setState(() {
-                                currentPage = 0;
-                                fetchCountSuppliers();
-                                _getTableData();
-                              });
-                            }
-                          : null,
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.arrow_back_ios),
-                      onPressed: currentPage > 0
-                          ? () {
-                              setState(() {
-                                currentPage--;
-                                fetchCountSuppliers();
-                                _getTableData();
-                              });
-                            }
-                          : null,
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.arrow_forward_ios),
-                      onPressed: currentPage < totalPages - 1
-                          ? () {
-                              setState(() {
-                                currentPage++;
-                                fetchCountSuppliers();
-                                _getTableData();
-                              });
-                            }
-                          : null,
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.last_page),
-                      onPressed: currentPage < totalPages - 1
-                          ? () {
-                              setState(() {
-                                currentPage = totalPages - 1;
-                                fetchCountSuppliers();
-                                _getTableData();
-                              });
-                            }
-                          : null,
-                    ),
-                  ],
+        bottomNavigationBar: BottomAppBar(
+          color: Colors.white, // Set the background color to white
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      Text("Utilizadores por Página: "),
+                      DropdownButton<int>(
+                        value: rowsPerPage,
+                        items: [25, 50, 100].map((int value) {
+                          return DropdownMenuItem<int>(
+                            value: value,
+                            child: Text(value == -1 ? 'Todos' : value.toString()),
+                          );
+                        }).toList(),
+                        onChanged: (newValue) {
+                          setState(() {
+                            rowsPerPage = newValue!;
+                            currentPage = 0; // Reset to the first page
+                            _getTableData();
+                          });
+                        },
+                      ),
+                      SizedBox(width: 16.0),
+                      Text("Página: ${currentPage + 1} de $totalPages"),
+                      IconButton(
+                        icon: Icon(Icons.first_page),
+                        onPressed: currentPage > 0
+                            ? () {
+                                setState(() {
+                                  currentPage = 0;
+                                  _getTableData();
+                                });
+                              }
+                            : null,
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.arrow_back_ios),
+                        onPressed: currentPage > 0
+                            ? () {
+                                setState(() {
+                                  currentPage--;
+                                  _getTableData();
+                                });
+                              }
+                            : null,
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.arrow_forward_ios),
+                        onPressed: currentPage < totalPages - 1
+                            ? () {
+                                setState(() {
+                                  currentPage++;
+                                  _getTableData();
+                                });
+                              }
+                            : null,
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.last_page),
+                        onPressed: currentPage < totalPages - 1
+                            ? () {
+                                setState(() {
+                                  currentPage = totalPages - 1;
+                                  _getTableData();
+                                });
+                              }
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-      floatingActionButton: SpeedDial(
-        icon: Icons.more_horiz,
-        iconTheme:
-            IconThemeData(color: Colors.white), // Set icon color to white
-        backgroundColor: Color.fromARGB(255, 130, 201, 189),
-        children: [
-          SpeedDialChild(
-              child: Icon(Icons.filter_list),
+        floatingActionButton: SpeedDial(
+          icon: Icons.more_horiz,
+          iconTheme: IconThemeData(color: Colors.white),
+          backgroundColor: Color.fromARGB(255, 130, 201, 189),
+          children: [
+            SpeedDialChild(
+                child: Icon(Icons.filter_list),
+                onTap: () {
+                  _showFilterDialog();
+                }),
+            SpeedDialChild(
+              child: Icon(Icons.file_upload),
               onTap: () {
-                _showFilterDialog();
-              }),
-          SpeedDialChild(
-            child: Icon(Icons.file_upload),
-            onTap: () {
-              _pickFile();
-            },
-          ),
-          SpeedDialChild(
-            child: Icon(Icons.add),
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    content: AddUserDialog(),
-                    // This is your AddUserPage within the Dialog
-                  );
-                },
-              );
-            },
-          ),
-        ],
+                _pickFile();
+              },
+            ),
+            SpeedDialChild(
+              child: Icon(Icons.add),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      content: AddUserDialog(),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
       ),
-    ));
+    );
   }
 }

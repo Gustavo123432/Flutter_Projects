@@ -1,0 +1,40 @@
+{
+  "cardInfo": {
+    "PAN": "4000000000000002",
+    "secureCode": "123",
+    "validationDate": "2512",
+    "cardholderName": "SIBS"
+  },
+  "deviceInfo": {
+    "browserAcceptHeader": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "browserJavaEnabled": "False",
+    "browserJavascriptEnabled": "True",
+    "browserLanguage": "pt-PT",
+    "browserColorDepth": "24",
+    "browserScreenHeight": "1080",
+    "browserScreenWidth": "1920",
+    "browserTZ": "-60",
+    "browserUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "systemFamily": "Windows",
+    "systemVersion": "10.0",
+    "systemArchitecture": "x64",
+    "deviceManufacturer": "Unknown",
+    "deviceModel": "PC",
+    "deviceID": "browser_12345",
+    "applicationName": "Chrome",
+    "applicationVersion": "122.0.0.0",
+    "ipAddress": "89.152.225.32"
+  },
+  "customerInfo": {
+    "EMAIL": "john.doe@example.com",
+    "PHONE": "351912345678",
+    "NAME": "John Doe",
+    "ADDRESS": "Test Street 123",
+    "CITY": "Lisboa",
+    "POST_CODE": "1000-100",
+    "COUNTRY": "PT"
+  },
+  "merchantInitiatedTransaction": {
+    "customerAcceptance": true
+  }
+} 

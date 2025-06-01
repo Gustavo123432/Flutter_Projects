@@ -76,10 +76,11 @@ class _HomePuduState extends State<HomePudu> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.precision_manufacturing,
-                      color: Colors.white,
-                      size: 30,
+                    Image.asset(
+                      'lib/assets/bellabotwhiteandorange_icon.png',
+                      width: 30,
+                      height: 30,
+                      fit: BoxFit.contain,
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -148,24 +149,7 @@ class _HomePuduState extends State<HomePudu> {
                         _showRobotDetails(robot);
                       },
                     ),
-                    /*ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(Icons.edit, color: Colors.green.shade700),
-                      ),
-                      title: const Text('Editar'),
-                      subtitle: const Text('Modificar informações do Robot'),
-                      onTap: () {
-                        // Implementar edição
-                        Navigator.pop(context);
-                      },
-                    ),*/
-                
-                    
+
                     ListTile(
                       leading: Container(
                         padding: const EdgeInsets.all(8),
@@ -209,22 +193,22 @@ class _HomePuduState extends State<HomePudu> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ListTile(
-                leading: const Icon(Icons.wifi),
+                leading: const Icon(Icons.wifi, color: Colors.black),
                 title: const Text('IP Address'),
                 subtitle: Text(robot.ip),
               ),
               ListTile(
-                leading: const Icon(Icons.devices),
+                leading: const Icon(Icons.devices, color: Colors.black),
                 title: const Text('Device ID'),
                 subtitle: Text(robot.idDevice),
               ),
               ListTile(
-                leading: const Icon(Icons.location_on),
+                leading: const Icon(Icons.location_on, color: Colors.black),
                 title: const Text('Region'),
                 subtitle: Text(robot.region),
               ),
               ListTile(
-                leading: const Icon(Icons.category),
+                leading: const Icon(Icons.category, color: Colors.black),
                 title: const Text('Type'),
                 subtitle: Text(robot.type),
               ),
@@ -232,7 +216,7 @@ class _HomePuduState extends State<HomePudu> {
           ),
           actions: [
             TextButton(
-              child: const Text('Fechar'),
+              child: const Text('Fechar', style: TextStyle(color: Colors.black)),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ],
@@ -250,7 +234,7 @@ class _HomePuduState extends State<HomePudu> {
           content: Text('Deseja realmente excluir o Robot ${robot.name}?'),
           actions: [
             TextButton(
-              child: const Text('Cancelar'),
+              child: const Text('Cancelar', style: TextStyle(color: Colors.black)),
               onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
@@ -355,7 +339,7 @@ class _HomePuduState extends State<HomePudu> {
                   child: Padding(
                     padding: EdgeInsets.all(16.0),
                     child: Text(
-                      'Nenhum Robot cadastrado',
+                      'Nenhum Robot registado',
                       style: TextStyle(fontSize: 18),
                     ),
                   ),
@@ -372,7 +356,7 @@ class _HomePuduState extends State<HomePudu> {
                     crossAxisCount: 3,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
-                    childAspectRatio: 1.2,
+                    childAspectRatio: 1.8,
                   ),
                   itemCount: robots.length,
                   itemBuilder: (context, index) {
@@ -382,7 +366,7 @@ class _HomePuduState extends State<HomePudu> {
                       child: InkWell(
                         onTap: () => _showRobotActions(robot, context),
                         child: Padding(
-                          padding: const EdgeInsets.all(16.0),
+                          padding: const EdgeInsets.all(8.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -394,12 +378,14 @@ class _HomePuduState extends State<HomePudu> {
                                       color: const Color.fromARGB(255, 246, 141, 45),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Icon(
-                                      Icons.precision_manufacturing,
-                                      color: Colors.white,
+                                    child: Image.asset(
+                                      'lib/assets/bellabotwhiteandorange_icon.png',
+                                      width: 24,
+                                      height: 24,
+                                      fit: BoxFit.contain,
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,7 +394,7 @@ class _HomePuduState extends State<HomePudu> {
                                           robot.name,
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 16,
+                                            fontSize: 14,
                                           ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -427,13 +413,9 @@ class _HomePuduState extends State<HomePudu> {
                               const Spacer(),
                               Text(
                                 'IP: ${robot.ip}',
-                                style: const TextStyle(fontSize: 14),
+                                style: const TextStyle(fontSize: 12),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Region: ${robot.region}',
-                                style: const TextStyle(fontSize: 14),
-                              ),
+                              const SizedBox(height: 2),
                             ],
                           ),
                         ),

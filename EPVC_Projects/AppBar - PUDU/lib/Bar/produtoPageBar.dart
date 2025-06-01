@@ -10,7 +10,7 @@ import 'package:my_flutter_project/models/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 List<Product> filteredProducts =
-    []; // Assuming this is where filtered products will be stored
+[]; // Assuming this is where filtered products will be stored
 
 class ProdutoPageBar extends StatefulWidget {
   @override
@@ -59,7 +59,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
             name: productData['Nome'] ?? '',
             description: productData['Nome'] ?? '',
             price:
-                double.tryParse(productData['Preco']?.toString() ?? '0') ?? 0.0,
+            double.tryParse(productData['Preco']?.toString() ?? '0') ?? 0.0,
             quantity: int.tryParse(productData['Qtd']?.toString() ?? '0') ?? 0,
             available: productData['Qtd'] != null &&
                 int.tryParse(productData['Qtd']) == 1,
@@ -240,52 +240,52 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
       drawer: DrawerBar(),
       body: isLoading
           ? Center(
-              child: CircularProgressIndicator(),
-            )
+        child: CircularProgressIndicator(),
+      )
           : Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: InputDecoration(
-                            labelText: 'Procurar...',
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: (value) {
-                            _filterItemsSearch(); // Call filter on text change
-                          },
-                        ),
-                      ),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      labelText: 'Procurar...',
+                      border: OutlineInputBorder(),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.filter_list),
-                      onPressed: _showFilterDialog,
-                    ),
-                  ],
-                ),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _onRefresh,
-                    child: ListView.builder(
-                      itemCount: filteredProducts.length,
-                      itemBuilder: (context, index) {
-                        return ProductCard(
-                          product: filteredProducts[index],
-                          onUpdate: (newAvailability) {
-                            updateProduct(
-                                filteredProducts[index].id, newAvailability);
-                          },
-                        );
-                      },
-                    ),
+                    onChanged: (value) {
+                      _filterItemsSearch(); // Call filter on text change
+                    },
                   ),
                 ),
-              ],
+              ),
+              IconButton(
+                icon: Icon(Icons.filter_list),
+                onPressed: _showFilterDialog,
+              ),
+            ],
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              child: ListView.builder(
+                itemCount: filteredProducts.length,
+                itemBuilder: (context, index) {
+                  return ProductCard(
+                    product: filteredProducts[index],
+                    onUpdate: (newAvailability) {
+                      updateProduct(
+                          filteredProducts[index].id, newAvailability);
+                    },
+                  );
+                },
+              ),
             ),
+          ),
+        ],
+      ),
       floatingActionButton: SpeedDial(
         icon: Icons.more_horiz,
         iconTheme: IconThemeData(color: Colors.white),

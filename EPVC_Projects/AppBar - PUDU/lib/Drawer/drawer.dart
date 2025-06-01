@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_flutter_project/Admin/dashboard.dart';
 import 'package:my_flutter_project/Admin/pedidosPage.dart';
 import 'package:my_flutter_project/Admin/produtoPage.dart';
 import 'package:my_flutter_project/Admin/turmasPage.dart';
@@ -36,7 +37,7 @@ class AdminDrawer extends StatefulWidget {
   int numero;
 
   AdminDrawer({required this.currentPage, required this.numero});
-  
+
   @override
   _AdminDrawerState createState() => _AdminDrawerState();
 }
@@ -82,12 +83,12 @@ class _AdminDrawerState extends State<AdminDrawer> {
                 await prefs.clear();
 
                 // Ensure navigation happens after the current frame finishes rendering
-                
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (BuildContext ctx) => LoginForm()),
-                  );
-                
+
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (BuildContext ctx) => LoginForm()),
+                );
+
               },
             ),
           ],
@@ -106,13 +107,15 @@ class _AdminDrawerState extends State<AdminDrawer> {
           key: _key,
           appBar: isSmallScreen
               ? AppBar(
-                  leading: IconButton(
-                    onPressed: () {
-                      _key.currentState?.openDrawer();
-                    },
-                    icon: Icon(Icons.menu),
-                  ),
-                )
+            backgroundColor: Color.fromARGB(255, 246, 141, 45),
+            leading: IconButton(
+              onPressed: () {
+                _key.currentState?.openDrawer();
+              },
+
+              icon: Icon(Icons.menu),
+            ),
+          )
               : null,
           drawer: SideBarWidget(controller: _controller), // Show sidebarX
           body: Row(
@@ -139,7 +142,7 @@ class _AdminDrawerState extends State<AdminDrawer> {
                     switch (_controller.selectedIndex) {
                       case 0:
                         _key.currentState?.closeDrawer();
-                        newPage = Center(child: Text("Dashboard"));
+                        newPage = DashboardPage();
                         break;
                       case 1:
                         _key.currentState?.closeDrawer();
@@ -161,7 +164,7 @@ class _AdminDrawerState extends State<AdminDrawer> {
                         _key.currentState?.closeDrawer();
                         //logout(context);  // Perform logout action directly here
                         newPage = LogoutDialog();
-                        //return widget.currentPage;  // Return the current page
+                    //return widget.currentPage;  // Return the current page
                       default:
                         _key.currentState?.closeDrawer();
                         newPage = Center(child: Text("Unexpected Page"));

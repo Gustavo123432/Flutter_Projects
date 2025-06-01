@@ -4,7 +4,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_flutter_project/Aluno/drawerHome.dart';
+import 'package:my_flutter_project/SIBS/Orders/cash_confirmation_page.dart';
+import 'package:my_flutter_project/SIBS/Orders/order_declined_page.dart';
 import 'package:my_flutter_project/login.dart';
+import 'package:my_flutter_project/widgets/loading_button.dart';
+import 'package:my_flutter_project/widgets/loading_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -12,9 +16,9 @@ import 'package:web_socket_channel/status.dart' as status;
 import 'package:intl/intl.dart';
 import 'package:diacritic/diacritic.dart'; // Import the diacritic package
 import 'package:my_flutter_project/SIBS/sibs_service.dart';
-import '../SIBS/mbway_waiting_page.dart';
-import '../SIBS/order_confirmation_page.dart';
-import '../SIBS/mbway_phone_page.dart';
+import '../SIBS/Orders/mbway_waiting_page.dart';
+import '../SIBS/Orders/order_confirmation_page.dart';
+import '../SIBS/Orders/mbway_phone_page.dart';
 
 void main() {
   runApp(HomeAlunoMain());
@@ -64,6 +68,7 @@ class _HomeAlunoState extends State<HomeAluno> {
   List<dynamic> recentBuys = [];
   dynamic checkquantidade;
   var contador = 1;
+  bool _isLoading = false;
   bool _isSearching = false;
   dynamic users;
 
@@ -72,6 +77,12 @@ class _HomeAlunoState extends State<HomeAluno> {
     super.initState();
     UserInfo();
     _getAllProducts();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    setState(() {}); // This will refresh the cart count when returning to this page
   }
 
   void UserInfo() async {
@@ -107,11 +118,15 @@ class _HomeAlunoState extends State<HomeAluno> {
                 Navigator.of(context).pop(); // Fecha o AlertDialog
               },
             ),
-            TextButton(
-              child: const Text('Confirmar'),
+            LoadingButton(
               onPressed: () async {
+                // Show loading state
+                setState(() => _isLoading = true);
+                
                 SharedPreferences prefs = await SharedPreferences.getInstance();
                 await prefs.clear();
+                
+                setState(() => _isLoading = false);
 
                 // ignore: use_build_context_synchronously
                 Navigator.pushReplacement(
@@ -120,6 +135,8 @@ class _HomeAlunoState extends State<HomeAluno> {
                         builder: (BuildContext ctx) => const LoginForm()));
                 ModalRoute.withName('/');
               },
+              child: Text('Confirmar'),
+              backgroundColor: Colors.red,
             ),
           ],
         );
@@ -232,189 +249,234 @@ class _HomeAlunoState extends State<HomeAluno> {
             home: Scaffold(
           appBar: AppBar(
             actions: [
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ShoppingCartPage(),
+              Stack(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ShoppingCartPage(),
+                        ),
+                      ).then((_) {
+                        setState(() {});
+                      });
+                    },
+                    icon: Icon(Icons.shopping_cart),
+                  ),
+                  if (cartItems.isNotEmpty)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '${cartItems.length}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     ),
-                  );
-                },
-                icon: Icon(Icons.shopping_cart),
+                ],
               ),
             ],
           ),
           drawer: DrawerHome(),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(height: 20),
-              Container(
-                margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
-                child: Text(
-                  "Comprados Recentemente",
-                  style: TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueGrey[900],
-                  ),
-                ),
-              ),
-              Container(
-                margin: EdgeInsets.symmetric(vertical: 5.0),
-                height: 100.0,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: recentBuysMapped.length,
-                  itemBuilder: (context, index) {
-                    var product = recentBuysMapped[index];
-                    var title = product['Descricao'];
-                    var price = product['Preco'].toString();
-                    var imageBase64 = product['Imagem'];
-
-                    return buildProductSection(
-                      imagePath: imageBase64,
-                      title: title,
-                      price: price,
-                    );
-                  },
-                ),
-              ),
-              Container(
-                margin: EdgeInsets.only(
-                  left: 16.0,
-                  right: 16.0,
-                  top: 16.0,
-                ),
-                child: Text(
-                  "Categorias",
-                  style: TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueGrey[900],
-                  ),
-                ),
-              ),
-              SizedBox(height: 15),
-              Expanded(
-                child: Container(
-                  child: GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2, // Number of cards per row
-                      childAspectRatio: 1, // Adjust the aspect ratio as needed
-                      crossAxisSpacing: 10, // Space between columns
-                      mainAxisSpacing: 10, // Space between rows
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(height: 20),
+                if (recentBuysMapped.isNotEmpty) ...[
+                  Container(
+                    margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+                    child: Text(
+                      "Comprados Recentemente",
+                      style: TextStyle(
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueGrey[900],
+                      ),
                     ),
-                    itemCount: 6, // Total number of items
-                    itemBuilder: (context, index) {
-                      switch (index) {
-                        case 0:
-                          return buildCategoryCard(
-                            title: 'Bebidas',
-                            backgroundImagePath: 'lib/assets/bebida.png',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CategoryPage(
-                                    title: 'Bebidas',
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        case 1:
-                          return buildCategoryCard(
-                            title: 'Quentes',
-                            backgroundImagePath: 'lib/assets/cafe.JPG',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CategoryPage(
-                                    title: 'Quentes',
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        case 2:
-                          return buildCategoryCard(
-                            title: 'Comidas',
-                            backgroundImagePath: 'lib/assets/comida.jpg',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CategoryPage(
-                                    title: 'Comidas',
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        case 3:
-                          return buildCategoryCard(
-                            title: 'Snacks',
-                            backgroundImagePath: 'lib/assets/snacks.jpg',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CategoryPage(
-                                    title: 'Snacks',
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        case 4:
-                          return buildCategoryCard(
-                            title: 'Doces',
-                            backgroundImagePath: 'lib/assets/doces.jpg',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CategoryPage(
-                                    title: 'Doces',
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        case 5:
-                          return buildCategoryCard(
-                            title: 'Restaurante',
-                            backgroundImagePath:
-                                'lib/assets/monteRestaurante.jpg',
-                            isAvailable: false, // Add this parameter
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: Text('Em Desenvolvimento'),
-                                  content: Text(
-                                      'O Restaurante não está disponível no momento.'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: Text('OK'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          );
-                        default:
-                          return Container(); // Fallback for safety
-                      }
-                    },
+                  ),
+                  Container(
+                    margin: EdgeInsets.symmetric(vertical: 5.0),
+                    constraints: BoxConstraints(maxHeight: 120),
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: recentBuysMapped.length,
+                      itemBuilder: (context, index) {
+                        var product = recentBuysMapped[index];
+                        var title = product['Descricao'];
+                        var price = product['Preco'].toString();
+                        var imageBase64 = product['Imagem'];
+                        var prencado = product['Prencado'].toString();
+
+                        return buildProductSection(
+                          imagePath: imageBase64,
+                          title: title,
+                          price: price,
+                          prencado: prencado
+                        );
+                      },
+                    ),
+                  ),
+                ],
+                Container(
+                  margin: EdgeInsets.only(
+                    left: 16.0,
+                    right: 16.0,
+                    top: 16.0,
+                  ),
+                  child: Text(
+                    "Categorias",
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueGrey[900],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: 15),
+                Expanded(
+                  child: Container(
+                    child: GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 1,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                      ),
+                      itemCount: 6,
+                      itemBuilder: (context, index) {
+                        switch (index) {
+                          case 0:
+                            return buildCategoryCard(
+                              title: 'Bebidas',
+                              backgroundImagePath: 'lib/assets/bebida.png',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryPage(
+                                      title: 'Bebidas',
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  setState(() {});
+                                });
+                              },
+                            );
+                          case 1:
+                            return buildCategoryCard(
+                              title: 'Quentes',
+                              backgroundImagePath: 'lib/assets/cafe.JPG',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryPage(
+                                      title: 'Quentes',
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  setState(() {});
+                                });
+                              },
+                            );
+                          case 2:
+                            return buildCategoryCard(
+                              title: 'Comidas',
+                              backgroundImagePath: 'lib/assets/comida.jpg',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryPage(
+                                      title: 'Comidas',
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  setState(() {});
+                                });
+                              },
+                            );
+                          case 3:
+                            return buildCategoryCard(
+                              title: 'Snacks',
+                              backgroundImagePath: 'lib/assets/snacks.jpg',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryPage(
+                                      title: 'Snacks',
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  setState(() {});
+                                });
+                              },
+                            );
+                          case 4:
+                            return buildCategoryCard(
+                              title: 'Doces',
+                              backgroundImagePath: 'lib/assets/doces.jpg',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryPage(
+                                      title: 'Doces',
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  setState(() {});
+                                });
+                              },
+                            );
+                          case 5:
+                            return buildCategoryCard(
+                              title: 'Restaurante',
+                              backgroundImagePath: 'lib/assets/monteRestaurante.jpg',
+                              isAvailable: false,
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Em Desenvolvimento'),
+                                    content: Text('O Restaurante não está disponível no momento.'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: Text('OK'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          default:
+                            return Container();
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         )));
   }
@@ -423,6 +485,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     required String imagePath,
     required String title,
     required String price,
+    required String prencado,
   }) {
     if (contador == 1) {
       CheckQuantidade(title.replaceAll('"', ''));
@@ -431,12 +494,11 @@ class _HomeAlunoState extends State<HomeAluno> {
     return GestureDetector(
       onTap: () async {
         contador = 1;
-        CheckQuantidade(title.replaceAll(
-            '"', '')); // Adiciona essa chamada para inicializar checkquantidade
+        CheckQuantidade(title.replaceAll('"', ''));
         var quantidadeDisponivel = data[0]['Qtd'];
 
         if (quantidadeDisponivel == 1) {
-          addToCart(imagePath, title, price);
+          addToCart(imagePath, title, price, prencado);
         } else {
           showDialog(
             context: context,
@@ -446,7 +508,7 @@ class _HomeAlunoState extends State<HomeAluno> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop(); // Fechar o diálogo
+                    Navigator.of(context).pop();
                   },
                   child: Text('OK'),
                 ),
@@ -456,7 +518,7 @@ class _HomeAlunoState extends State<HomeAluno> {
         }
       },
       child: Container(
-        width: MediaQuery.of(context).size.width / 2,
+        width: MediaQuery.of(context).size.width / 3.2,
         margin: EdgeInsets.symmetric(horizontal: 2.0),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -474,15 +536,22 @@ class _HomeAlunoState extends State<HomeAluno> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Image.memory(
-                base64.decode(imagePath),
+              Container(
                 height: 45.0,
+                child: Image.memory(
+                  base64.decode(imagePath),
+                  fit: BoxFit.contain,
+                  gaplessPlayback: true, // Prevents image flickering
+                  cacheWidth: 100, // Cache width for better performance
+                  cacheHeight: 100, // Cache height for better performance
+                ),
               ),
               Text(
                 title.replaceAll('"', ''),
                 style: TextStyle(
                   fontSize: 11.0,
                   fontWeight: FontWeight.bold,
+                  overflow: TextOverflow.fade,
                 ),
               ),
               Row(
@@ -505,15 +574,19 @@ class _HomeAlunoState extends State<HomeAluno> {
     );
   }
 
-  void addToCart(String imagePath, String title, String price) {
+  void addToCart(String imagePath, String title, String price, String prencado) {
     // Verifica se os parâmetros necessários não são nulos
-    if (imagePath != null && title != null && price != null) {
+    if (imagePath != null && title != null && price != null && prencado !=null) {
       // Cria um mapa representando o item a ser adicionado ao carrinho
       Map<String, dynamic> item = {
         'Imagem': imagePath,
         'Nome': title.replaceAll('"', ''),
         'Preco': price,
+        'Prencado': prencado,
+        'PrepararPrencado': false, // Initialize PrepararPrencado property
       };
+
+      print('Adding item to cart: ${item['Nome']}, Prencado: ${item['Prencado']}, PrepararPrencado: ${item['PrepararPrencado']}');
 
       // Atualiza a interface do usuário e adiciona o item ao carrinho
       setState(() {
@@ -521,11 +594,11 @@ class _HomeAlunoState extends State<HomeAluno> {
       });
 
       // Exibe um snackbar para informar ao usuário que o item foi adicionado ao carrinho
-      ScaffoldMessenger.of(context).showSnackBar(
+      /*ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Item adicionado ao carrinho com sucesso!'),
         ),
-      );
+      );*/
     } else {
       // Exibe uma mensagem de erro se algum dos parâmetros for nulo
       ScaffoldMessenger.of(context).showSnackBar(
@@ -703,6 +776,7 @@ class _CategoryPageState extends State<CategoryPage> {
   String? selectedSortOption;
   double? minPrice;
   double? maxPrice;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -717,6 +791,30 @@ class _CategoryPageState extends State<CategoryPage> {
     _streamController.close();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void addToCart(Map<String, dynamic> item) {
+    // Ensure the item has all required properties
+    if (!item.containsKey('Prencado')) {
+      item['Prencado'] = "0";  // Default to "0" if not present
+    }
+    if (!item.containsKey('PrepararPrencado')) {
+      item['PrepararPrencado'] = false;
+    }
+    if (!item.containsKey('Fresh')) {
+      item['Fresh'] = false;
+    }
+    
+    // Set default preparation based on Prencado value
+    if (item['Prencado'] == '1' || item['Prencado'] == '2') {
+      item['PrepararPrencado'] = true;  // Default to prensado/aquecido
+    } else if (item['Prencado'] == '3') {
+      item['Fresh'] = true;  // Default to fresh
+    }
+    
+    setState(() {
+      cartItems.add(item);
+    });
   }
 
   Future<void> fetchData(String categoria) async {
@@ -770,18 +868,6 @@ class _CategoryPageState extends State<CategoryPage> {
       }).toList();
 
       _streamController.add(filteredItems);
-    });
-  }
-
-  void addToCart(Map<String, dynamic> item) {
-    setState(() {
-      cartItems.add(item);
-    });
-  }
-
-  void removeFromCart(Map<String, dynamic> item) {
-    setState(() {
-      cartItems.remove(item);
     });
   }
 
@@ -909,134 +995,201 @@ class _CategoryPageState extends State<CategoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          IconButton(
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => HomeAluno(),
+          ),
+        );
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
             onPressed: () {
-              Navigator.push(
-                context,
+              Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
-                  builder: (context) => ShoppingCartPage(),
+                  builder: (context) => HomeAluno(),
                 ),
               );
             },
-            icon: Icon(Icons.shopping_cart),
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      labelText: 'Procurar...',
-                      border: OutlineInputBorder(),
+          actions: [
+            Stack(
+              children: [
+                IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ShoppingCartPage(),
+                      ),
+                    ).then((_) {
+                      setState(() {});
+                    });
+                  },
+                  icon: Icon(Icons.shopping_cart),
+                ),
+                if (cartItems.isNotEmpty)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '${cartItems.length}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                    onChanged: (value) {
-                      _filterItems(); // Call filter on text change
-                    },
+                  ),
+              ],
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: 'Procurar...',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        _filterItems(); // Call filter on text change
+                      },
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                icon: Icon(Icons.filter_list),
-                onPressed: _showFilterDialog,
-              ),
-            ],
-          ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _onRefresh,
-              child: StreamBuilder<List<dynamic>>(
-                stream: _streamController.stream,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    List<dynamic> items = snapshot.data!;
-                    return ListView.builder(
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        final double preco = double.parse(item['Preco']);
-                        return Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ListTile(
-                                leading: Image.memory(
-                                  base64.decode(item['Imagem']),
-                                  fit: BoxFit.cover,
-                                  height: 50,
-                                  width: 50,
-                                ),
-                                title: Text(item['Nome']),
-                                subtitle: Text(
-                                  item['Qtd'] == "1"
-                                      ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
-                                      : "Indisponível",
-                                ),
-                                trailing: cartItems.any((cartItem) =>
-                                        cartItem['Nome'] == item['Nome'])
-                                    ? Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            onPressed: () {
-                                              removeFromCart(item);
+                IconButton(
+                  icon: Icon(Icons.filter_list),
+                  onPressed: _showFilterDialog,
+                ),
+              ],
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _onRefresh,
+                child: StreamBuilder<List<dynamic>>(
+                  stream: _streamController.stream,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      List<dynamic> items = snapshot.data!;
+                      return ListView.builder(
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          final double preco = double.parse(item['Preco']);
+                          return Card(
+                            key: ValueKey(item['Nome']), // Use a chave para ajudar o Flutter a otimizar a reconstrução
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ListTile(
+                                  leading: Image.memory(
+                                    base64.decode(item['Imagem']),
+                                    fit: BoxFit.cover,
+                                    height: 50,
+                                    width: 50,
+                                  ),
+                                  title: Text(item['Nome']),
+                                  subtitle: Text(
+                                    item['Qtd'] == "1"
+                                        ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
+                                        : "Indisponível",
+                                  ),
+                                  trailing: cartItems.any((cartItem) =>
+                                          cartItem['Nome'] == item['Nome'])
+                                      ? Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            /*IconButton(
+                                              onPressed: () {
+                                                removeFromCart(item);
+                                              },
+                                              icon: Icon(Icons.remove),
+                                            ),*/
+                                            Text(
+                                              cartItems
+                                                  .where((element) =>
+                                                      element['Nome'] ==
+                                                      item['Nome'])
+                                                  .length
+                                                  .toString(),
+                                              style: TextStyle(fontSize: 15.0),
+                                            ),
+                                            IconButton(
+                                              onPressed: () {
+                                                addToCart(item);
+                                              },
+                                              icon: Icon(Icons.add),
+                                            ),
+                                          ],
+                                        )
+                                      : Visibility(
+                                          visible: item['Qtd'] == "1",
+                                          child: LoadingButton(
+                                            onPressed: _isLoading ? null : () async {
+                                              setState(() => _isLoading = true);
+                                              try {
+                                                await Future.delayed(Duration(milliseconds: 300));
+                                                addToCart(item);
+                                              } finally {
+                                                setState(() => _isLoading = false);
+                                              }
                                             },
-                                            icon: Icon(Icons.remove),
+                                            child: _isLoading 
+                                              ? SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child: CircularProgressIndicator(
+                                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                    strokeWidth: 2,
+                                                  ),
+                                                )
+                                              : Text('Comprar'),
+                                            backgroundColor: _isLoading ? Colors.grey : Colors.orange,
                                           ),
-                                          Text(
-                                            cartItems
-                                                .where((element) =>
-                                                    element['Nome'] ==
-                                                    item['Nome'])
-                                                .length
-                                                .toString(),
-                                            style: TextStyle(fontSize: 15.0),
-                                          ),
-                                          IconButton(
-                                            onPressed: () {
-                                              addToCart(item);
-                                            },
-                                            icon: Icon(Icons.add),
-                                          ),
-                                        ],
-                                      )
-                                    : Visibility(
-                                        visible: item['Qtd'] == "1",
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            addToCart(item);
-                                          },
-                                          child: Text('Comprar'),
                                         ),
-                                      ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  } else if (snapshot.hasError) {
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    } else if (snapshot.hasError) {
+                      return Center(
+                        child: Text('Error: ${snapshot.error}'),
+                      );
+                    }
                     return Center(
-                      child: Text('Error: ${snapshot.error}'),
+                      child: CircularProgressIndicator(),
                     );
-                  }
-                  return Center(
-                    child: CircularProgressIndicator(),
-                  );
-                },
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1074,6 +1227,15 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
     UserInfo();
   }
 
+  @override
+  void dispose() {
+    _streamController.close();
+    _searchController.dispose();
+    _dateController.dispose();
+    _timeController.dispose();
+    super.dispose();
+  }
+
   void UserInfo() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     var user = prefs.getString("username");
@@ -1090,15 +1252,6 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
         users = json.decode(response.body);
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _streamController.close();
-    _searchController.dispose();
-    _dateController.dispose();
-    _timeController.dispose();
-    super.dispose();
   }
 
   Future<void> fetchData(String categoria) async {
@@ -1391,65 +1544,76 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(50.0),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Procurar...',
-                border: OutlineInputBorder(),
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => HomeAluno(),
+          ),
+        );
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          bottom: PreferredSize(
+            preferredSize: Size.fromHeight(50.0),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Procurar...',
+                  border: OutlineInputBorder(),
+                ),
               ),
             ),
           ),
         ),
-      ),
-      body: StreamBuilder<List<dynamic>>(
-        stream: _streamController.stream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('Pratos não Encontrados'));
-          }
+        body: StreamBuilder<List<dynamic>>(
+          stream: _streamController.stream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(child: Text('Pratos não Encontrados'));
+            }
 
-          final items = snapshot.data!;
-          return ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return Card(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListTile(
-                          leading: Image.memory(
-                            base64.decode(item['imagem']),
-                            fit: BoxFit.cover,
-                            height: 50,
-                            width: 50,
-                          ),
-                          title: Text(item['nome']),
-                          trailing: Visibility(
-                            visible: item['estado'] == "1",
-                            child: ElevatedButton(
-                              onPressed: () {
-                                _showReservationDialog(item);
-                              },
-                              child: Text('Reservar'),
+            final items = snapshot.data!;
+            return ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return Card(
+                  key: ValueKey(item['Nome']), // Use a chave para ajudar o Flutter a otimizar a reconstrução
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ListTile(
+                            leading: Image.memory(
+                              base64.decode(item['imagem']),
+                              fit: BoxFit.cover,
+                              height: 50,
+                              width: 50,
                             ),
-                          ))
-                    ]),
-              );
-            },
-          );
-        },
+                            title: Text(item['nome']),
+                            trailing: Visibility(
+                              visible: item['estado'] == "1",
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  _showReservationDialog(item);
+                                },
+                                child: Text('Reservar'),
+                              ),
+                            ))
+                      ]),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -1462,10 +1626,20 @@ class ShoppingCartPage extends StatefulWidget {
 
 class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Map<String, int> itemCountMap = {};
+  List<String> orderedItems = [];
   dynamic users;
   double dinheiroAtual = 0;
   SibsService? _sibsService;
   int orderNumber = 0;
+  bool _isLoading = false;
+  String? _loadingMessage;
+
+  void _setLoading(bool loading, {String? message}) {
+    setState(() {
+      _isLoading = loading;
+      _loadingMessage = message;
+    });
+  }
 
   @override
   void initState() {
@@ -1510,6 +1684,313 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
+  Future<bool> _showOrderConfirmationDialog() async {
+    return await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                'Confirmar Pedido',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.check_circle, color: Colors.green),
+                title: const Text('Confirmar', style: TextStyle(color: Colors.green)),
+                onTap: () => Navigator.pop(context, true),
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel, color: Colors.red),
+                title: const Text('Cancelar', style: TextStyle(color: Colors.red)),
+                onTap: () => Navigator.pop(context, false),
+              ),
+            ],
+          ),
+        );
+      },
+    ) ?? false;
+  }
+
+  Future<String?> _showPaymentMethodDialog() async {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Text(
+              'Método de Pagamento',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // MBWay Option
+            ListTile(
+              leading: Icon(Icons.phone_android, color: Color.fromARGB(255, 177, 2, 2)),
+              title: Text('MBWay', style: TextStyle(color: Color.fromARGB(255, 177, 2, 2))),
+              onTap: () {
+                _setLoading(true, message: 'Processando MBWay...');
+                Navigator.pop(context, 'mbway');
+              },
+            ),
+            // Dinheiro Option
+            ListTile(
+              leading: Icon(Icons.money, color: Color.fromARGB(255, 27, 94, 32)),
+              title: Text('Dinheiro', style: TextStyle(color: Color.fromARGB(255, 27, 94, 32))),
+              onTap: () {
+                _setLoading(true, message: 'Processando pagamento em dinheiro...');
+                Navigator.pop(context, 'dinheiro');
+              },
+            ),
+            // Saldo Option (only shown if authorized)
+            if (users != null && users.isNotEmpty && users[0]['AutorizadoSaldo'] == '1')
+              ListTile(
+                leading: Icon(Icons.account_balance_wallet, color: Colors.orange[700]),
+                title: Text('Saldo', style: TextStyle(color: Colors.orange[700])),
+                onTap: () {
+                  _setLoading(true, message: 'Processando pagamento com saldo...');
+                  Navigator.pop(context, 'saldo');
+                },
+              ),
+            SizedBox(height: 8),
+            // Cancel Button
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[700],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _showPrencadoConfirmationDialog(List<Map<String, dynamic>> prencadoProducts) async {
+    Map<String, bool> selectedProducts = {};
+    Map<String, bool> freshOptionForAquecido = {};
+    
+    return await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                'Preparação dos Produtos',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...prencadoProducts.map((product) {
+                String prencado = product['Prencado'] ?? '0';
+                selectedProducts[product['Nome']] = false;
+                freshOptionForAquecido[product['Nome']] = false;
+                
+                return StatefulBuilder(
+                  builder: (context, setState) {
+                    if (prencado == '1') {
+                      return ListTile(
+                        leading: Icon(Icons.restaurant, color: Colors.orange),
+                        title: Text(product['Nome']),
+                        subtitle: Text('Deseja Prensado?'),
+                        trailing: Checkbox(
+                          value: selectedProducts[product['Nome']],
+                          onChanged: (bool? value) {
+                            setState(() {
+                              selectedProducts[product['Nome']] = value ?? false;
+                              product['PrepararPrencado'] = value ?? false;
+                            });
+                          },
+                        ),
+                      );
+                    } else if (prencado == '2') {
+                      return ListTile(
+                        leading: Icon(Icons.severe_cold, color: Colors.green),
+                        title: Text(product['Nome']),
+                        subtitle: Text('Deseja Fresco?'),
+                        trailing: Checkbox(
+                          value: selectedProducts[product['Nome']],
+                          onChanged: (bool? value) {
+                            setState(() {
+                              selectedProducts[product['Nome']] = value ?? false;
+                              product['PrepararPrencado'] = value ?? false;
+                              freshOptionForAquecido[product['Nome']] = value ?? false;
+                            });
+                          },
+                        ),
+                      );
+                    } else if (prencado == '3') {
+                      return ListTile(
+                        leading: Icon(Icons.local_cafe, color: Colors.brown),
+                        title: Text(product['Nome']),
+                        subtitle: Text('Deseja Fresco?'),
+                        trailing: Checkbox(
+                          value: selectedProducts[product['Nome']],
+                          onChanged: (bool? value) {
+                            setState(() {
+                              selectedProducts[product['Nome']] = value ?? false;
+                              product['PrepararPrencado'] = value ?? false;
+                              freshOptionForAquecido[product['Nome']] = value ?? false;
+                            });
+                          },
+                        ),
+                      );
+                    }
+                    return Container();
+                  },
+                );
+              }).toList(),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+                  ),
+                  LoadingButton(
+                    onPressed: () async {
+                      _setLoading(true, message: 'Confirmando preparação...');
+                      for (var product in prencadoProducts) {
+                        int index = cartItems.indexWhere((item) => item['Nome'] == product['Nome']);
+                        if (index != -1) {
+                          cartItems[index]['PrepararPrencado'] = selectedProducts[product['Nome']];
+                          cartItems[index]['Fresh'] = freshOptionForAquecido[product['Nome']];
+                        }
+                      }
+                      Navigator.pop(context, true);
+                    },
+                    child: Text('Confirmar'),
+                    backgroundColor: Colors.green,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    ) ?? false;
+  }
+
+  Future<bool> _showNeedsChangeDialog() async {
+    return await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Text(
+              'Troco',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.check_circle, color: Colors.green),
+              title: const Text('Sim', style: TextStyle(color: Colors.green)),
+              onTap: () => Navigator.pop(context, true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.cancel, color: Colors.red),
+              title: const Text('Não', style: TextStyle(color: Colors.red)),
+              onTap: () => Navigator.pop(context, false),
+            ),
+          ],
+        ),
+      ),
+    ) ?? false;
+  }
+
+  Future<double?> _showMoneyAmountDialog(double total) async {
+    final moneyController = TextEditingController();
+    return showModalBottomSheet<double>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Text(
+              'Valor Entregue',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Total a pagar: ${total.toStringAsFixed(2).replaceAll('.', ',')}€',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: moneyController,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                hintText: 'Digite o valor que será entregue',
+                suffixText: '€',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    double? amount = double.tryParse(moneyController.text.replaceAll(',', '.'));
+                    if (amount != null && amount >= total) {
+                      Navigator.pop(context, amount);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Valor inválido ou menor que o total')),
+                      );
+                    }
+                  },
+                  child: Text('Confirmar', style: TextStyle(color: Colors.green)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> sendOrderToApi() async {
     if (itemCountMap.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1518,13 +1999,70 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       return;
     }
 
+    // First confirmation dialog
+    bool confirmOrder = await _showOrderConfirmationDialog();
+    if (!confirmOrder) return;
+
+    // Check for products with Prencado != 0
+    List<Map<String, dynamic>> prencadoProducts = cartItems.where((item) {
+      String prencado = item['Prencado'] ?? '0';
+      return prencado != '0';
+    }).toList();
+
+    // If there are products with Prencado != 0, show the confirmation dialog
+    if (prencadoProducts.isNotEmpty) {
+      bool confirmPrencado = await _showPrencadoConfirmationDialog(prencadoProducts);
+      if (!confirmPrencado) return;
+    }
+
     // Mostrar diálogo de seleção de método de pagamento
     final paymentMethod = await _showPaymentMethodDialog();
     if (paymentMethod == null) return;
 
+    // Initialize payment-related variables
+    String nif = '';
+    bool requestInvoice = false;
+
+    // Check if user is a professor and handle invoice request
+    if (users != null && users.isNotEmpty && users[0]['Permissao'] == 'Professor') {
+      requestInvoice = await _showInvoiceRequestDialog();
+      
+      if (requestInvoice) {
+        bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1;
+        
+        if (autoBillNIF && users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
+          nif = users[0]['NIF'].toString();
+        } else {
+          nif = await _showNifInputDialog() ?? '';
+          if (nif.isEmpty) {
+            return;
+          }
+        }
+      }
+    }
+
     try {
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
+      // Create the description string with proper formatting
+      List<String> formattedNames = cartItems.map((item) {
+        String name = item['Nome'] as String;
+        bool prepararPrencado = item['PrepararPrencado'] ?? false;
+        String prencado = item['Prencado'] ?? '0';
+        bool isFresh = item['Fresh'] ?? false;
+        
+        String suffix = '';
+        
+        if (prencado == '1' && prepararPrencado) {
+          suffix = ' - Prensado';
+        } else if (prencado == '2' && prepararPrencado) {
+          suffix = ' - Aquecido';
+        } else if (prencado == '3' && isFresh) {
+          suffix = ' - Fresco';
+        }
+        
+        return '$name$suffix';
+      }).toList();
+
+      String descricao = formattedNames.join(', ');
 
       // Extract user information
       var turma = users[0]['Turma'] ?? '';
@@ -1532,142 +2070,50 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       var apelido = users[0]['Apelido'] ?? '';
       var permissao = users[0]['Permissao'] ?? '';
       var imagem = users[0]['Imagem'] ?? '';
-
-      // Encode cartItems to JSON string
-      String cartItemsJson = json.encode(cartItems);
       double total = calculateTotal();
 
       if (paymentMethod == 'mbway') {
-        // Usar a nova página MBWayPhoneNumberPage que contém a lógica de pagamento
-        double total = calculateTotal();
-        
         // Preparar os dados do pedido
         Map<String, dynamic> orderData = {
           'nome': nome,
           'apelido': apelido,
           'turma': turma,
-          'descricao': itemNames.join(', '),
+          'descricao': descricao,
           'permissao': permissao,
           'imagem': imagem,
-          'cartItems': cartItemsJson,
+          'total': total.toString(),
+          'MetodoDePagamento': paymentMethod,
+          'cartItems': json.encode(cartItems),
+          'requestInvoice': requestInvoice ? '1' : '0',
+          'nif': nif,
         };
         
-        // Ir para a página de telefone MBWay com a lógica de pagamento
         await Navigator.push(
-            context,
-            MaterialPageRoute(
+          context,
+          MaterialPageRoute(
             builder: (context) => MBWayPhoneNumberPage(
               amount: total,
               orderData: orderData,
               sibsService: _sibsService!,
               onResult: (success, newOrderNumber) {
-                  if (success) {
-                  // Pagamento bem-sucedido, limpar carrinho
+                if (success) {
                   setState(() {
+                    orderNumber = newOrderNumber;
                     cartItems.clear();
                     updateItemCountMap();
-                    orderNumber = newOrderNumber;
                   });
                 }
               },
               onCancel: () {
-                Navigator.pop(context); // Voltar para a página do carrinho
+                Navigator.pop(context);
               },
             ),
           ),
         );
       } else if (paymentMethod == 'dinheiro') {
-        // Se for dinheiro, perguntar sobre o troco
-        bool needsChange = await _showNeedsChangeDialog();
-
-        if (needsChange) {
-          // Se precisar de troco, perguntar o valor entregue
-          dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
-        } else {
-          // Se não precisar de troco, o valor entregue é o mesmo do total
-          dinheiroAtual = total;
-        }
-
-        // Criar o pedido com as informações de pagamento em dinheiro
-        final response = await http.post(
-          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
-          body: {
-            'query_param': '5',
-            'nome': nome,
-            'apelido': apelido,
-            'orderNumber': '0',
-            'turma': turma,
-            'descricao': itemNames.join(', '),
-            'permissao': permissao,
-            'total': total.toString(),
-            'valor': dinheiroAtual.toString(),
-            'imagem': imagem,
-            'cartItems': cartItemsJson,
-            'payment_method': paymentMethod,
-          },
-        );
-
-        print('Response status: ${response.statusCode}');
-        print('Response body: ${response.body}');
-
-        if (response.statusCode == 200) {
-          if (response.body.isEmpty) {
-            throw Exception('Empty response from server');
-          }
-
-          try {
-            final data = json.decode(response.body);
-
-            if (data['status'] == 'success') {
-              orderNumber = int.parse(data['orderNumber'].toString());
-              // Enviar para o WebSocket e limpar o carrinho
-              await sendOrderToWebSocket(cartItems, total.toString());
-
-                    setState(() {
-                      cartItems.clear();
-                      updateItemCountMap();
-                    });
-
-              double change = dinheiroAtual - total;
-              String changeMsg = change > 0
-                  ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
-                  : '';
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                    content: Text(
-                        'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
-                    );
-
-              // Navegar para a página de confirmação de pedido
-                    Navigator.pushReplacement(
-                      context,
-                MaterialPageRoute(
-                  builder: (context) => OrderConfirmationPage(
-                    orderNumber: orderNumber,
-                    amount: total,
-                  ),
-                ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                    content: Text(
-                        'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
-              );
-            }
-          } catch (e) {
-            print('JSON decode error: $e');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text('Erro ao processar resposta do servidor')),
-            );
-        }
-      } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
-          );
-        }
+        await _handleCashPayment(total, requestInvoice: requestInvoice, nif: nif);
+      } else if (paymentMethod == 'saldo') {
+        await _handleSaldoPayment(total, requestInvoice: requestInvoice, nif: nif);
       }
     } catch (e) {
       print('Erro ao enviar pedido: $e');
@@ -1677,223 +2123,323 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  Future<String?> _showPaymentMethodDialog() async {
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Método de Pagamento'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, 'dinheiro');
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, 50), // width, height
-                backgroundColor: Colors.green[700],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.attach_money, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text('Dinheiro',
-                      style: TextStyle(fontSize: 16, color: Colors.white)),
-                ],
-              ),
-            ),
-            SizedBox(height: 15),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, 'mbway');
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, 50), // width, height
-                backgroundColor: Colors.purple,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.phone_android, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text('MBWay',
-                      style: TextStyle(fontSize: 16, color: Colors.white)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<bool> _showNeedsChangeDialog() async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Troco'),
-            content: Text('Precisa de troco?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text('Não'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text('Sim'),
-              ),
-            ],
-          ),
-        ) ??
-        false; // Se o usuário fechar o diálogo sem escolher, assume false
-  }
-
-  Future<double?> _showMoneyAmountDialog(double total) async {
-    final moneyController = TextEditingController();
-    return showDialog<double>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Valor Entregue'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-                'Total a pagar: ${total.toStringAsFixed(2).replaceAll('.', ',')}€'),
-            SizedBox(height: 10),
-            TextField(
-              controller: moneyController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                hintText: 'Digite o valor que será entregue',
-                suffixText: '€',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              double? amount =
-                  double.tryParse(moneyController.text.replaceAll(',', '.'));
-              if (amount != null && amount >= total) {
-                Navigator.pop(context, amount);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text('Valor inválido ou menor que o total')),
-                );
-              }
-            },
-            child: Text('Confirmar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> sendOrderToWebSocket(
-      List<Map<String, dynamic>> cartItems, String total) async {
+      List<Map<String, dynamic>> cartItems, 
+      String total, 
+      {String? paymentMethod, 
+      bool requestInvoice = false, 
+      String nif = '',
+      double? dinheiroAtual}) async {
     try {
-      // Check if cartItems is not empty
-      print('Cart items: $cartItems'); // Debugging
+      // Format item names with preparation preferences
+      List<String> formattedNames = cartItems.map((item) {
+        String name = item['Nome'] as String;
+        bool prepararPrencado = item['PrepararPrencado'] ?? false; // Indica se alguma opção de preparação foi marcada no diálogo (usado para tipos 1 e 2)
+        String prencado = item['Prencado'] ?? '0';
+        bool isFresh = item['Fresh'] ?? false; // Usado para a opção "Fresco" (tipo 3)
+        
+        String suffix = '';
+        
+        if (prencado == '1' && prepararPrencado) {
+          suffix = ' - Prensado';
+        } else if (prencado == '2' && prepararPrencado) {
+          suffix = ' - Aquecido';
+        } else if (prencado == '3' && isFresh) {
+          suffix = ' - Fresco';
+        }
+        
+        return '$name$suffix';
 
-      // Extract item names or any other needed data
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
-      print('Item names: $itemNames'); // Debugging
+      }).toList();
+      
+      String descricao = formattedNames.join(', ');
 
       var turma = users[0]['Turma'];
       var nome = users[0]['Nome'];
       var permissao = users[0]['Permissao'];
       var imagem = users[0]['Imagem'];
+      
+      // Calcular o troco usando o dinheiroAtual passado como parâmetro
+      double troco = (dinheiroAtual ?? double.parse(total)) - double.parse(total);
+      String trocos = troco.toStringAsFixed(2);
 
       final channel = WebSocketChannel.connect(
         Uri.parse('ws://websocket.appbar.epvc.pt'),
       );
 
-      // Send all necessary cart data
+      // Send order data
       Map<String, dynamic> orderData = {
         'QPediu': nome,
         'NPedido': orderNumber,
-        'Troco': dinheiroAtual,
+        'Troco': trocos,
         'Turma': turma,
         'Permissao': permissao,
         'Estado': 0,
-        'Descricao': itemNames, // Cart item names
+        'Descricao': descricao,
         'Total': total,
         'Imagem': imagem,
+        'MetodoDePagamento': paymentMethod,
+        'DinheiroAtual': dinheiroAtual?.toString() ?? total, // Incluir o valor do dinheiro atual
       };
 
-      print('Sending over WebSocket: ${json.encode(orderData)}'); // Debugging
+      // Add invoice information if requested
+      if (requestInvoice) {
+        orderData['RequestInvoice'] = '1';
+        orderData['NIF'] = nif;
+      }
 
-      // Send the order to the server
       channel.sink.add(json.encode(orderData));
 
       channel.stream.listen(
         (message) {
-          var serverResponse = json.decode(message);
-          if (serverResponse['status'] == 'success') {
+          // Add a basic check to see if the message looks like JSON
+          if (message != null && message.startsWith('{') && message.endsWith('}')) {
+            try {
+              var serverResponse = json.decode(message);
+              if (serverResponse['status'] == 'success') {
+                if (mounted) { // Check if the widget is still mounted
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Pedido enviado com sucesso! Pedido Nº $orderNumber'),
+                    ),
+                  );
+                }
+              } else {
+                 if (mounted) { // Check if the widget is still mounted
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
+                    ),
+                  );
+                 }
+              }
+            } catch (e) {
+              print('Erro ao processar a mensagem WebSocket: $e');
+              if (mounted) { // Check if the widget is still mounted
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        'Erro ao processar resposta do WebSocket. Contacte o Administrador!'),
+                  ),
+                );
+              }
+            }
+          } else {
+             print('Received non-JSON message from WebSocket: $message');
+             // Optionally, you can show a different message to the user for non-JSON responses
+          }
+          channel.sink.close();
+        },
+        onError: (error) {
+          print('Erro ao fazer a requisição WebSocket: $error');
+          if (mounted) { // Check if the widget is still mounted
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content:
-                    Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
+                content: Text(
+                    'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+              ),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      print('Erro ao estabelecer conexão WebSocket: $e');
+      if (mounted) { // Check if the widget is still mounted
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleCashPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
+    try {
+      // Create the description string with proper formatting
+      List<String> formattedNames = cartItems.map((item) {
+        String name = item['Nome'] as String;
+        bool prepararPrencado = item['PrepararPrencado'] ?? false;
+        String prencado = item['Prencado'] ?? '0';
+        bool isFresh = item['Fresh'] ?? false;
+        String suffix = '';
+        
+        if (prencado == '1' && prepararPrencado) {
+          suffix = ' - Prensado';
+        } else if (prencado == '2' && prepararPrencado) {
+          suffix = ' - Aquecido';
+        } else if (prencado == '3' && isFresh) {
+          suffix = ' - Fresco';
+        }
+        
+        return '$name$suffix';
+      }).toList();
+
+      String descricao = formattedNames.join(', ');
+
+      // Extract user information
+      var turma = users[0]['Turma'] ?? '';
+      var nome = users[0]['Nome'] ?? '';
+      var apelido = users[0]['Apelido'] ?? '';
+      var permissao = users[0]['Permissao'] ?? '';
+      var imagem = users[0]['Imagem'] ?? '';
+
+      // Se for dinheiro, perguntar sobre o troco
+      bool needsChange = await _showNeedsChangeDialog();
+      if (needsChange == null) return; // Se o usuário cancelar o diálogo de troco, retorna
+
+      double? dinheiroAtualNullable;
+      if (needsChange) {
+        dinheiroAtualNullable = await _showMoneyAmountDialog(total);
+        if (dinheiroAtualNullable == null) return; // Se o usuário cancelar o diálogo de valor, retorna
+      } else {
+        dinheiroAtualNullable = total;
+      }
+
+      // Agora podemos usar dinheiroAtualNullable com segurança
+      double dinheiroAtual = dinheiroAtualNullable;
+
+      // Criar o pedido com as informações de pagamento em dinheiro
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        body: {
+          'query_param': '5',
+          'nome': nome,
+          'apelido': apelido,
+          'orderNumber': '0',
+          'turma': turma,
+          'descricao': descricao,
+          'permissao': permissao,
+          'total': total.toString(),
+          'valor': dinheiroAtual.toString(),
+          'imagem': imagem,
+          'payment_method': 'dinheiro',
+          'phone_number': '--',
+          'requestInvoice': requestInvoice ? '1' : '0',
+          'nif': nif,
+        },
+      );
+
+      print(response);
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        if (response.body.isEmpty) {
+          throw Exception('Empty response from server');
+        }
+
+        try {
+          final data = json.decode(response.body);
+
+          if (data['status'] == 'success') {
+            orderNumber = int.parse(data['orderNumber'].toString());
+            
+            // Calcular o troco antes de enviar para o WebSocket
+            double troco = dinheiroAtual - total;
+            String trocos = troco.toStringAsFixed(2);
+
+            // Enviar para o WebSocket com o valor correto do dinheiro
+            await sendOrderToWebSocket(
+              cartItems,
+              total.toString(),
+              paymentMethod: 'dinheiro',
+              requestInvoice: requestInvoice,
+              nif: nif,
+              dinheiroAtual: dinheiroAtual // Passar o valor do dinheiro para o WebSocket
+            );
+            
+            // --- MOVER ESTA CHAMADA PARA ANTES DE LIMPAR O CARRINHO ---
+            await sendRecentOrderToApi(cartItems); // Envia os itens do pedido para adicionar aos recentes
+
+            setState(() {
+              cartItems.clear();
+              updateItemCountMap();
+            });
+
+            String changeMsg = troco > 0
+                ? ' Troco: ${troco.toStringAsFixed(2).replaceAll('.', ',')}€'
+                : '';
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
+            );
+
+            // Navegar para a página de confirmação de pedido
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CashConfirmationPage(
+                  change: troco,
+                  orderNumber: orderNumber,
+                  amount: total,
+                ),
               ),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                    'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
-              ),
+                    'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
             );
           }
-          channel.sink.close();
-        },
-        onError: (error) {
-          print('Erro ao fazer a requisição WebSocket: $error');
+        } catch (e) {
+          print('JSON decode error: $e');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-            ),
+            SnackBar(content: Text('Erro ao processar resposta do servidor')),
           );
-        },
-      );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
+        );
+      }
     } catch (e) {
-      print('Erro ao estabelecer conexão WebSocket: $e');
+      print('Erro ao processar pagamento em dinheiro: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-        ),
+        SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
       );
     }
   }
 
   void updateItemCountMap() {
     itemCountMap.clear();
+    orderedItems.clear(); // Clear the ordered items list first
+    
+    // Create a map to track unique items and their counts
+    Map<String, Map<String, dynamic>> uniqueItems = {};
+    
     for (var item in cartItems) {
-      final itemName = item['Nome'];
-      // Verifica se o itemName não é nulo antes de tentar incrementar o contador
-      if (itemName != null) {
-        // Se o itemName já estiver no mapa, incrementa o contador; senão, define o contador como 1
-        itemCountMap[itemName] = (itemCountMap[itemName] ?? 0) + 1;
+      final itemName = item['Nome'] as String;
+      if (!uniqueItems.containsKey(itemName)) {
+        uniqueItems[itemName] = item;
+        orderedItems.add(itemName);
       }
+    }
+    
+    // Update the count map
+    for (var itemName in orderedItems) {
+      itemCountMap[itemName] = cartItems.where((item) => item['Nome'] == itemName).length;
     }
   }
 
   double calculateTotal() {
     double total = 0.0;
     for (var item in cartItems) {
-      double preco = double.parse(item['Preco']);
-      total += preco;
+      try {
+        String precoStr = item['Preco'].toString().replaceAll(',', '.');
+        double preco = double.parse(precoStr);
+        total += preco;
+      } catch (e) {
+        print('Error parsing price for item ${item['Nome']}: $e');
+      }
     }
-    return total;
+    return double.parse(total.toStringAsFixed(2));
   }
 
   String getLocalDate() {
@@ -1913,6 +2459,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         // Extrair a imagem se não for nula, caso contrário, use uma string vazia
         var imagem = order['Imagem'] ?? '';
         var preco = order['Preco'] ?? '';
+        var prencado = order['Prencado'] ?? '0';
+        var prepararPrencado = order['PrepararPrencado'] ?? false;
+        
+        // Convert boolean to string representation for API
+        String prepararPrencadoValue = prepararPrencado ? '1' : '0';
 
         // Enviar solicitação POST para a API para cada pedido
         var response = await http.post(
@@ -1924,6 +2475,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             'data': localData.toString(),
             'imagem': imagem,
             'preco': preco,
+            'prencado': prencado.toString(),
+            'prepararPrencado': prepararPrencadoValue,
           },
         );
 
@@ -1969,11 +2522,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
   Future<void> checkAvailabilityBeforeOrder(double total) async {
     bool allAvailable = true;
-    List<String> unavailableItems = [];
+    List<String> unavailableItems = <String>[];  // Explicitly specify the type
 
     for (var item in cartItems) {
-      var itemName = item['Nome'];
-      var quantity = await checkQuantidade(itemName); // Await here
+      var itemName = item['Nome'] as String;  // Cast to String
+      var quantity = await checkQuantidade(itemName);
 
       if (quantity == 0) {
         allAvailable = false;
@@ -1983,16 +2536,43 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
     if (cartItems.isNotEmpty) {
       if (allAvailable) {
-        // Em vez de enviar diretamente para a API, abrir o diálogo de seleção de método de pagamento
+        // Check if user is a professor before proceeding to payment
+        String userPermission = users != null && users.isNotEmpty ? users[0]['Permissao'] ?? '' : '';
+        String nif = '';
+        bool requestInvoice = false;
+        
+        // If the user is a professor, ask if they want an invoice with NIF
+        if (userPermission == 'Professor') {
+          requestInvoice = await _showInvoiceRequestDialog();
+          
+          if (requestInvoice) {
+            // Verifica se tem faturação automática ativa
+            bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1;
+            
+            if (autoBillNIF && users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
+              // Se tiver faturação automática e NIF, usa o NIF cadastrado
+              nif = users[0]['NIF'].toString();
+            } else {
+              // Se não tiver faturação automática ou NIF, pede para inserir
+              nif = await _showNifInputDialog() ?? '';
+              if (nif.isEmpty) {
+                // User cancelled NIF input
+                return;
+              }
+            }
+          }
+        }
+        
+        // Show payment method selection dialog
         final paymentMethod = await _showPaymentMethodDialog();
         if (paymentMethod == null) return;
         
         if (paymentMethod == 'mbway') {
-          // Para MBWay, apenas abrir a página de telefone sem enviar para a API ainda
-          await _handleMBWayPayment(total);
+          await _handleMBWayPayment(total, requestInvoice: requestInvoice, nif: nif);
         } else if (paymentMethod == 'dinheiro') {
-          // Para pagamento em dinheiro, seguir o fluxo normal
-          await _handleCashPayment(total);
+          await _handleCashPayment(total, requestInvoice: requestInvoice, nif: nif);
+        } else if (paymentMethod == 'saldo') {
+          await _handleSaldoPayment(total, requestInvoice: requestInvoice, nif: nif);
         }
       } else {
         showDialog(
@@ -2017,11 +2597,177 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  // Método para lidar com pagamento MBWay
-  Future<void> _handleMBWayPayment(double total) async {
+  Future<bool> _showInvoiceRequestDialog() async {
+    // Verifica se o usuário tem faturação automática ativa e NIF cadastrado
+    bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1;
+    bool hasNIF = users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty;
+
+    // Se tiver faturação automática e NIF, retorna true diretamente
+    if (autoBillNIF && hasNIF) {
+      return true;
+    }
+
+    return await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                'Fatura com NIF',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.check_circle, color: Colors.green),
+                title: const Text('Sim', style: TextStyle(color: Colors.green)),
+                onTap: () => Navigator.pop(context, true),
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel, color: Colors.red),
+                title: const Text('Não', style: TextStyle(color: Colors.red)),
+                onTap: () => Navigator.pop(context, false),
+              ),
+            ],
+          ),
+        );
+      },
+    ) ?? false;
+  }
+
+  Future<String?> _showNifInputDialog() async {
+    final nifController = TextEditingController();
+    
+    // Verifica se o usuário tem faturação automática ativa
+    bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1;
+    
+    // Se tiver faturação automática, retorna o NIF diretamente
+    if (autoBillNIF && users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
+      return users[0]['NIF'].toString();
+    }
+
+    // Se não tiver faturação automática, verifica se já tem NIF cadastrado
+    if (users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
+      nifController.text = users[0]['NIF'].toString();
+    }
+
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Text(
+              'Inserir NIF',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nifController,
+              keyboardType: TextInputType.number,
+              maxLength: 9,
+              decoration: InputDecoration(
+                hintText: 'Digite o NIF',
+                counterText: '',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    String nif = nifController.text.trim();
+                    if (nif.length == 9 && int.tryParse(nif) != null) {
+                      // Se o NIF for diferente do cadastrado, atualiza na base de dados
+                      if (users[0]['NIF'] == null || users[0]['NIF'].toString() != nif) {
+                        try {
+                          final response = await http.post(
+                            Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+                            body: {
+                              'query_param': 'update_nif',
+                              'user_id': users[0]['IdUser'].toString(),
+                              'nif': nif,
+                            },
+                          );
+
+                          if (response.statusCode == 200) {
+                            // Atualiza o NIF localmente
+                            setState(() {
+                              users[0]['NIF'] = nif;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('NIF atualizado com sucesso!')),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Erro ao atualizar NIF')),
+                            );
+                          }
+                        } catch (e) {
+                          print('Erro ao atualizar NIF: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erro ao atualizar NIF')),
+                          );
+                        }
+                      }
+                      Navigator.pop(context, nif);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('NIF inválido. O NIF deve ter 9 dígitos numéricos.')),
+                      );
+                    }
+                  },
+                  child: Text('Confirmar', style: TextStyle(color: Colors.green)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Method for MBWay payment
+  Future<void> _handleMBWayPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
     try {
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
+      // Create the description string with proper formatting
+      List<String> formattedNames = cartItems.map((item) {
+        String name = item['Nome'] as String;
+        bool prepararPrencado = item['PrepararPrencado'] ?? false;
+        String prencado = item['Prencado'] ?? '0';
+        bool isFresh = item['Fresh'] ?? false;
+        
+        String suffix = '';
+        
+        if (prencado == '1' && prepararPrencado) {
+          suffix = ' - Prensado';
+        } else if (prencado == '2' && prepararPrencado) {
+          suffix = ' - Aquecido';
+        } else if (prencado == '3' && isFresh) {
+          suffix = ' - Fresco';
+        }
+        
+        return '$name$suffix';
+      }).toList();
+
+      String descricao = formattedNames.join(', ');
 
       // Extract user information
       var turma = users[0]['Turma'] ?? '';
@@ -2030,18 +2776,19 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       var permissao = users[0]['Permissao'] ?? '';
       var imagem = users[0]['Imagem'] ?? '';
 
-      // Encode cartItems to JSON string
-      String cartItemsJson = json.encode(cartItems);
-      
       // Preparar os dados do pedido
       Map<String, dynamic> orderData = {
-            'nome': nome,
-            'apelido': apelido,
-            'turma': turma,
-            'descricao': itemNames.join(', '),
-            'permissao': permissao,
-            'imagem': imagem,
-            'cartItems': cartItemsJson,
+        'nome': nome,
+        'apelido': apelido,
+        'turma': turma,
+        'descricao': descricao,
+        'permissao': permissao,
+        'imagem': imagem,
+        'total': total.toString(),
+        'payment_method': 'mbway',
+        'cartItems': json.encode(cartItems),
+        'requestInvoice': requestInvoice ? '1' : '0',
+        'nif': nif,
       };
       
       // Ir para a página de telefone MBWay com a lógica de pagamento
@@ -2054,57 +2801,81 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             sibsService: _sibsService!,
             onResult: (success, newOrderNumber) {
               if (success) {
-                // Pagamento bem-sucedido, limpar carrinho
                 setState(() {
+                  orderNumber = newOrderNumber;
+                  // Envia os itens do pedido para adicionar aos recentes ANTES de limpar
+                  sendRecentOrderToApi(cartItems);
+                  // Clear cart items after all processing is complete
                   cartItems.clear();
                   updateItemCountMap();
-                  orderNumber = newOrderNumber;
                 });
               }
             },
             onCancel: () {
-              Navigator.pop(context); // Voltar para a página do carrinho
+              Navigator.pop(context);
             },
           ),
         ),
       );
     } catch (e) {
       print('Erro ao processar pagamento MBWay: $e');
-            ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
+        );
+      }
     }
   }
 
-  // Método para lidar com pagamento em dinheiro
-  Future<void> _handleCashPayment(double total) async {
-    try {
-      List<String> itemNames =
-          cartItems.map((item) => item['Nome'] as String).toList();
+  // Method for Saldo payment
+  Future<void> _handleSaldoPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
+    // Implement balance check, deduction, and transaction recording here
+    if (users == null || users.isEmpty || users[0]['Saldo'] == null) {
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text('Erro ao obter saldo do usuário.')),
+         );
+       }
+       return; // Cannot proceed without user data or balance
+    }
 
-      // Extract user information
-      var turma = users[0]['Turma'] ?? '';
-      var nome = users[0]['Nome'] ?? '';
-      var apelido = users[0]['Apelido'] ?? '';
-      var permissao = users[0]['Permissao'] ?? '';
-      var imagem = users[0]['Imagem'] ?? '';
+    double currentBalance = double.tryParse(users[0]['Saldo'].toString()) ?? 0.0;
 
-      // Encode cartItems to JSON string
-      String cartItemsJson = json.encode(cartItems);
-      
-          // Se for dinheiro, perguntar sobre o troco
-          bool needsChange = await _showNeedsChangeDialog();
+    if (currentBalance >= total) {
+        // Sufficient balance, proceed with payment
+         try {
+            // Create the description string with proper formatting
+            List<String> formattedNames = cartItems.map((item) {
+              String name = item['Nome'] as String;
+              bool prepararPrencado = item['PrepararPrencado'] ?? false;
+              String prencado = item['Prencado'] ?? '0';
+              bool isFresh = item['Fresh'] ?? false;
 
-          if (needsChange) {
-            // Se precisar de troco, perguntar o valor entregue
-            dinheiroAtual = await _showMoneyAmountDialog(total) ?? total;
-          } else {
-            // Se não precisar de troco, o valor entregue é o mesmo do total
-            dinheiroAtual = total;
-          }
-      
-            // Criar o pedido com as informações de pagamento em dinheiro
-            final response = await http.post(
+              String suffix = '';
+              
+              if (prencado == '1' && prepararPrencado) {
+                suffix = ' - Prensado';
+              } else if (prencado == '2' && prepararPrencado) {
+                suffix = ' - Aquecido';
+              } else if (prencado == '3' && isFresh) {
+                suffix = ' - Fresco';
+              }
+              
+              return '$name$suffix';
+            }).toList();
+
+            String descricao = formattedNames.join(', ');
+
+            // Extract user information
+            var turma = users[0]['Turma'] ?? '';
+            var nome = users[0]['Nome'] ?? '';
+            var apelido = users[0]['Apelido'] ?? '';
+            var permissao = users[0]['Permissao'] ?? '';
+            var imagem = users[0]['Imagem'] ?? '';
+            var userEmail = users[0]['Email'] ?? '';
+
+            // Primeiro, criar o pedido para obter o número do pedido
+            final orderResponse = await http.post(
               Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
               body: {
                 'query_param': '5',
@@ -2112,83 +2883,151 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                 'apelido': apelido,
                 'orderNumber': '0',
                 'turma': turma,
-                'descricao': itemNames.join(', '),
+                'descricao': descricao,
                 'permissao': permissao,
                 'total': total.toString(),
-                'valor': dinheiroAtual.toString(),
+                'valor': total.toString(),
                 'imagem': imagem,
-                'cartItems': cartItemsJson,
-          'payment_method': 'dinheiro',
+                'payment_method': 'saldo',
+                'phone_number': '--',
+                'requestInvoice': requestInvoice ? '1' : '0',
+                'nif': nif,
               },
             );
 
-            print('Response status: ${response.statusCode}');
-            print('Response body: ${response.body}');
+            if (orderResponse.statusCode == 200 && orderResponse.body.isNotEmpty) {
+              final orderData = json.decode(orderResponse.body);
+              if (orderData['status'] == 'success') {
+                orderNumber = int.parse(orderData['orderNumber'].toString());
+                
+                // Agora que temos o número do pedido, usar apenas ele na descrição
+                String descricaoComPedido = 'Pedido Nº$orderNumber';
 
-            if (response.statusCode == 200) {
-              if (response.body.isEmpty) {
-                throw Exception('Empty response from server');
-              }
+                // Call API to deduct balance and record transaction
+                final response = await http.post(
+                  Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+                  body: {
+                    'query_param': '9.1',
+                    'email': userEmail,
+                    'amount': total.toString(),
+                    'description': descricaoComPedido,
+                    'type': '2', // 2 for used
+                  },
+                );
 
-              try {
-                final data = json.decode(response.body);
+                print('Saldo payment API response status: ${response.statusCode}');
+                print('Saldo payment API response body: ${response.body}');
 
-                if (data['status'] == 'success') {
-                  orderNumber = int.parse(data['orderNumber'].toString());
-                  // Enviar para o WebSocket e limpar o carrinho
-                  await sendOrderToWebSocket(cartItems, total.toString());
-            await sendRecentOrderToApi(cartItems);
+                if (response.statusCode == 200) {
+                  final responseData = json.decode(response.body);
+                  if (responseData['success'] == true) {
+                    // Enviar para o WebSocket
+                    await sendOrderToWebSocket(
+                      cartItems,
+                      total.toString(),
+                      paymentMethod: 'saldo',
+                      requestInvoice: requestInvoice,
+                      nif: nif,
+                    );
 
-                  setState(() {
-                    cartItems.clear();
-                    updateItemCountMap();
-                  });
+                    // Envia os itens do pedido para adicionar aos recentes ANTES de limpar
+                    await sendRecentOrderToApi(cartItems);
 
-                  double change = dinheiroAtual - total;
-                  String changeMsg = change > 0
-                      ? ' Troco: ${change.toStringAsFixed(2).replaceAll('.', ',')}€'
-                      : '';
+                    // Limpar o carrinho e atualizar a UI
+                    setState(() {
+                      cartItems.clear();
+                      updateItemCountMap();
+                    });
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(
-                            'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
-                  );
+                    // Mostrar mensagem de sucesso
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Pedido Nº $orderNumber realizado com sucesso!')),
+                    );
 
-            // Navegar para a página de confirmação de pedido
+                    // Navegar para a página de confirmação de sucesso
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CashConfirmationPage(
+                          change: 0.0, // Não há troco no pagamento com saldo
+                          orderNumber: orderNumber,
+                          amount: total,
+                        ),
+                      ),
+                    );
+                  } else {
+                    String errorMsg = responseData['error'] ?? 'Erro desconhecido ao processar pagamento com Saldo';
+                    // Navegar para a página de declínio com a mensagem de erro
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OrderDeclinedPage(
+                          reason: errorMsg,
+                          amount: total,
+                        ),
+                      ),
+                    );
+                  }
+                } else {
+                  // Navegar para a página de declínio com erro de comunicação
                   Navigator.pushReplacement(
                     context,
-              MaterialPageRoute(
-                builder: (context) => OrderConfirmationPage(
-                  orderNumber: orderNumber,
-                  amount: total,
-                ),
-              ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(
-                            'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
+                    MaterialPageRoute(
+                      builder: (context) => OrderDeclinedPage(
+                        reason: 'Erro na comunicação com o servidor',
+                        amount: total,
+                      ),
+                    ),
                   );
                 }
-              } catch (e) {
-                print('JSON decode error: $e');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text('Erro ao processar resposta do servidor')),
+              } else {
+                // Navegar para a página de declínio com erro ao criar pedido
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OrderDeclinedPage(
+                      reason: 'Erro ao criar pedido: ${orderData['message'] ?? "Erro desconhecido"}',
+                      amount: total,
+                    ),
+                  ),
                 );
               }
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Erro HTTP ${response.statusCode}')),
+              // Navegar para a página de declínio com erro ao criar pedido
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OrderDeclinedPage(
+                    reason: 'Erro ao criar pedido',
+                    amount: total,
+                  ),
+                ),
               );
-      }
-    } catch (e) {
-      print('Erro ao processar pagamento em dinheiro: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
-      );
+            }
+         } catch (e) {
+            print('Error processing Saldo payment: $e');
+            // Navegar para a página de declínio com erro de processamento
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OrderDeclinedPage(
+                  reason: 'Erro ao processar pagamento: ${e.toString()}',
+                  amount: total,
+                ),
+              ),
+            );
+         }
+    } else {
+        // Saldo insuficiente - navegar para a página de declínio
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OrderDeclinedPage(
+              reason: 'Saldo insuficiente. Saldo atual: ${currentBalance.toStringAsFixed(2)}€',
+              amount: total,
+            ),
+          ),
+        );
     }
   }
 
@@ -2198,7 +3037,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     final rootContext = context;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Carrinho de Compras'),
+        title: Text(
+          'Carrinho de Compras',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        elevation: 0,
         actions: [
           IconButton(
             onPressed: () {
@@ -2214,112 +3057,567 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         ],
       ),
       drawer: DrawerHome(),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: itemCountMap.length,
-              itemBuilder: (context, index) {
-                final itemName = itemCountMap.keys.toList()[index];
-                final itemCount = itemCountMap[itemName] ?? 0;
-                final item = cartItems.firstWhere(
-                  (element) => element['Nome'] == itemName,
-                );
-                final image =
-                    item != null ? base64.decode(item['Imagem']) : null;
-                return Card(
-                  child: ListTile(
-                    leading: image != null
-                        ? Image.memory(
-                            image,
-                            fit: BoxFit.cover,
-                            height: 50,
-                            width: 50,
-                          )
-                        : SizedBox.shrink(),
-                    title: Text('$itemName'),
-                    subtitle: Text('Quantidade: $itemCount'),
-                    trailing: IconButton(
-                      icon: Icon(Icons.remove_circle),
-                      onPressed: () {
-                        setState(() {
-                          for (int i = 0; i < cartItems.length; i++) {
-                            if (cartItems[i]['Nome'] == itemName) {
-                              cartItems.removeAt(i);
-                              break;
+      body: cartItems.isEmpty 
+        ? _buildEmptyCart() 
+        : Column(
+          children: [
+            // Resumo do carrinho
+            Container(
+              padding: EdgeInsets.all(16),
+              color: Colors.orange.withOpacity(0.1),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Meu Carrinho', 
+                        style: TextStyle(
+                          fontSize: 18, 
+                          fontWeight: FontWeight.bold
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '${itemCountMap.length} ${itemCountMap.length == 1 ? 'produto' : 'produtos'} diferentes',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            // Lista de produtos
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.only(top: 12),
+                itemCount: orderedItems.length,
+                itemBuilder: (context, index) {
+                  final itemName = orderedItems[index];
+                  final itemCount = itemCountMap[itemName] ?? 0;
+                  // Safely find the item or use a placeholder if not found
+                  final item = cartItems.firstWhere(
+                    (element) => element['Nome'] == itemName,
+                    orElse: () => { // Provide a default map if the item is not found
+                      'Nome': itemName, // Keep the original item name
+                      'Imagem': '', // Provide a default empty image string
+                      'Preco': '0.0', // Provide a default price
+                      'Prencado': '0', // Provide a default prencado status
+                      'PrepararPrencado': false, // Provide a default value
+                      'Fresh': false, // Provide a default value
+                    },
+                  );
+
+                  // If item is null (not found), return an empty container or handle appropriately
+                  // This check is technically no longer strictly necessary with the orElse returning a map,
+                  // but it's good for robustness or if you prefer not to display placeholders.
+                  // If you want to hide items not found, keep this block.
+                  // If you want to display placeholders, remove this block.
+                  // Keeping it for now to match previous behavior of hiding missing items.
+                  if (item['Nome'] != itemName) { // Check if the found item's name matches (i.e., if orElse was triggered)
+                     return Container(); // Hide the item if the placeholder was returned
+                  }
+
+                  final image = item['Imagem'] != null && item['Imagem'].isNotEmpty ? base64.decode(item['Imagem']) : null;
+                  final itemPrice = double.tryParse(item['Preco']?.toString() ?? '0') ?? 0;
+                  final itemTotal = itemPrice * itemCount;
+                  
+                  return Card(
+                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white,
+                            Colors.grey[50]!,
+                          ],
+                        ),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Top row with image, title and quantity
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Imagem do produto
+                                Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: image != null
+                                        ? Image.memory(
+                                            image,
+                                            fit: BoxFit.cover,
+                                            gaplessPlayback: true,
+                                            cacheWidth: 120,
+                                            cacheHeight: 120,
+                                            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                              if (wasSynchronouslyLoaded) return child;
+                                              return AnimatedSwitcher(
+                                                duration: Duration(milliseconds: 200),
+                                                child: frame != null ? child : Container(
+                                                  color: Colors.grey[200],
+                                                  child: Icon(
+                                                    Icons.fastfood,
+                                                    size: 40,
+                                                    color: Colors.grey[400],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          )
+                                        : Container(
+                                            color: Colors.grey[200],
+                                            child: Icon(
+                                              Icons.fastfood,
+                                              size: 40,
+                                              color: Colors.grey[400],
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                SizedBox(width: 12),
+                                // Title and price
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        itemName,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.grey[800],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: 4),
+                                     
+                                    ],
+                                  ),
+                                ),
+                                // Quantity controls
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(Icons.remove, size: 16),
+                                        onPressed: _isLoading ? null : () {
+                                          setState(() {
+                                            _isLoading = true;
+                                            if (itemCount > 1) {
+                                              int index = cartItems.indexWhere((element) => element['Nome'] == itemName);
+                                              if (index != -1) {
+                                                cartItems.removeAt(index);
+                                                itemCountMap[itemName] = itemCount - 1;
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Item removido'),
+                                                    duration: Duration(milliseconds: 500),
+                                                  ),
+                                                );
+                                              }
+                                            } else {
+                                              cartItems.removeWhere((element) => element['Nome'] == itemName);
+                                              itemCountMap.remove(itemName);
+                                              orderedItems.remove(itemName);
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Item removido do carrinho'),
+                                                  duration: Duration(milliseconds: 500),
+                                                ),
+                                              );
+                                            }
+                                          });
+                                        },
+                                        color: _isLoading ? Colors.grey[400] : Colors.grey[700],
+                                        padding: EdgeInsets.all(4),
+                                        constraints: BoxConstraints(
+                                          minWidth: 32,
+                                          minHeight: 32,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 4),
+                                        child: Text(
+                                          itemCount.toString(),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.grey[800],
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.add, size: 16),
+                                        onPressed: _isLoading ? null : () {
+                                          setState(() {
+                                            _isLoading = true;
+                                            cartItems.add(Map<String, dynamic>.from(item));
+                                            itemCountMap[itemName] = itemCount + 1;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text('Item adicionado'),
+                                                duration: Duration(milliseconds: 500),
+                                              ),
+                                            );
+                                            _isLoading = false;
+                                          });
+                                        },
+                                        color: _isLoading ? Colors.grey[400] : Colors.grey[700],
+                                        padding: EdgeInsets.all(4),
+                                        constraints: BoxConstraints(
+                                          minWidth: 32,
+                                          minHeight: 32,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 8),
+                            // Preparation options at the bottom
+                            if (item['Prencado'] == '1' || item['Prencado'] == '2')
+                              Center(
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        item['Prencado'] == '1' ? Icons.coffee : Icons.local_cafe,
+                                        size: 16,
+                                        color: Colors.orange[700],
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Selecione o Tipo: ',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                      Expanded( // Let ToggleButtons take available space
+                                        child: ToggleButtons(
+                                          isSelected: [
+                                            item['PrepararPrencado'] ?? false,
+                                            !(item['PrepararPrencado'] ?? false),
+                                          ],
+                                          onPressed: (index) {
+                                            setState(() {
+                                              item['PrepararPrencado'] = index == 0;
+                                            });
+                                          },
+                                          borderRadius: BorderRadius.circular(6),
+                                          selectedColor: Colors.white,
+                                          fillColor: Colors.orange[700],
+                                          borderColor: Colors.orange[700],
+                                          color: Colors.grey[700],
+                                          borderWidth: 1.0,
+                                          selectedBorderColor: Colors.orange[700],
+                                          children: [
+                                            Expanded(
+                                              child: Padding(
+                                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                                child: Text(
+                                                  item['Prencado'] == '1' ? 'Prensado' : 'Aquecido',
+                                                  style: TextStyle(fontSize: 12),
+                                                  textAlign: TextAlign.center,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Padding(
+                                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                                child: Text(
+                                                  'Normal',
+                                                  style: TextStyle(fontSize: 12),
+                                                  textAlign: TextAlign.center,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            if (item['Prencado'] == '3')
+                              Center(
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.local_drink,
+                                        size: 16,
+                                        color: Colors.orange[700],
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Selecione o Tipo: ',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                      Expanded( // Let ToggleButtons take available space
+                                        child: ToggleButtons(
+                                          isSelected: [
+                                            item['Fresh'] ?? false,
+                                            !(item['Fresh'] ?? false),
+                                          ],
+                                          onPressed: (index) {
+                                            setState(() {
+                                              item['Fresh'] = index == 0;
+                                            });
+                                          },
+                                          borderRadius: BorderRadius.circular(6),
+                                          selectedColor: Colors.white,
+                                          fillColor: Colors.orange[700],
+                                          borderColor: Colors.orange[700],
+                                          color: Colors.grey[700],
+                                          borderWidth: 1.0,
+                                          selectedBorderColor: Colors.orange[700],
+                                          children: [
+                                            Expanded(
+                                              child: Padding(
+                                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                                child: Text(
+                                                  'Fresco',
+                                                  style: TextStyle(fontSize: 12),
+                                                  textAlign: TextAlign.center,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Padding(
+                                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                                child: Text(
+                                                  'Natural',
+                                                  style: TextStyle(fontSize: 12),
+                                                  textAlign: TextAlign.center,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            
+            // Rodapé com total e botão
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    offset: Offset(0, -2),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Resumo de valores
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total a pagar:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          '${total.toStringAsFixed(2).replaceAll('.', ',')}€',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    
+                    // Botão de confirmar pedido
+                    SizedBox(
+                      width: double.infinity,
+                      child: LoadingButton(
+                        onPressed: _isLoading ? null : () async {
+                          if (cartItems.isEmpty) {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text('Carrinho Vazio'),
+                                  content: Text(
+                                      'Carrinho Vazio.\nPara continuar adicione produtos.'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text('OK'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          } else {
+                            setState(() => _isLoading = true);
+                            try {
+                              await checkAvailabilityBeforeOrder(total);
+                            } finally {
+                              setState(() => _isLoading = false);
                             }
                           }
-                          updateItemCountMap();
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Item removido do carrinho')),
-                        );
-                      },
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Confirmar Pedido',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (_isLoading)
+                              Padding(
+                                padding: EdgeInsets.only(left: 10),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        backgroundColor: _isLoading ? Colors.grey : Colors.orange,
+                      ),
                     ),
-                  ),
-                );
-              },
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+  }
+
+  // Widget para estado vazio do carrinho
+  Widget _buildEmptyCart() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.shopping_cart_outlined,
+            size: 100,
+            color: Colors.grey[300],
+          ),
+          SizedBox(height: 24),
+          Text(
+            'Seu carrinho está vazio',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
             ),
           ),
-          Container(
-            margin: EdgeInsets.only(bottom: 16.0),
-            child: Column(
-              children: [
-                Text(
-                  'Total: ${total.toStringAsFixed(2).replaceAll('.', ',')}€',
-                  style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+          SizedBox(height: 16),
+          Text(
+            'Adicione produtos para fazer seu pedido',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[500],
+            ),
+          ),
+          SizedBox(height: 32),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HomeAlunoMain(),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (cartItems.isEmpty) {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text('Carrinho Vazio'),
-                            content: Text(
-                                'Carrinho Vazio.\nPara continuar adicione produtos.'),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                child: Text('OK'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    } else {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text('Confirmação do Pedido'),
-                            content: Text('Deseja confirmar o pedido?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                                            checkAvailabilityBeforeOrder(total);
-                                },
-                                child: Text('Confirmar'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                child: Text('Cancelar'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    }
-                  },
-                  child: Text('Confirmar Pedido'),
-                ),
-              ],
+              );
+            },
+            icon: Icon(Icons.add_shopping_cart, color: Colors.orange[500]),
+            label: Text('Escolher Produtos', style: TextStyle(color: Colors.orange[500]),),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
@@ -2327,3 +3625,5 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     );
   }
 }
+
+

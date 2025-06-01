@@ -110,62 +110,125 @@ class _TurmasPageState extends State<TurmasPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-     /* appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 246, 141, 45),
-        title: Text('Turmas'),
-      ),
-      drawer: DrawerAdmin(),*/
       body: Container(
-        width: double.infinity, // Usar toda a largura disponível
-        height: double.infinity, // Usar toda a altura disponível
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage(
-                'lib/assets/epvc.png'), // Caminho para a sua imagem de fundo
-            // fit: BoxFit.cover,
+            image: AssetImage('lib/assets/epvc.png'),
           ),
         ),
         child: Stack(
           children: [
-            // Imagem de fundo
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Color.fromARGB(255, 255, 255, 255)
-                      .withOpacity(0.80), // Cor preta com opacidade de 40%
+                  color: Color.fromARGB(255, 255, 255, 255).withOpacity(0.85),
                 ),
               ),
             ),
-            Center(
-              child: SingleChildScrollView(
-                child: DataTable(
-                  columns: [
-                    DataColumn(label: Text('Turma')),
-                    DataColumn(label: Text('')),
-                  ],
-                  rows: turmas.map((turma) {
-                    return DataRow(
-                      cells: [
-                        DataCell(Text(turma.turma)),
-                        DataCell(
-                          removerMode
-                              ? ElevatedButton(
-                                  onPressed: () {
-                                    _toggleRemoveSelection(
-                                        turmas.indexOf(turma));
-                                  },
-                                  child: indexesToRemove
-                                          .contains(turmas.indexOf(turma))
-                                      ? Text('Cancelar')
-                                      : Text('Eliminar'),
-                                )
-                              : SizedBox.shrink(),
-                        ),
-                      ],
-                    );
-                  }).toList(),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(height: 40),
+                Text(
+                  'Gestão de Turmas',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color.fromARGB(255, 246, 141, 45),
+                  ),
                 ),
-              ),
+                SizedBox(height: 24),
+                Expanded(
+                  child: turmas.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Nenhuma turma encontrada',
+                            style: TextStyle(fontSize: 18, color: Colors.grey[700]),
+                          ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                          child: GridView.builder(
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 1,
+                              crossAxisSpacing: 24,
+                              mainAxisSpacing: 24,
+                              childAspectRatio: 3.5,
+                            ),
+                            itemCount: turmas.length,
+                            itemBuilder: (context, index) {
+                              final turma = turmas[index];
+                              return Card(
+                                elevation: 4,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: Color.fromARGB(255, 246, 141, 45),
+                                    child: Icon(Icons.class_, color: Colors.white),
+                                  ),
+                                  title: Text(
+                                    turma.turma,
+                                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                                  ),
+                                  trailing: removerMode
+                                      ? ElevatedButton.icon(
+                                          style: ButtonStyle(
+                                            backgroundColor: MaterialStateProperty.all(Colors.orange),
+                                            shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                            )),
+                                          ),
+                                          onPressed: () {
+                                            _toggleRemoveSelection(index);
+                                          },
+                                          icon: Icon(Icons.delete, color: Colors.white),
+                                          label: Text('Eliminar', style: TextStyle(color: Colors.white)),
+                                        )
+                                      : null,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                ),
+                SizedBox(height: 24),
+                removerMode
+                    ? ElevatedButton.icon(
+                        style: ButtonStyle(
+                          backgroundColor: MaterialStateProperty.all(Colors.grey[700]),
+                          shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          )),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            removerMode = false;
+                          });
+                        },
+                        icon: Icon(Icons.cancel, color: Colors.white),
+                        label: Text('Cancelar Remoção', style: TextStyle(color: Colors.white)),
+                      )
+                    : ElevatedButton.icon(
+                        style: ButtonStyle(
+                          backgroundColor: MaterialStateProperty.all(Color.fromARGB(255, 246, 141, 45)),
+                          shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          )),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            removerMode = true;
+                          });
+                        },
+                        icon: Icon(Icons.delete_outline, color: Colors.white),
+                        label: Text('Modo Remover', style: TextStyle(color: Colors.white)),
+                      ),
+                SizedBox(height: 24),
+              ],
             ),
           ],
         ),
@@ -173,20 +236,25 @@ class _TurmasPageState extends State<TurmasPage> {
       floatingActionButton: SpeedDial(
         icon: Icons.add,
         iconTheme: IconThemeData(color: Colors.white),
-        backgroundColor: Color.fromARGB(255, 130, 201, 189),
+        backgroundColor: Color.fromARGB(255, 246, 141, 45),
         children: [
           SpeedDialChild(
             child: Icon(Icons.add),
             label: 'Adicionar Turma',
+            backgroundColor: Color.fromARGB(255, 246, 141, 45),
             onTap: () {
               showDialog(
                 context: context,
                 builder: (BuildContext context) {
                   return AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     title: Text('Adicionar Turma'),
                     content: TextField(
                       controller: turmaController,
-                      decoration: InputDecoration(labelText: 'Nome da Turma'),
+                      decoration: InputDecoration(
+                        labelText: 'Nome da Turma',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     actions: <Widget>[
                       TextButton(
@@ -195,24 +263,21 @@ class _TurmasPageState extends State<TurmasPage> {
                         },
                         child: Text('Cancelar'),
                       ),
-                      TextButton(
+                      ElevatedButton(
+                        style: ButtonStyle(
+                          backgroundColor: MaterialStateProperty.all(Color.fromARGB(255, 246, 141, 45)),
+                        ),
                         onPressed: () {
                           _addTurma(turmaController.text);
+                          turmaController.clear();
                           Navigator.of(context).pop();
                         },
-                        child: Text('Adicionar'),
+                        child: Text('Adicionar', style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   );
                 },
               );
-            },
-          ),
-          SpeedDialChild(
-            child: Icon(Icons.delete),
-            label: 'Remover Turma',
-            onTap: () {
-              _removeSelectedTurmas();
             },
           ),
         ],

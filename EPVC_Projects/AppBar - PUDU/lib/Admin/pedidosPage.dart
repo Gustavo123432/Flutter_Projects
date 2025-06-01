@@ -8,6 +8,10 @@ import 'package:my_flutter_project/Admin/drawerAdmin.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
 //coment
 /*
 import 'dart:io' as io;
@@ -102,12 +106,9 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     );
   }
   //coment
-/*
 Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildContext context) async {
-  final regularFont = await http.get(Uri.parse("lib/assets/fonts/Roboto-Regular.ttf"));
-  final Uint8List fontData = regularFont.bodyBytes;
   final pdf = pw.Document();
-
+  double total = 0;
   pdf.addPage(
     pw.MultiPage(
       build: (pw.Context context) => [
@@ -118,11 +119,11 @@ Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildC
               'Quem pediu',
               'Turma',
               'Descrição',
-              'Total    ',
-              'Estado      '
+              'Total',
+              'Estado'
             ],
             for (var order in orders)
-              if (order.data == selectedDate) // Verifica se a data do pedido corresponde à data selecionada
+              if (order.data.split(' ').first == selectedDate)
                 [
                   order.number,
                   order.requester,
@@ -132,99 +133,75 @@ Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildC
                   order.status == '0' ? 'Por Fazer' : 'Concluído',
                 ],
           ],
-          cellStyle: pw.TextStyle(font: pw.Font.ttf(fontData.buffer.asByteData())),
         ),
       ],
     ),
   );
-
-  double total = 0;
   for (var order in orders) {
-    // Converta a data do objeto para o formato yyyy-mm-dd
-    String orderDateFormatted = order.data.split(' ')[0];
-    // Verifique se a data do pedido corresponde à data selecionada
-    if (orderDateFormatted == selectedDate) {
-      total += double.tryParse(order.total) ?? 0;
+    if (order.data.split(' ').first == selectedDate) {
+      total += double.tryParse(order.total.replaceAll(',', '.')) ?? 0;
     }
   }
-
   pdf.addPage(pw.Page(
     build: (pw.Context context) {
       return pw.Center(
-        child: pw.Text('Total: ${total.toStringAsFixed(2)}', style: pw.TextStyle(font: pw.Font.ttf(fontData.buffer.asByteData()))),
+        child: pw.Text('Total: ${total.toStringAsFixed(2)}€'),
       );
     },
   ));
-
-  final pdfBytes = await pdf.save();
-  final pdfData = Uint8List.fromList(pdfBytes);
-
-  if (kIsWeb) {
-    final blob = html.Blob([pdfData]);
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    html.AnchorElement(href: url)
-      ..setAttribute('download', 'purchase_orders_$selectedDate.pdf')
-      ..click();
-    html.Url.revokeObjectUrl(url);
-  } else {
-    final directory = await getExternalStorageDirectory();
-    final filePath = '${directory?.path}/purchase_orders_$selectedDate.pdf';
-    final file = io.File(filePath);
-    await file.writeAsBytes(pdfData);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('PDF exportado com sucesso'),
-      ),
-    );
-  }
-}*/
+  final bytes = await pdf.save();
+  final directory = await getApplicationDocumentsDirectory();
+  final file = File('${directory.path}/pedidos_$selectedDate.pdf');
+  await file.writeAsBytes(bytes);
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('PDF exportado para ${file.path}')),
+  );
+}
 //finish coment
 
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-     /* appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 246, 141, 45),
-        title: Text('Registo de Pedidos'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              logout(context);
-            },
-            icon: Icon(Icons.logout),
+ 
+      body: Stack(
+        children: [
+          // Background image
+          Positioned.fill(
+            child: Image.asset(
+              'lib/assets/epvc.png',
+              fit: BoxFit.scaleDown,
+            ),
           ),
-        ],
-    
-      ),
-      drawer: DrawerAdmin(),*/
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('lib/assets/epvc.png'),
-          ),
-        ),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Color.fromARGB(255, 255, 255, 255).withOpacity(0.80),
+          // Centered logo
+          Positioned.fill(
+            child: Center(
+              child: Opacity(
+                opacity: 0.12, // semi-transparent
+                child: Image.asset(
+                  'lib/assets/logo.png',
+                  width: 260,
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
-            Center(
+          ),
+          // White overlay and content
+          Positioned.fill(
+            child: Container(
+              color: Color.fromARGB(255, 255, 255, 255).withOpacity(0.85),
               child: FutureBuilder<List<PurchaseOrder>>(
                 future: futurePurchaseOrders,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return CircularProgressIndicator();
+                    return Center(child: CircularProgressIndicator());
                   } else if (snapshot.hasError) {
-                    return Text('Sem Dados');
+                    return Center(child: Text('Sem Dados', style: TextStyle(fontSize: 18, color: Colors.red)));
+                  } else if (snapshot.data == null || snapshot.data!.isEmpty) {
+                    return Center(child: Text('Nenhum pedido encontrado.', style: TextStyle(fontSize: 18)));
                   } else {
                     return ListView.builder(
+                      padding: EdgeInsets.symmetric(vertical: 24, horizontal: 8),
                       itemCount: snapshot.data!.length,
                       itemBuilder: (context, index) {
                         PurchaseOrder order = snapshot.data![index];
@@ -236,23 +213,81 @@ Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildC
                         } catch (e) {
                           formattedTotal = 'Invalid Total';
                         }
+                        Color statusColor = order.status == '0' ? Colors.orange : Colors.green;
+                        String statusText = order.status == '0' ? 'Por Fazer' : 'Concluído';
                         return Card(
-                          elevation: 3,
-                          margin:
-                              EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                          child: ListTile(
-                            title:
-                                Text('Nº Pedido: ${order.number.toString()}'),
-                            subtitle: Column(
+                          elevation: 4,
+                          margin: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Quem pediu: ${order.requester}'),
-                                Text('Turma: ${order.group}'),
-                                Text(
-                                    'Descrição: ${order.description.replaceAll('[', '').replaceAll(']', '')}'),
-                                Text('Total: $formattedTotal€'),
-                                Text(
-                                    'Estado: ${order.status == '0' ? 'Por Fazer' : 'Concluído'}'),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Nº Pedido: ${order.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withOpacity(0.15),
+                                        border: Border.all(color: statusColor),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        statusText,
+                                        style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(Icons.person, size: 18, color: Colors.blueGrey),
+                                    SizedBox(width: 6),
+                                    Text('Quem pediu: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                                    Expanded(child: Text(order.requester)),
+                                  ],
+                                ),
+                                SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.group, size: 18, color: Colors.blueGrey),
+                                    SizedBox(width: 6),
+                                    Text('Turma: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                                    Expanded(child: Text(order.group)),
+                                  ],
+                                ),
+                                SizedBox(height: 4),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.description, size: 18, color: Colors.blueGrey),
+                                    SizedBox(width: 6),
+                                    Text('Descrição: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                                    Expanded(child: Text(order.description.replaceAll('[', '').replaceAll(']', ''))),
+                                  ],
+                                ),
+                                SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.euro, size: 18, color: Colors.blueGrey),
+                                    SizedBox(width: 6),
+                                    Text('Total: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                                    Text('$formattedTotal€', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                                SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.calendar_today, size: 18, color: Colors.blueGrey),
+                                    SizedBox(width: 6),
+                                    Text('Data: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                                    Text(order.data),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
@@ -263,8 +298,8 @@ Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildC
                 },
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       floatingActionButton: SpeedDial(
         icon: Icons.more_horiz,
@@ -292,19 +327,16 @@ Future<void> _showDatePicker(List<PurchaseOrder> orders) async {
     builder: (BuildContext context, Widget? child) {
       return Theme(
         data: ThemeData.light().copyWith(
-          // Define a cor de fundo do seletor de data aqui
           colorScheme: ColorScheme.light(primary: Color.fromARGB(255, 130, 201, 189)),
         ),
         child: child!,
       );
     },
   );
-
-  /*if (selectedDate != null) {
-    // Formate a data selecionada para o formato yyyy-mm-dd
+  if (selectedDate != null) {
     final formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-    exportToPdf(orders, formattedDate, context);
-  }*/
+    await exportToPdf(orders, formattedDate, context);
+  }
 }
 
   Future<void> removeAll(context) async {

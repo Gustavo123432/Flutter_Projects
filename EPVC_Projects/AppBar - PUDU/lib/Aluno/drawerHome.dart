@@ -3,8 +3,12 @@ import 'package:my_flutter_project/Admin/produtoPage.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
 import 'package:my_flutter_project/Aluno/pedidosPageAluno.dart';
 import 'package:my_flutter_project/Aluno/reservasPageAluno.dart';
+import 'package:my_flutter_project/Aluno/settingsPage.dart';
 import 'package:my_flutter_project/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:my_flutter_project/Aluno/support_page.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class DrawerHome extends StatefulWidget {
   const DrawerHome({super.key});
@@ -14,6 +18,44 @@ class DrawerHome extends StatefulWidget {
 
 class _DrawerHomeState extends State<DrawerHome> {
   //final _advancedDrawerController = AdvancedDrawerController();
+  List<dynamic> users = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var user = prefs.getString("username");
+
+    if (user == null || user.isEmpty) {
+      print('DrawerHome: No username found in SharedPreferences');
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        body: {
+          'query_param': '1',
+          'user': user,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          users = json.decode(response.body);
+          print('DrawerHome: User data fetched successfully');
+        });
+      } else {
+        print('DrawerHome: Failed to fetch user data: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('DrawerHome: Error fetching user data: $e');
+    }
+  }
 
   void logout(BuildContext context) {
     showDialog(
@@ -51,6 +93,10 @@ class _DrawerHomeState extends State<DrawerHome> {
 
   @override
   Widget build(BuildContext context) {
+    String userEmail = (users.isNotEmpty && users[0]['Email'] != null)
+        ? users[0]['Email'].toString()
+        : 'Email não disponível';
+
     return Drawer(
       child: Container(
         width: 250, // Defina a largura fixa aqui
@@ -104,7 +150,7 @@ class _DrawerHomeState extends State<DrawerHome> {
               leading: Icon(Icons.archive),
               title: Text('Pedidos'),
             ),
-             ListTile(
+             /*ListTile(
               onTap: () {
                 Navigator.pushReplacement(
                   context,
@@ -113,6 +159,53 @@ class _DrawerHomeState extends State<DrawerHome> {
               },
               leading: Icon(Icons.restaurant),
               title: Text('Reservas'),
+            ),*/
+            ListTile(
+              onTap: () {
+                showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: Text('Em Desenvolvimento'),
+                                  content: Text(
+                                      'O Restaurante não está disponível no momento.'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+              },
+              leading: Icon(Icons.restaurant),
+              title: Text('Reservas'),
+            ),
+            ListTile(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsPage()),
+                );
+              },
+              leading: Icon(Icons.settings),
+              title: Text('Definições'),
+            ),
+            ListTile(
+              onTap: () {
+                Navigator.pop(context);
+                 if (userEmail != 'Email não disponível') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SupportPage(userEmail: userEmail)),
+                  );
+                } else {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     SnackBar(content: Text('Não foi possível obter o seu email. Tente novamente mais tarde.')),
+                  );
+                }
+              },
+              leading: Icon(Icons.help_outline),
+              title: Text('Suporte'),
             ),
             ListTile(
               onTap: () {

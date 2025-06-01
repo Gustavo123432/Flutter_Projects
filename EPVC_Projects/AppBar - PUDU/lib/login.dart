@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:my_flutter_project/Admin/dashboard.dart';
 import 'package:my_flutter_project/Admin/users.dart';
 import 'package:my_flutter_project/Aluno/formatPWDFirst.dart';
 import 'package:my_flutter_project/Aluno/home.dart';
@@ -12,8 +13,14 @@ import 'package:my_flutter_project/PasswordRecovery/esqueciPWD.dart';
 import 'package:my_flutter_project/PasswordRecovery/reenserirPWD.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart';
 
 String errorMessage = '';
+
+// Utility function to generate MD5 hash
+String generateMD5(String input) {
+  return md5.convert(utf8.encode(input)).toString();
+}
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -43,55 +50,109 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   void login() async {
-    // print("Iniciando login...");
-
     final name = NameController.text;
     final pwd = PwdController.text;
-    // print("Email: $name, Senha: $pwd");
 
-    /////////////////////////////////////////
-    // Send a GET  request to your PHP API for authentication
-    /////////////////////////////////////////
-
-    dynamic tar;
-    dynamic response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$pwd'));
-    if (response.statusCode == 200) {
-      setState(() {
-        tar = json.decode(response.body);
-      });
+    // Verificar se a senha é 'epvc' - Prioridade máxima
+    if (pwd.trim().toLowerCase() == 'epvc') {
+      if (name != null || name != "") {
+        PwdController.clear();
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => EmailRequestPage(
+                  tentativa: 2,
+                  email: name,
+                )));
+        return;
+      } else {
+        PwdController.clear();
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => EmailRequestPage(
+                  tentativa: 2,
+                  email: "",
+                )));
+        return;
+      }
     }
-    if (tar != 'false') {
-      // Authentication successful, navigate to the next screen or perform actions
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('permissao', tar[0]['Permissao'].toString());
-      await prefs.setString('username', tar[0]['Email'].toString());
-      await prefs.setString('idUser', tar[0]['IdUser'].toString());
-      await prefs.setString('pwd', pwd);
-      PwdController.clear();
-    } else if (tar == 'false') {
-      final snackBar = SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Text(
-          errorMessage = 'Credenciais Inválidas',
-          style: const TextStyle(
-            fontSize: 16, // Customize font size
+
+    // Encrypt password with MD5
+    final encryptedPwd = generateMD5(pwd);
+
+    try {
+      dynamic response = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$encryptedPwd'));
+
+      if (response.statusCode == 200) {
+        dynamic tar = json.decode(response.body);
+
+        if (tar == 'false') {
+          // Show error message for invalid credentials
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text(
+                'Falha no Login. Verifique o email e a password.',
+                style: TextStyle(fontSize: 16),
+              ),
+              backgroundColor: Colors.red,
+              elevation: 6.0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+            ),
+          );
+          return;
+        }
+
+        // Authentication successful
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('permissao', tar[0]['Permissao'].toString());
+        await prefs.setString('username', tar[0]['Email'].toString());
+        await prefs.setString('idUser', tar[0]['IdUser'].toString());
+
+        String tipo = tar[0]['Permissao'].toString();
+        PwdController.clear();
+
+        if (tipo == "Administrador") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AdminDrawer(
+                currentPage: DashboardPage(),
+                numero: 0,
+              ),
+            ),
+          );
+        } else if (tipo == "Professor" ||
+            tipo == "Funcionária" ||
+            tipo == "Aluno") {
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+        } else if (tipo == "Bar") {
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) => BarPagePedidos()));
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            'Login Inválido. Verifique o Email e a Password e tente novamente!',
+            style: TextStyle(fontSize: 16),
+          ),
+          backgroundColor: Colors.red,
+          elevation: 6.0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
           ),
         ),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            // Some code to undo the change.
-          },
-        ),
-        backgroundColor: Colors.red, // Customize background color
-        elevation: 6.0, // Add elevation
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0), // Customize border radius
-        ),
       );
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
+
     setState(() {});
   }
 
@@ -101,6 +162,7 @@ class _LoginFormState extends State<LoginForm> {
   /////////////////////////////////////////
 
   Widget build(BuildContext context) {
+    // Verificar login apenas quando não estiver processando uma autenticação atual
     verifylogin(context);
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -119,163 +181,165 @@ class _LoginFormState extends State<LoginForm> {
   Widget webScreenLayout() {
     return Scaffold(
         backgroundColor: Colors.white, // Background color
-        body: Center(
-          child: Container(
-            width: 570,
-            height: 520,
-            padding: const EdgeInsets.all(1),
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 130, 201, 189),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
+        body: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Center(
+              child: Container(
+                width: 570,
+                height: 520,
+                padding: const EdgeInsets.all(1),
+                decoration: BoxDecoration(
                   color: const Color.fromARGB(255, 130, 201, 189),
-                  spreadRadius: 5,
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromARGB(255, 130, 201, 189),
+                      spreadRadius: 5,
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 350,
-                    height: 150,
-                    color: Color.fromARGB(255, 130, 201, 189),
-                    child: Image.asset(
-                      'lib/assets/barapp.png',
-                      width: 350,
-                      height: 150,
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  SizedBox(
-                    width: 350,
-                    child: Container(
-                      color: Colors.white,
-                      child: TextFormField(
-                        controller: NameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(
-                            borderSide: BorderSide(
-                                color: Color.fromARGB(255, 130, 201,
-                                    189)), // Change border color here
-                          ),
-                          prefixIcon: Icon(Icons.email), // User icon
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 350,
+                        height: 150,
+                        color: Color.fromARGB(255, 130, 201, 189),
+                        child: Image.asset(
+                          'lib/assets/barapp.png',
+                          width: 350,
+                          height: 150,
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your email';
-                          }
-                          return null;
-                        },
-                        onFieldSubmitted: (_) {
-                          if (_formKey.currentState!.validate()) {
-                            login();
-                          }
-                        },
                       ),
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  SizedBox(
-                    width: 350,
-                    child: Container(
-                      color: Colors.white,
-                      child: TextFormField(
-                        controller: PwdController,
-                        obscureText: _obscureText,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          border: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Color.fromARGB(255, 130, 201,
-                                  189), // Change border color here
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      SizedBox(
+                        width: 350,
+                        child: Container(
+                          color: Colors.white,
+                          child: TextFormField(
+                            controller: NameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              border: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                    color: Color.fromARGB(255, 130, 201,
+                                        189)), // Change border color here
+                              ),
+                              prefixIcon: Icon(Icons.email), // User icon
                             ),
-                          ),
-                          prefixIcon: Icon(Icons.lock), // User icon
-                          suffixIcon: IconButton(
-                            icon: _obscureText
-                                ? Icon(Icons.visibility)
-                                : Icon(Icons.visibility_off),
-                            onPressed: _togglePasswordVisibility,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              return null;
+                            },
+                            onFieldSubmitted: (_) {
+                              if (_formKey.currentState!.validate()) {
+                                login();
+                              }
+                            },
                           ),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          return null;
-                        },
-                        onFieldSubmitted: (_) {
+                      ),
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      SizedBox(
+                        width: 350,
+                        child: Container(
+                          color: Colors.white,
+                          child: TextFormField(
+                            controller: PwdController,
+                            obscureText: _obscureText,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              border: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: Color.fromARGB(255, 130, 201,
+                                      189), // Change border color here
+                                ),
+                              ),
+                              prefixIcon: Icon(Icons.lock), // User icon
+                              suffixIcon: IconButton(
+                                icon: _obscureText
+                                    ? Icon(Icons.visibility)
+                                    : Icon(Icons.visibility_off),
+                                onPressed: _togglePasswordVisibility,
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              return null;
+                            },
+                            onFieldSubmitted: (_) {
+                              if (_formKey.currentState!.validate()) {
+                                login();
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text.rich(
+                        TextSpan(
+                          text: 'Esqueceu-se da Password? ',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                          children: <TextSpan>[
+                            TextSpan(
+                              text: 'Clique Aqui',
+                              style: TextStyle(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  // Lógica para lidar com o clique no texto
+                                  print('Esqueceu-se da Password? Clique Aqui');
+                                  // Adicione aqui a lógica para lidar com a recuperação da senha
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
                           if (_formKey.currentState!.validate()) {
                             login();
                           }
                         },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text.rich(
-                    TextSpan(
-                      text: 'Esqueceu-se da Password? ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
-                      children: <TextSpan>[
-                        TextSpan(
-                          text: 'Clique Aqui',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                          ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () {
-                              // Lógica para lidar com o clique no texto
-                              print('Esqueceu-se da Password? Clique Aqui');
-                              // Adicione aqui a lógica para lidar com a recuperação da senha
-                            },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        login();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      // ignore: deprecated_member_use
-                      backgroundColor:
+                        style: ElevatedButton.styleFrom(
+                          // ignore: deprecated_member_use
+                          backgroundColor:
                           Color.fromARGB(255, 246, 141, 45), // Button color
-                      minimumSize: const Size(350, 50), // Button size
-                    ),
-                    child: const Text(
-                      'Login',
-                      style: TextStyle(
-                        color: Colors.white, // Text color
-                        fontSize: 18, // Text size
+                          minimumSize: const Size(350, 50), // Button size
+                        ),
+                        child: const Text(
+                          'Login',
+                          style: TextStyle(
+                            color: Colors.white, // Text color
+                            fontSize: 18, // Text size
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ));
+            )));
   }
 
   Widget mobileScreenLayout() {
@@ -365,8 +429,9 @@ class _LoginFormState extends State<LoginForm> {
                               context,
                               MaterialPageRoute(
                                   builder: (context) => EmailRequestPage(
-                                        tentativa: 0,
-                                      )));
+                                    tentativa: 0,
+                                    email: "",
+                                  )));
 
                           // Adicione aqui a lógica para lidar com a recuperação da senha
                         },
@@ -395,65 +460,71 @@ class _LoginFormState extends State<LoginForm> {
 }
 
 void verifylogin(context) async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  var id = prefs.getString("username");
-  var email = prefs.getString("email");
-  var type = prefs.getString("permissao");
-  var pwd = prefs.getString("pwd").toString();
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var id = prefs.getString("username");
+    var type = prefs.getString("permissao");
+    var pwd = prefs.getString("pwd");
 
-  if (id != null) // Already logged in
-  {
-    if (pwd == "epvc") {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => EmailRequestPage(tentativa: 2)));
-      prefs.remove("pwd");
-    } else {
-      if (type == "Administrador") // Admin
-      {
-        print("Administrador");
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AdminDrawer(
-              currentPage: UserTable(),
-              numero: 1,
-            ),
-          ),
-        );
-      } else if (type == "Professor") {
-        // User (Professor)
-        print("Professor");
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-      } else if (type == "Funcionária") {
-        // User (Funcionária)
-        print("Funcionária");
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-      } else if (type == "Bar") {
-        // User (Bar)
-        print("Bar");
-        Navigator.push(
-            context, MaterialPageRoute(builder: (context) => BarPagePedidos()));
-      } else if (type == "Aluno") {
-        // Exibe a mensagem antes de navegar
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Bem-vindo, Aluno!"),
-          ),
-        );
-
-        // Aguarda um pequeno atraso para permitir que a mensagem seja exibida
-        Future.delayed(Duration(seconds: 1), () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => HomeAlunoMain()),
-          );
-        });
-      }
+    // Verificar se há um usuário logado
+    if (id == null) {
+      // Não há usuário logado, apenas retornar
+      return;
     }
+
+    // Verificar se a senha é 'epvc' - tem prioridade sobre qualquer outra verificação
+    if (pwd != null && pwd.trim().toLowerCase() == "epvc") {
+      // Remover a senha para evitar loops
+      await prefs.remove("pwd");
+      if (id != null || id != "") {
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => EmailRequestPage(
+              tentativa: 2,
+              email: id,
+            )));
+        return;
+      } else {
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => EmailRequestPage(
+              tentativa: 2,
+              email: "",
+            )));
+        return;
+      }
+      // Navegar para EmailRequestPage com tentativa 2
+    }
+
+    // Processar navegação normal baseada no tipo de usuário
+    if (type == "Administrador") {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => AdminDrawer(
+            currentPage: DashboardPage(),
+            numero: 0,
+          ),
+        ),
+      );
+    } else if (type == "Professor") {
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+    } else if (type == "Funcionária") {
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+    } else if (type == "Bar") {
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => BarPagePedidos()));
+    } else if (type == "Aluno") {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Bem-vindo, Aluno!")));
+
+      Future.delayed(Duration(seconds: 1), () {
+        if (context.mounted) {
+          Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+        }
+      });
+    }
+  } catch (e) {
+    print("Erro na Verificação");
   }
 }

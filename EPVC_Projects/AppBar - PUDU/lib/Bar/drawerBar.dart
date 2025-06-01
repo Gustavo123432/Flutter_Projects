@@ -3,6 +3,7 @@ import 'package:my_flutter_project/Bar/barPage.dart';
 import 'package:my_flutter_project/Bar/pedidosRegistados.dart';
 import 'package:my_flutter_project/Bar/produtoPageBar.dart';
 import 'package:my_flutter_project/Bar/restaurantePage.dart';
+import 'package:my_flutter_project/Bar/saldoPage.dart';
 import 'package:my_flutter_project/BotDelivery/homeBotDelivery.dart';
 
 class DrawerBar extends StatefulWidget {
@@ -14,7 +15,7 @@ class DrawerBar extends StatefulWidget {
 class _DrawerBarState extends State<DrawerBar> {
   //final _advancedDrawerController = AdvancedDrawerController();
 
-  @override 
+  @override
   Widget build(BuildContext context) {
     return Drawer(
       child: Container(
@@ -38,7 +39,7 @@ class _DrawerBarState extends State<DrawerBar> {
                 'lib/assets/barapp.png',
                 fit: BoxFit.contain,
               ),
-              
+
             ),
             ListTile(
               onTap: () {
@@ -60,7 +61,7 @@ class _DrawerBarState extends State<DrawerBar> {
               leading: Icon(Icons.archive_outlined),
               title: Text('Pedidos Registados'),
             ),
-                 ListTile(
+            ListTile(
               onTap: () {
                 Navigator.push(
                   context,
@@ -80,7 +81,17 @@ class _DrawerBarState extends State<DrawerBar> {
               leading: Icon(Icons.local_pizza),
               title: Text('Produtos'),
             ),
-              ListTile(
+            ListTile(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SaldoPage()),
+                );
+              },
+              leading: Icon(Icons.account_balance_wallet),
+              title: Text('Saldo'),
+            ),
+            ListTile(
               onTap: () {
                 Navigator.push(
                   context,
@@ -88,13 +99,13 @@ class _DrawerBarState extends State<DrawerBar> {
                 );
               },
               leading: Image.asset(
-                'lib/assets/robo.png',
-                width: 24,
-                height: 24,
+                'lib/assets/bellabot_icon.png',
+                width: 28,
+                height: 28,
               ),
               title: Text('Bot Delivery'),
             ),
-        
+
             Spacer(),
             DefaultTextStyle(
               style: TextStyle(

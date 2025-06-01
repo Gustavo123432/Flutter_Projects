@@ -17,7 +17,7 @@ class _RestaurantePageState extends State<RestaurantePage> {
   List<dynamic> menuItems = [];
   final TextEditingController _menuNameController = TextEditingController();
   final TextEditingController _menuDescriptionController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _menuPriceController = TextEditingController();
   String? _selectedMenuItemId;
 
@@ -58,46 +58,46 @@ class _RestaurantePageState extends State<RestaurantePage> {
   }
 
   bool? state = false;
-Future<void> fetchMenuItems() async {
-  try {
-    final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {'query_param': '4'},
-    );
+  Future<void> fetchMenuItems() async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {'query_param': '4'},
+      );
 
-    if (response.statusCode == 200) {
-      final responseBody = json.decode(response.body);
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
 
-      if (mounted) {
-        setState(() {
-          if (responseBody is List) {
-            // Normal case: API returned a list of menu items
-            if (responseBody.isEmpty) {
+        if (mounted) {
+          setState(() {
+            if (responseBody is List) {
+              // Normal case: API returned a list of menu items
+              if (responseBody.isEmpty) {
+                menuItems = [];
+                state = true; // No items available
+              } else {
+                menuItems = responseBody;
+                state = false; // Items found
+              }
+            } else if (responseBody is Map && responseBody.containsKey('message')) {
+              // API returned a message instead of a list
               menuItems = [];
-              state = true; // No items available
+              state = true;
             } else {
-              menuItems = responseBody;
-              state = false; // Items found
+              // Fallback case: unexpected format
+              menuItems = [];
+              state = true;
             }
-          } else if (responseBody is Map && responseBody.containsKey('message')) {
-            // API returned a message instead of a list
-            menuItems = [];
-            state = true;
-          } else {
-            // Fallback case: unexpected format
-            menuItems = [];
-            state = true;
-          }
-        });
+          });
+        }
+      } else {
+        throw Exception('Failed to load menu items');
       }
-    } else {
-      throw Exception('Failed to load menu items');
+    } catch (e) {
+      print('Error fetching menu items: $e');
     }
-  } catch (e) {
-    print('Error fetching menu items: $e');
   }
-}
 
 //falta imagem
   Future<void> addMenuItem() async {
@@ -237,14 +237,14 @@ Future<void> fetchMenuItems() async {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(), 
+              onPressed: () => Navigator.of(context).pop(),
               child: Text("Cancelar"),
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); 
+                Navigator.of(context).pop();
                 toggleMenuItemStatus(
-                    id, isEnabled ? "0" : "1"); 
+                    id, isEnabled ? "0" : "1");
               },
               child: Text("Confirmar"),
             ),
@@ -302,8 +302,8 @@ Future<void> fetchMenuItems() async {
           TextButton(
             onPressed: () {
               deleteMenuItem(pratoId);
-              Navigator.pop(context); 
-              Navigator.pop(context); 
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             child: Text("Excluir", style: TextStyle(color: Colors.red)),
           ),
@@ -312,26 +312,26 @@ Future<void> fetchMenuItems() async {
     );
   }
 
-Future<void> updateReservationState(String id, String newState) async {
-  try {
-    final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
-      body: {
-        'query_param': '5.1',
-        'id': id,
-        'status': newState,
-      },
-    );
+  Future<void> updateReservationState(String id, String newState) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+        body: {
+          'query_param': '5.1',
+          'id': id,
+          'status': newState,
+        },
+      );
 
-    if (response.statusCode == 200) {
-      print('Reservation state updated');
-    } else {
-      throw Exception('Failed to update reservation state');
+      if (response.statusCode == 200) {
+        print('Reservation state updated');
+      } else {
+        throw Exception('Failed to update reservation state');
+      }
+    } catch (e) {
+      print('Error updating reservation state: $e');
     }
-  } catch (e) {
-    print('Error updating reservation state: $e');
   }
-}
 
   Future<void> showConfirmationReservationDialog(
       BuildContext context, String id, bool isEnabled) async {
@@ -348,7 +348,7 @@ Future<void> updateReservationState(String id, String newState) async {
               child: Text('Cancelar'),
               onPressed: () {
                 Navigator.of(context)
-                    .pop(); 
+                    .pop();
               },
             ),
             TextButton(
@@ -381,290 +381,290 @@ Future<void> updateReservationState(String id, String newState) async {
       body: SingleChildScrollView(
         child: reservas == false
             ? Column(
-                children: [
-                   Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Reservas',
-                        style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold)),
-                  ),
-                  Text("Sem Reservas."),
-                  SizedBox(
-                    height: 32,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Pratos',
-                        style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold)),
-                  ),
-                  state == true
-                      ? Column(
-                          children: [
-                            Text("\t\t\tSem Pratos. Adicione um prato"),
-                            SizedBox(
-                              height: 32,
-                            )
-                          ],
-                        ) // Shows the message when no items
-                      : GridView.builder(
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                            childAspectRatio: 1.0,
-                          ),
-                          itemCount: menuItems.length,
-                          itemBuilder: (context, index) {
-                            final item = menuItems[index];
-                            Uint8List imageBytes = base64Decode(item['imagem']);
-                            bool isEnabled = item['estado'] ==
-                                "1"; // Convert from string if needed
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('Reservas',
+                  style: TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold)),
+            ),
+            Text("Sem Reservas."),
+            SizedBox(
+              height: 32,
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('Pratos',
+                  style: TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold)),
+            ),
+            state == true
+                ? Column(
+              children: [
+                Text("\t\t\tSem Pratos. Adicione um prato"),
+                SizedBox(
+                  height: 32,
+                )
+              ],
+            ) // Shows the message when no items
+                : GridView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              gridDelegate:
+              SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 1.0,
+              ),
+              itemCount: menuItems.length,
+              itemBuilder: (context, index) {
+                final item = menuItems[index];
+                Uint8List imageBytes = base64Decode(item['imagem']);
+                bool isEnabled = item['estado'] ==
+                    "1"; // Convert from string if needed
 
-                            return GestureDetector(
-                              onTap: () => showConfirmationDialog(
-                                  context, item['id'], isEnabled),
-                              child: Card(
-                                color: isEnabled
-                                    ? Colors.green
-                                    : Colors.white, // Change color when enabled
-                                elevation: 4,
-                                margin: const EdgeInsets.all(8),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.vertical(
-                                              top: Radius.circular(8)),
-                                          child: Image.memory(
-                                            imageBytes,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                          ),
-                                        ),
-                                      ),
-                                      Text(
-                                        '${item['nome']}',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: isEnabled
-                                              ? Colors.white
-                                              : Colors
-                                                  .black, // Change text color
-                                        ),
-                                      ),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        '${item['ingredientes']}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: isEnabled
-                                              ? Colors.white70
-                                              : Colors.grey[600],
-                                        ),
-                                      ),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        '${double.parse(item['preco']).toStringAsFixed(2)}€',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: isEnabled
-                                              ? Colors.white
-                                              : Colors.orange,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                return GestureDetector(
+                  onTap: () => showConfirmationDialog(
+                      context, item['id'], isEnabled),
+                  child: Card(
+                    color: isEnabled
+                        ? Colors.green
+                        : Colors.white, // Change color when enabled
+                    elevation: 4,
+                    margin: const EdgeInsets.all(8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(8)),
+                              child: Image.memory(
+                                imageBytes,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
                               ),
-                            );
-                          },
-                        ),
-                ],
-              ) // Shows the message when no items
-            : Column(
-                children: [
-                  // Reservations Section
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Reservas',
-                        style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold)),
-                  ),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4, // Number of cards per row
-                      crossAxisSpacing: 8, // Horizontal space between cards
-                      mainAxisSpacing: 8, // Vertical space between cards
-                      childAspectRatio: 1.0, // Width/height ratio of cards
-                    ),
-                    itemCount: reservations.length,
-                    itemBuilder: (context, index) {
-                      final reservation = reservations[index];
-                      bool isEnabled = reservation['estado'] ==
-                          '1'; // Check if the reservation is enabled (state = 1)
-
-                      // Card color based on the state
-                      Color cardColor = isEnabled ? Colors.green : Colors.white;
-
-                      return GestureDetector(
-                        onTap: () {
-                          // Show confirmation dialog before changing state
-                          showConfirmationReservationDialog(
-                              context, reservation['id'], isEnabled);
-                        },
-                        child: Card(
-                          elevation: 4, // Shadow on the card
-                          margin: const EdgeInsets.all(
-                              8), // Spacing around the card
-                          color: cardColor, // Set card color based on state
-                          child: Padding(
-                            padding: const EdgeInsets.all(
-                                16), // Internal padding of the card
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${reservation['name']} - ${reservation['description']}',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: isEnabled
-                                        ? Colors.white
-                                        : Colors
-                                            .black, // Adjust text color based on card state
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  'Date: ${reservation['date']} - Time: ${reservation['time']}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: isEnabled
-                                        ? Colors.white70
-                                        : Colors.grey[600],
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Pratos',
-                        style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold)),
-                  ),
-                  state == true
-                      ? Column(
-                          children: [
-                            Text("Sem Pratos. Adicione um prato"),
-                            SizedBox(
-                              height: 32,
-                            )
-                          ],
-                        ) // Shows the message when no items
-                      : GridView.builder(
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                            childAspectRatio: 1.0,
+                          Text(
+                            '${item['nome']}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isEnabled
+                                  ? Colors.white
+                                  : Colors
+                                  .black, // Change text color
+                            ),
                           ),
-                          itemCount: menuItems.length,
-                          itemBuilder: (context, index) {
-                            final item = menuItems[index];
-                            Uint8List imageBytes = base64Decode(item['imagem']);
-                            bool isEnabled = item['estado'] ==
-                                "1"; // Convert from string if needed
-
-                            return GestureDetector(
-                              onTap: () => showConfirmationDialog(
-                                  context, item['id'], isEnabled),
-                              child: Card(
-                                color: isEnabled
-                                    ? Colors.green
-                                    : Colors.white, // Change color when enabled
-                                elevation: 4,
-                                margin: const EdgeInsets.all(8),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.vertical(
-                                              top: Radius.circular(8)),
-                                          child: Image.memory(
-                                            imageBytes,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                          ),
-                                        ),
-                                      ),
-                                      Text(
-                                        '${item['nome']}',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: isEnabled
-                                              ? Colors.white
-                                              : Colors
-                                                  .black, // Change text color
-                                        ),
-                                      ),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        '${item['ingredientes']}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: isEnabled
-                                              ? Colors.white70
-                                              : Colors.grey[600],
-                                        ),
-                                      ),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        '${double.parse(item['preco']).toStringAsFixed(2)}€',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: isEnabled
-                                              ? Colors.white
-                                              : Colors.orange,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ],
+                          SizedBox(height: 8),
+                          Text(
+                            '${item['ingredientes']}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isEnabled
+                                  ? Colors.white70
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            '${double.parse(item['preco']).toStringAsFixed(2)}€',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: isEnabled
+                                  ? Colors.white
+                                  : Colors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ) // Shows the message when no items
+            : Column(
+          children: [
+            // Reservations Section
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('Reservas',
+                  style: TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold)),
+            ),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4, // Number of cards per row
+                crossAxisSpacing: 8, // Horizontal space between cards
+                mainAxisSpacing: 8, // Vertical space between cards
+                childAspectRatio: 1.0, // Width/height ratio of cards
               ),
+              itemCount: reservations.length,
+              itemBuilder: (context, index) {
+                final reservation = reservations[index];
+                bool isEnabled = reservation['estado'] ==
+                    '1'; // Check if the reservation is enabled (state = 1)
+
+                // Card color based on the state
+                Color cardColor = isEnabled ? Colors.green : Colors.white;
+
+                return GestureDetector(
+                  onTap: () {
+                    // Show confirmation dialog before changing state
+                    showConfirmationReservationDialog(
+                        context, reservation['id'], isEnabled);
+                  },
+                  child: Card(
+                    elevation: 4, // Shadow on the card
+                    margin: const EdgeInsets.all(
+                        8), // Spacing around the card
+                    color: cardColor, // Set card color based on state
+                    child: Padding(
+                      padding: const EdgeInsets.all(
+                          16), // Internal padding of the card
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${reservation['name']} - ${reservation['description']}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isEnabled
+                                  ? Colors.white
+                                  : Colors
+                                  .black, // Adjust text color based on card state
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Date: ${reservation['date']} - Time: ${reservation['time']}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isEnabled
+                                  ? Colors.white70
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('Pratos',
+                  style: TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold)),
+            ),
+            state == true
+                ? Column(
+              children: [
+                Text("Sem Pratos. Adicione um prato"),
+                SizedBox(
+                  height: 32,
+                )
+              ],
+            ) // Shows the message when no items
+                : GridView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              gridDelegate:
+              SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 1.0,
+              ),
+              itemCount: menuItems.length,
+              itemBuilder: (context, index) {
+                final item = menuItems[index];
+                Uint8List imageBytes = base64Decode(item['imagem']);
+                bool isEnabled = item['estado'] ==
+                    "1"; // Convert from string if needed
+
+                return GestureDetector(
+                  onTap: () => showConfirmationDialog(
+                      context, item['id'], isEnabled),
+                  child: Card(
+                    color: isEnabled
+                        ? Colors.green
+                        : Colors.white, // Change color when enabled
+                    elevation: 4,
+                    margin: const EdgeInsets.all(8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(8)),
+                              child: Image.memory(
+                                imageBytes,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${item['nome']}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isEnabled
+                                  ? Colors.white
+                                  : Colors
+                                  .black, // Change text color
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            '${item['ingredientes']}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isEnabled
+                                  ? Colors.white70
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            '${double.parse(item['preco']).toStringAsFixed(2)}€',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: isEnabled
+                                  ? Colors.white
+                                  : Colors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
       floatingActionButton: SpeedDial(
         animatedIcon: AnimatedIcons.menu_close,

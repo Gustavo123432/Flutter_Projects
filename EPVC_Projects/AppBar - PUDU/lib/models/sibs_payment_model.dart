@@ -276,8 +276,8 @@ class SibsPaymentResponse {
   factory SibsPaymentResponse.fromJson(Map<String, dynamic> json) {
     return SibsPaymentResponse(
       amount: json['amount'] != null ? Amount(
-        value: json['amount']['value'] is int 
-            ? json['amount']['value'].toDouble() 
+        value: json['amount']['value'] is int
+            ? json['amount']['value'].toDouble()
             : double.parse(json['amount']['value'].toString()),
         currency: json['amount']['currency'],
       ) : null,
@@ -400,8 +400,8 @@ class PaymentStatusResponse {
       ),
       transactionID: json['transactionID'],
       amount: Amount(
-        value: json['amount']['value'] is int 
-            ? json['amount']['value'].toDouble() 
+        value: json['amount']['value'] is int
+            ? json['amount']['value'].toDouble()
             : double.parse(json['amount']['value'].toString()),
         currency: json['amount']['currency'],
       ),

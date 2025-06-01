@@ -47,14 +47,74 @@ class SibsService {
         return jsonDecode(response.body);
       } else {
         final errorBody = json.decode(response.body);
+        
+        // Verificar especificamente o erro E9999 (problema no número do telefone)
+        if (errorBody['returnStatus'] != null && 
+            errorBody['returnStatus']['statusCode'] == 'E9999') {
+          throw Exception('Número MB WAY inválido ou inativo. Verifique o número e tente novamente.');
+        }
+        
+        // Outros erros 
         throw Exception(
-            'Failed to create MBWay payment: ${errorBody['httpMessage'] ?? 'Unknown error'}');
+            'Failed to create MBWay payment: ${errorBody['httpMessage'] ?? errorBody['returnStatus']?['statusMsg'] ?? 'Unknown error'}');
       }
     } catch (e) {
       print('Detailed error: $e');
       throw Exception('SIBS communication error: $e');
     }
   }
+
+  Future<Map<String, dynamic>> SendToWebhook({
+    required String transactionId,
+    required String transactionSignature,
+  }) async {
+    try {
+      final payload = {
+        "transactionID": transactionId,
+        "transactionSignature": transactionSignature,
+        "timestamp": DateTime.now().toUtc().toIso8601String(),
+        "paymentMethod": "MBWAY",
+        "paymentStatus": "PENDING",
+        "amount": {
+          "value": 0, // Will be updated when payment completes
+          "currency": "EUR"
+        }
+      };
+
+      print('Sending to webhook with payload: ${json.encode(payload)}');
+
+      final response = await http.post(
+        Uri.parse('https://api.appbar.epvc.pt/api/sibs/initial'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode(payload),
+      );
+
+      print('Webhook registration response: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          return jsonDecode(response.body);
+        } catch (e) {
+          // If response isn't JSON, return simple success
+          return {"status": "success", "message": "Transaction registered with webhook"};
+        }
+      } else {
+        throw Exception('Failed to register transaction with webhook: HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Webhook registration error: $e');
+      // Don't throw an exception, just return an error status
+      return {"status": "error", "message": "Failed to register with webhook: $e"};
+    }
+  }
+
+  double roundToTwoDecimals(double value) {
+  return (value * 100).roundToDouble() / 100;
+}
 
   Future<Map<String, dynamic>> initiateMBWayPayment({
     required double amount,
@@ -74,16 +134,16 @@ class SibsService {
         },
         "transaction": {
           "transactionTimestamp": timestamp,
-          "description": "Pedido AppBar - Nº $orderNumber",
+          "description": "Pedido AppBar - $orderNumber",
           "moto": false,
           "paymentType": "PURS",
-          "amount": {"value": amount, "currency": "EUR"},
+          "amount": {"value": roundToTwoDecimals(amount), "currency": "EUR"},
           "paymentMethod": ["MBWAY", "REFERENCE"],
           "paymentReference": {
             "initialDatetime": timestamp,
             "finalDatetime": expiry,
-            "maxAmount": {"value": amount, "currency": "EUR"},
-            "minAmount": {"value": amount, "currency": "EUR"},
+            "maxAmount": {"value": roundToTwoDecimals(amount), "currency": "EUR"},
+            "minAmount": {"value": roundToTwoDecimals(amount), "currency": "EUR"},
             "entity": "24000"
           }
         }
@@ -116,41 +176,65 @@ class SibsService {
 
   Future<Map<String, dynamic>> checkPaymentStatus(String paymentId) async {
     try {
+      print('Checking payment status for ID: $paymentId');
+      // Use webhook instead of direct SIBS API
       final response = await http.get(
-        Uri.parse('$baseUrl/payments/$paymentId/status'),
+        Uri.parse('https://api.appbar.epvc.pt/api/status/$paymentId'),
         headers: {
-          'Authorization': 'Bearer $accessToken',
-          'X-IBM-Client-Id': clientId,
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
         },
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+      print('Status check response: ${response.statusCode}');
 
+      if (response.statusCode == 200) {
+        print('Raw response: ${response.body}');
+        final data = json.decode(response.body);
+        
+        // The response already contains the status in the correct format
+        // Example response: {"paymentStatus": "Declined", "amount": {"value": null}, "returnStatus": {}, "rawResponse": {}}
+        String resultStatus = data['paymentStatus'] ?? 'Pending';
+        print('Payment status: $resultStatus');
+        
+        // Return the response in the expected format
         return {
-          'status': data['paymentStatus'] ??
-              'UNKNOWN', // Changed from transaction.status
-          'transactionStatusCode': data['transactionStatusCode'] ?? 'UNKNOWN',
+          'status': resultStatus, // Already properly formatted (Success, Declined, Pending)
           'paymentId': paymentId,
-          'transactionId':
-              data['transactionID'], // Added transactionID from response
-          'amount': data['amount']?['value'],
-          'currency': data['amount']?['currency'],
-          'timestamp': data['execution']?['endTime'], // Using execution.endTime
-          'paymentMethod': data['paymentMethod'],
-          'phoneNumber': data['token']
-              ?['value'], // Added phone number from token
-          'returnStatus': data['returnStatus'], // Full status object
+          'transactionId': paymentId, // Use the same ID as we don't have a separate one
+          'amount': data['amount']?['value'] ?? 0.0,
+          'currency': 'EUR',
+          'timestamp': DateTime.now().toIso8601String(),
+          'returnStatus': data['returnStatus'] ?? {},
           'rawResponse': data // Include full response for debugging
         };
+      } else if (response.statusCode == 404) {
+        // If the transaction is not found, consider it pending (may not be registered yet)
+        print('Transaction not found in status service, treating as pending');
+        return {
+          'status': 'Pending',
+          'paymentId': paymentId,
+          'transactionId': paymentId,
+          'returnStatus': {
+            'statusMsg': 'Transaction not found in status service'
+          }
+        };
       } else {
-        final errorBody = json.decode(response.body);
+        // Attempt to parse error response
+        Map<String, dynamic> errorData = {};
+        try {
+          errorData = json.decode(response.body);
+          print('Error response: $errorData');
+        } catch (e) {
+          errorData = {'message': 'Invalid response format'};
+          print('Error parsing response: $e');
+        }
+        
         throw Exception(
-            'Payment status check failed: ${errorBody['returnStatus']?['statusDescription'] ?? errorBody['httpMessage'] ?? 'Unknown error (HTTP ${response.statusCode})'}');
+            'Payment status check failed: ${errorData['message'] ?? 'Unknown error (HTTP ${response.statusCode})'}');
       }
     } catch (e) {
-      print('Detailed error: $e');
+      print('Detailed error checking payment status: $e');
       throw Exception('Payment status check error: ${e.toString()}');
     }
   }

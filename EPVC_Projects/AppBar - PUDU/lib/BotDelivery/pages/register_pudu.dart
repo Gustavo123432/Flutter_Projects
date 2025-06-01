@@ -50,7 +50,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
       ).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          throw Exception('Timeout ao conectar com o servidor');
+          throw Exception('Tempo expirado ao conectar com o servidor');
         },
       );
 
@@ -97,7 +97,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
       ).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          throw Exception('Timeout ao conectar com o servidor');
+          throw Exception('Tempo expirado ao conectar com o servidor');
         },
       );
 
@@ -210,7 +210,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Robot registrado com sucesso!'),
+            content: Text('Robot registado com sucesso!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -219,7 +219,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao registrar o Robot: ${e.toString()}'),
+            content: Text('Erro ao registar o Robot: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -235,7 +235,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Register New Robot'),
+        title: const Text('Registar Novo Robot'),
         backgroundColor: const Color.fromARGB(255, 246, 141, 45),
       ),
       body: SingleChildScrollView(
@@ -259,23 +259,29 @@ class _RegisterPuduState extends State<RegisterPudu> {
                             color: Color.fromARGB(255, 246, 141, 45),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
-                            Icons.precision_manufacturing,
-                            size: 50,
-                            color: Colors.white,
+                          child: ClipOval(
+                            child: Container(
+                              color: const Color.fromARGB(255, 246, 141, 45),
+                              child: Image.asset(
+                                'lib/assets/bellabotwhiteandorange_icon.png',
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 24),
                         TextFormField(
                           controller: _ipController,
                           decoration: const InputDecoration(
-                            labelText: 'IP Address',
+                            labelText: 'Endereço IP',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.wifi),
+                            prefixIcon: Icon(Icons.wifi, color: Colors.black),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter IP address';
+                              return 'Por favor, insira o IP do robot';
                             }
                             return null;
                           },
@@ -284,13 +290,13 @@ class _RegisterPuduState extends State<RegisterPudu> {
                         TextFormField(
                           controller: _idDeviceController,
                           decoration: const InputDecoration(
-                            labelText: 'Device ID',
+                            labelText: 'ID do Robot',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.devices),
+                            prefixIcon: Icon(Icons.devices, color: Colors.black),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter Device ID';
+                              return 'Por favor, insira o ID do Robot';
                             }
                             return null;
                           },
@@ -298,15 +304,22 @@ class _RegisterPuduState extends State<RegisterPudu> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Robot Name',
-                            border: OutlineInputBorder(),
-                            prefixIcon:
-                                Icon(Icons.precision_manufacturing_outlined),
+                          decoration: InputDecoration(
+                            labelText: 'Nome do Robot',
+                            border: const OutlineInputBorder(),
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Image.asset(
+                                'lib/assets/bellabot_icon.png',
+                                width: 24,
+                                height: 24,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter robot name';
+                              return 'Por favor, insira o nome do robot';
                             }
                             return null;
                           },
@@ -315,14 +328,14 @@ class _RegisterPuduState extends State<RegisterPudu> {
                         TextFormField(
                           controller: _secretDeviceController,
                           decoration: const InputDecoration(
-                            labelText: 'Device Secret',
+                            labelText: 'Segredo do Robot',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.security),
+                            prefixIcon: Icon(Icons.security, color: Colors.black),
                           ),
                           obscureText: true,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter device secret';
+                              return 'Por favor, insira o segredo do robot';
                             }
                             return null;
                           },
@@ -331,13 +344,13 @@ class _RegisterPuduState extends State<RegisterPudu> {
                         TextFormField(
                           controller: _regionController,
                           decoration: const InputDecoration(
-                            labelText: 'Region',
+                            labelText: 'Região',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.location_on),
+                            prefixIcon: Icon(Icons.location_on, color: Colors.black),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter region';
+                              return 'Por favor, insira a região do robot';
                             }
                             return null;
                           },
@@ -346,9 +359,9 @@ class _RegisterPuduState extends State<RegisterPudu> {
                         DropdownButtonFormField<String>(
                           value: _selectedType,
                           decoration: const InputDecoration(
-                            labelText: 'Robot Type',
+                            labelText: 'Modelo do Robot',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.category),
+                            prefixIcon: Icon(Icons.category, color: Colors.black),
                           ),
                           items: _robotTypes.map((String type) {
                             return DropdownMenuItem<String>(
@@ -379,7 +392,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
                                 ? const CircularProgressIndicator(
                                     color: Colors.white)
                                 : const Text(
-                                    'Register Robot',
+                                    'Registar Robot',
                                     style: TextStyle(fontSize: 18),
                                   ),
                           ),

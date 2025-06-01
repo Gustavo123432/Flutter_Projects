@@ -27,8 +27,7 @@ android {
     compileSdk flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
-    compileSdkVersion 34  // Change this line to 33 or 34
-
+    compileSdkVersion 35  // Atualizando para 35 para compatibilidade com os plugins
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

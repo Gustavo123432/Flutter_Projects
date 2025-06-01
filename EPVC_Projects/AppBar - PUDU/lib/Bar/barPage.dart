@@ -18,6 +18,7 @@ class PurchaseOrder {
   final String status;
   final String userPermission;
   final String imagem;
+  final String paymentMethod;
 
   PurchaseOrder({
     required this.number,
@@ -29,6 +30,7 @@ class PurchaseOrder {
     required this.status,
     required this.userPermission,
     required this.imagem,
+    required this.paymentMethod,
   });
 
   factory PurchaseOrder.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class PurchaseOrder {
       status: json['Estado']?.toString() ?? '0',
       imagem: json['Imagem'] ?? '',
       userPermission: json['Permissao'] ?? 'Sem permissão',
+      paymentMethod: json['payment_method'] ?? json['MetodoDePagamento'] ?? 'dinheiro',
     );
   }
 }
@@ -56,7 +59,7 @@ class BarPagePedidos extends StatefulWidget {
 class _BarPagePedidosState extends State<BarPagePedidos> {
   late Stream<List<PurchaseOrder>> purchaseOrderStream;
   final StreamController<List<PurchaseOrder>> purchaseOrderController =
-      StreamController.broadcast();
+  StreamController.broadcast();
   List<PurchaseOrder> currentOrders = [];
   WebSocketChannel? _channel;
 
@@ -76,7 +79,8 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
         List<PurchaseOrder> orders =
-            data.map((json) => PurchaseOrder.fromJson(json)).toList();
+        data.map((json) => PurchaseOrder.fromJson(json)).toList();
+
 
         setState(() {
           currentOrders = orders.where((order) => order.status != '2').toList();
@@ -99,7 +103,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     );
 
     _channel!.stream.listen(
-      (message) {
+          (message) {
         if (message != null && message.isNotEmpty) {
           try {
             Map<String, dynamic> data = jsonDecode(message);
@@ -109,7 +113,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
               // Remove completed orders (status 2)
               if (order.status == '2') {
                 currentOrders.removeWhere((o) => o.number == order.number);
-              } 
+              }
               // Update existing orders
               else {
                 int index = currentOrders.indexWhere((o) => o.number == order.number);
@@ -159,6 +163,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
         .map((product) => product.trim())
         .toList();
 
+    // Find orders with similar products
     List<PurchaseOrder> matchingOrders = allOrders.where((order) {
       List<String> orderProducts = order.description
           .split(',')
@@ -170,8 +175,29 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     matchingOrders.removeWhere((order) => order.number == currentOrder.number);
     matchingOrders.removeWhere((order) => int.parse(order.status) != 0);
 
+    // Aggregate products from all relevant orders (current order + matching orders)
+    Map<String, int> productCounts = {};
+
+    // Add products from current orders
+    for (String product in currentProducts) {
+      productCounts[product] = (productCounts[product] ?? 0) + 1;
+    }
+
+    // Add products from matching orders
+    for (PurchaseOrder order in matchingOrders) {
+      List<String> orderProducts = order.description
+          .split(',')
+          .map((product) => product.trim())
+          .toList();
+
+      for (String product in orderProducts) {
+        productCounts[product] = (productCounts[product] ?? 0) + 1;
+      }
+    }
+
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (BuildContext context) {
         return SingleChildScrollView(
           scrollDirection: Axis.vertical,
@@ -183,6 +209,22 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
               children: [
                 Text('Você está preparando o pedido ${currentOrder.number}.'),
                 SizedBox(height: 10),
+
+                // Display aggregated product counts
+                Text('Total de produtos a preparar:'),
+                SizedBox(height: 5),
+                ...productCounts.entries.map((entry) {
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 16.0, bottom: 4.0),
+                    child: Text(
+                      '• ${entry.value}x ${entry.key}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  );
+                }).toList(),
+
+                SizedBox(height: 15),
+                Text('Produtos no pedido atual:'),
                 Text.rich(
                   TextSpan(
                     children: currentOrder.description
@@ -190,21 +232,24 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                         .replaceAll(']', '')
                         .split(',')
                         .map((item) => TextSpan(
-                              text: '\t\t\t• ${item.trim()}\n',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ))
+                      text: '\t\t\t• ${item.trim()}\n',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ))
                         .toList(),
                   ),
                 ),
-                if (matchingOrders.isNotEmpty)
+
+                if (matchingOrders.isNotEmpty) ...[
+                  SizedBox(height: 10),
                   Text('Os seguintes pedidos contêm produtos semelhantes:'),
-                ...matchingOrders.map((order) {
-                  return ListTile(
-                    title: Text('Pedido ${order.number} - ${order.requester}'),
-                    subtitle: Text(
-                        'Produtos: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
-                  );
-                }).toList(),
+                  ...matchingOrders.map((order) {
+                    return ListTile(
+                      title: Text('Pedido ${order.number} - ${order.requester}'),
+                      subtitle: Text(
+                          'Produtos: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
+                    );
+                  }).toList(),
+                ],
               ],
             ),
             actions: [
@@ -252,6 +297,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
               status: '1', // Set status to 1 (Preparar)
               userPermission: order.userPermission,
               imagem: order.imagem,
+              paymentMethod: order.paymentMethod,
             );
             purchaseOrderController.add(currentOrders);
           }
@@ -271,6 +317,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       );
     }
   }
+
 
   Future<void> _markOrderAsCompleted(PurchaseOrder order) async {
     try {
@@ -406,7 +453,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                         ConnectionState.waiting) {
                       return Center(
                           child:
-                              CircularProgressIndicator());
+                          CircularProgressIndicator());
                     } else {
                       return Center(
                           child: Text(
@@ -505,9 +552,9 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                           .replaceAll(']', '')
                                           .split(',')
                                           .map((item) => TextSpan(
-                                                text: '• ${item.trim()}\n',
-                                                style: TextStyle(fontWeight: FontWeight.bold),
-                                              ))
+                                        text: '• ${item.trim()}\n',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ))
                                           .toList(),
                                     ),
                                   ),
@@ -521,11 +568,76 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                   ),
                                   SizedBox(height: 4),
                                   Text(
-                                    'Troco: ${order.troco}€',
+                                    'Troco: ${double.parse(order.troco).toStringAsFixed(2).replaceAll('.', ',')}€',
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey[800],
                                     ),
+                                  ),
+                                  SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Método de Pagamento: ',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[800],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: order.paymentMethod.toLowerCase() == 'mbway'
+                                              ? Color.fromARGB(255, 232, 240, 254)
+                                              : order.paymentMethod.toLowerCase() == 'saldo'
+                                              ? Colors.orange[50]
+                                              : Color.fromARGB(255, 239, 249, 239),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: order.paymentMethod.toLowerCase() == 'mbway'
+                                                ? Colors.red
+                                                : order.paymentMethod.toLowerCase() == 'saldo'
+                                                ? Colors.orange[700]!
+                                                : Color.fromARGB(255, 76, 175, 80),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              order.paymentMethod.toLowerCase() == 'mbway'
+                                                  ? Icons.phone_android
+                                                  : order.paymentMethod.toLowerCase() == 'saldo'
+                                                  ? Icons.account_balance_wallet
+                                                  : Icons.money,
+                                              size: 16,
+                                              color: order.paymentMethod.toLowerCase() == 'mbway'
+                                                  ? Colors.red
+                                                  : order.paymentMethod.toLowerCase() == 'saldo'
+                                                  ? Colors.orange[700]
+                                                  : Color.fromARGB(255, 76, 175, 80),
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              order.paymentMethod.toLowerCase() == 'mbway'
+                                                  ? 'MBWay'
+                                                  : order.paymentMethod.toLowerCase() == 'saldo'
+                                                  ? 'Saldo'
+                                                  : 'Dinheiro',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: order.paymentMethod.toLowerCase() == 'mbway'
+                                                    ? Colors.red
+                                                    : order.paymentMethod.toLowerCase() == 'saldo'
+                                                    ? Colors.orange[700]
+                                                    : Color.fromARGB(255, 76, 175, 80),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   SizedBox(height: 12),
                                   Card(
@@ -682,10 +794,69 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                   ),
                                 ),
                                 Text(
-                                  'Troco: ${order.troco}€',
+                                  'Troco: ${double.parse(order.troco).toStringAsFixed(2).replaceAll('.', ',')}€',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // Display payment method
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: order.paymentMethod.toLowerCase() == 'mbway'
+                                        ? Color.fromARGB(255, 232, 240, 254)
+                                        : order.paymentMethod.toLowerCase() == 'saldo'
+                                        ? Colors.orange[50]
+                                        : Color.fromARGB(255, 239, 249, 239),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: order.paymentMethod.toLowerCase() == 'mbway'
+                                          ? Colors.red
+                                          : order.paymentMethod.toLowerCase() == 'saldo'
+                                          ? Colors.orange[700]!
+                                          : Color.fromARGB(255, 76, 175, 80),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        order.paymentMethod.toLowerCase() == 'mbway'
+                                            ? Icons.phone_android
+                                            : order.paymentMethod.toLowerCase() == 'saldo'
+                                            ? Icons.account_balance_wallet
+                                            : Icons.money,
+                                        size: 16,
+                                        color: order.paymentMethod.toLowerCase() == 'mbway'
+                                            ? Colors.red
+                                            : order.paymentMethod.toLowerCase() == 'saldo'
+                                            ? Colors.orange[700]
+                                            : Color.fromARGB(255, 76, 175, 80),
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        order.paymentMethod.toLowerCase() == 'mbway'
+                                            ? 'MBWay'
+                                            : order.paymentMethod.toLowerCase() == 'saldo'
+                                            ? 'Saldo'
+                                            : 'Dinheiro',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: order.paymentMethod.toLowerCase() == 'mbway'
+                                              ? Colors.red
+                                              : order.paymentMethod.toLowerCase() == 'saldo'
+                                              ? Colors.orange[700]
+                                              : Color.fromARGB(255, 76, 175, 80),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
