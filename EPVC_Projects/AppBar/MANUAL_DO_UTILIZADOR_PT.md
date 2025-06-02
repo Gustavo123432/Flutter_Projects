@@ -10,8 +10,8 @@
 7. [Área do Aluno](#área-do-aluno)
 8. [Sistema de Pagamentos](#sistema-de-pagamentos)
 9. [Gestão de Perfil](#gestão-de-perfil)
-10. [Configurações](#configurações)
-11. [Recuperação de Senha](#recuperação-de-senha)
+10. [Definições](#definições)
+11. [Recuperação de Palavra-passe](#recuperação-de-palavra-passe)
 12. [Resolução de Problemas](#resolução-de-problemas)
 13. [Suporte](#suporte)
 
@@ -20,7 +20,7 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
 
 ## Requisitos do Sistema
 - Sistema Operativo: Android 6.0 ou superior / iOS 12.0 ou superior
-- Conexão à Internet: Wi-Fi ou dados móveis
+- Ligação à Internet: Wi-Fi ou dados móveis
 - Espaço de Armazenamento: Mínimo 50MB
 - Para pagamentos MB WAY: Aplicação MB WAY instalada e conta ativa
 
@@ -28,14 +28,14 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
 1. Aceda à App Store (iOS) ou Google Play Store (Android)
 2. Pesquise por "EPVC App"
 3. Clique em "Instalar"
-4. Aguarde o download e instalação
+4. Aguarde a transferência e instalação
 5. Abra a aplicação
 
 ## Primeiro Acesso
 1. Abra a aplicação
-2. No ecrã inicial, clique em "Login"
+2. No ecrã inicial, clique em "Iniciar Sessão"
 3. Introduza as credenciais fornecidas pela instituição:
-   - Email: [seu email]
+   - Correio eletrónico: [seu correio eletrónico]
    - Palavra-passe: [palavra-passe temporária]
 4. Clique em "Entrar"
 5. Na primeira vez, será solicitado que altere a sua palavra-passe
@@ -44,8 +44,8 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
 ## Interface da Aplicação
 
 ### Ecrã Inicial
-- Logo da EPVC
-- Botão de Login
+- Logótipo da EPVC
+- Botão de Iniciar Sessão
 - Opção "Esqueceu a palavra-passe?"
 
 ### Menu Principal
@@ -55,7 +55,7 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
   - Pedidos
   - Saldo
   - Definições
-  - Sair
+  - Terminar Sessão
 
 ### Barra de Navegação
 - Botão voltar
@@ -86,7 +86,7 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
 2. Visualize informações pessoais:
    - Nome completo
    - Número de estudante
-   - Email
+   - Correio eletrónico
    - Turma
    - Saldo atual
 3. Opções de edição disponíveis
@@ -98,7 +98,7 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
 2. Introduza o número de telemóvel registado no MB WAY
 3. Confirme o valor
 4. Aguarde a notificação no telemóvel
-5. Aprove o pagamento na app MB WAY
+5. Aprove o pagamento na aplicação MB WAY
 6. Aguarde a confirmação na aplicação
 
 ### 2. Carregamento de Saldo
@@ -114,7 +114,7 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
 ### 1. Visualização de Dados
 - Nome completo
 - Número de estudante
-- Email
+- Correio eletrónico
 - Turma
 - Saldo atual
 - Histórico de pedidos
@@ -143,18 +143,18 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
 - Privacidade
 
 ## Recuperação de Palavra-passe
-1. No ecrã de login, clique em "Esqueceu a palavra-passe?"
-2. Introduza o email registado
+1. No ecrã de início de sessão, clique em "Esqueceu a palavra-passe?"
+2. Introduza o correio eletrónico registado
 3. Clique em "Enviar"
-4. Verifique o seu email
+4. Verifique o seu correio eletrónico
 5. Siga as instruções recebidas
 6. Crie uma nova palavra-passe
 
 ## Resolução de Problemas
 
-### Problemas de Login
+### Problemas de Início de Sessão
 1. **Credenciais inválidas**
-   - Verifique o email e palavra-passe
+   - Verifique o correio eletrónico e palavra-passe
    - Confirme se as teclas Caps Lock ou Num Lock estão ativadas
    - Tente recuperar a palavra-passe
 
@@ -165,7 +165,7 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
 ### Problemas de Pagamento
 1. **MB WAY não funciona**
    - Verifique se o número está correto
-   - Confirme se a app MB WAY está instalada
+   - Confirme se a aplicação MB WAY está instalada
    - Verifique se a conta está ativa
 
 2. **Transação incompleta**
@@ -174,32 +174,32 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
    - Verifique o histórico
 
 ### Problemas Técnicos
-1. **Aplicação trava**
+1. **Aplicação bloqueia**
    - Feche completamente
-   - Limpe o cache
+   - Limpe a cache
    - Reinicie o dispositivo
 
-2. **Erro de conexão**
-   - Verifique a internet
+2. **Erro de ligação**
+   - Verifique a ligação à internet
    - Tente novamente
    - Contacte o suporte
 
 ## Suporte
 
 ### Contactos
-- Email: [inserir email de suporte]
+- Correio eletrónico: [inserir correio eletrónico de suporte]
 - Telefone: [inserir número de suporte]
 - Horário: [inserir horário de atendimento]
 
 ### Canais de Ajuda
-- Email de suporte
+- Correio eletrónico de suporte
 - Telefone de emergência
 - Chat de suporte (quando disponível)
 
 ### Informações Importantes
 - Guarde os comprovativos de pagamento
 - Mantenha a aplicação atualizada
-- Faça logout ao terminar
+- Termine a sessão ao terminar
 - Em caso de problemas, contacte o suporte
 
 ---
