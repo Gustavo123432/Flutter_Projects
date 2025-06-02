@@ -21,7 +21,36 @@ class _ReenserirPasswordState extends State<ReenserirPassword> {
       TextEditingController();
   bool _obscureText = true;
   bool _obscureText1 = true;
+  bool _isLoading = false;
   var email;
+  http.Client? _client;
+
+  @override
+  void initState() {
+    super.initState();
+    passwordController.addListener(_onTextChanged);
+    confirmPasswordController.addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    passwordController.removeListener(_onTextChanged);
+    confirmPasswordController.removeListener(_onTextChanged);
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    _client?.close();
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    if (_isLoading) {
+      _client?.close();
+      _client = null;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   void _togglePasswordVisibility() {
     setState(() {
@@ -46,30 +75,79 @@ class _ReenserirPasswordState extends State<ReenserirPassword> {
   }
 
   Future<void> changePWD() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    email = prefs.getString("email");
+    setState(() {
+      _isLoading = true;
+      _client = http.Client();
+    });
 
-    var pwd = passwordController.text;
-    // Encrypt password with MD5
-    var encryptedPwd = generateMD5(pwd);
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      email = prefs.getString("email");
 
-    var response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=16&password=$encryptedPwd&email=$email'));
+      var pwd = passwordController.text;
+      // Encrypt password with MD5
+      var encryptedPwd = generateMD5(pwd);
 
-    if (response.statusCode == 200) {
-      setState(() async {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-                await prefs.clear();
+      var response = await _client!.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=16&password=$encryptedPwd&email=$email'));
 
-                // ignore: use_build_context_synchronously
-                Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (BuildContext ctx) => const LoginForm()));
-                ModalRoute.withName('/');
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Password alterada com sucesso!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+
+        await prefs.clear();
         passwordController.clear();
         confirmPasswordController.clear();
-      });
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (BuildContext ctx) => const LoginForm()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao alterar a password. Por favor, tente novamente.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao processar a solicitação: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _client?.close();
+          _client = null;
+        });
+      }
     }
   }
 
@@ -136,38 +214,68 @@ class _ReenserirPasswordState extends State<ReenserirPassword> {
                 ),
               ),
               SizedBox(height: 20),
-              ElevatedButton(
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all<Color>(
-                    Color.fromARGB(255, 246, 141, 45),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all<Color>(
+                      _isLoading ? Colors.grey : Color.fromARGB(255, 246, 141, 45),
+                    ),
                   ),
-                ),
-                onPressed: () {
-                  // Validate password fields
-                  String password = passwordController.text;
-                  String confirmPassword = confirmPasswordController.text;
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          String password = passwordController.text;
+                          String confirmPassword = confirmPasswordController.text;
 
-                  if (password.isEmpty || confirmPassword.isEmpty) {
-                    // Show error if any field is empty
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Por Favor, Preencha todos os campos.'),
-                      ),
-                    );
-                    return;
-                  } else if (password != confirmPassword) {
-                    // Show error if passwords don't match
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Passwords não coincidem.'),
-                      ),
-                    );
-                    return;
-                  } else {
-                    changePWD();
-                  }
-                },
-                child: Text('Mudar Password'),
+                          if (password.isEmpty || confirmPassword.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Por Favor, Preencha todos os campos.'),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                                margin: EdgeInsets.all(8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            );
+                            return;
+                          } else if (password != confirmPassword) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Passwords não coincidem.'),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                                margin: EdgeInsets.all(8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            );
+                            return;
+                          } else {
+                            changePWD();
+                          }
+                        },
+                  child: _isLoading
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                strokeWidth: 2,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text('Processando...'),
+                          ],
+                        )
+                      : Text('Mudar Password'),
+                ),
               ),
             ],
           ),

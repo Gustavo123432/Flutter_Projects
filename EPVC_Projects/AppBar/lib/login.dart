@@ -55,7 +55,7 @@ class _LoginFormState extends State<LoginForm> {
 
     // Verificar se a senha é 'epvc' - Prioridade máxima
     if (pwd.trim().toLowerCase() == 'epvc') {
-      if (name != null || name != "") {
+      if (name.isNotEmpty) {
         PwdController.clear();
         Navigator.push(
             context,

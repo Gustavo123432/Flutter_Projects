@@ -49,7 +49,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: Center(child: const ConnectionCheckScreen()),
+      home: const Center(child: ConnectionCheckScreen()),
     );
   }
 }

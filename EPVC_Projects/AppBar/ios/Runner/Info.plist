@@ -47,5 +47,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>PKPaymentNetworks</key>
+	<array>
+		<string>amex</string>
+		<string>masterCard</string>
+		<string>visa</string>
+	</array>
+	<key>PKMerchantIdentifier</key>
+	<string>merchant.com.yourdomain.app</string>
 </dict>
 </plist>

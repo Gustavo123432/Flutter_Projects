@@ -70,6 +70,7 @@ class _DrawerHomeState extends State<DrawerHome> {
               onPressed: () {
                 Navigator.of(context).pop(); // Fecha o AlertDialog
               },
+              style: TextButton.styleFrom(foregroundColor: Colors.white, backgroundColor: Colors.orange),
             ),
             TextButton(
               child: const Text('Confirmar'),
@@ -84,6 +85,7 @@ class _DrawerHomeState extends State<DrawerHome> {
                         builder: (BuildContext ctx) => const LoginForm()));
                 ModalRoute.withName('/');
               },
+              style: TextButton.styleFrom(foregroundColor: Colors.white, backgroundColor: Colors.orange),
             ),
           ],
         );
@@ -171,7 +173,8 @@ class _DrawerHomeState extends State<DrawerHome> {
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.pop(context),
-                                      child: Text('OK'),
+                                      child: Text('OK', style: TextStyle(color: Colors.white)),
+                                      style: TextButton.styleFrom(backgroundColor: Colors.orange),
                                     ),
                                   ],
                                 ),

@@ -7,6 +7,7 @@ import 'package:my_flutter_project/Aluno/drawerHome.dart';
 import 'package:my_flutter_project/SIBS/Orders/cash_confirmation_page.dart';
 import 'package:my_flutter_project/SIBS/Orders/order_declined_page.dart';
 import 'package:my_flutter_project/login.dart';
+import 'package:my_flutter_project/widgets/add_to_cart_animation.dart';
 import 'package:my_flutter_project/widgets/loading_button.dart';
 import 'package:my_flutter_project/widgets/loading_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,6 +20,7 @@ import 'package:my_flutter_project/SIBS/sibs_service.dart';
 import '../SIBS/Orders/mbway_waiting_page.dart';
 import '../SIBS/Orders/order_confirmation_page.dart';
 import '../SIBS/Orders/mbway_phone_page.dart';
+import 'package:flutter/rendering.dart';
 
 void main() {
   runApp(HomeAlunoMain());
@@ -71,6 +73,7 @@ class _HomeAlunoState extends State<HomeAluno> {
   bool _isLoading = false;
   bool _isSearching = false;
   dynamic users;
+  final GlobalKey _cartIconKey = GlobalKey();
 
   @override
   void initState() {
@@ -243,105 +246,111 @@ class _HomeAlunoState extends State<HomeAluno> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-        canPop: false,
-        child: MaterialApp(
-            home: Scaffold(
-          appBar: AppBar(
-            actions: [
-              Stack(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ShoppingCartPage(),
-                        ),
-                      ).then((_) {
-                        setState(() {});
-                      });
-                    },
-                    icon: Icon(Icons.shopping_cart),
-                  ),
-                  if (cartItems.isNotEmpty)
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        padding: EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        constraints: BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          '${cartItems.length}',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(''), // Assuming you want the title back
+        
+        leading: Builder(
+          builder: (BuildContext context) {
+            return IconButton(
+              icon: const Icon(Icons.menu), // Assuming the leading icon is a menu icon
+              onPressed: () { Scaffold.of(context).openDrawer(); },
+              tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+            );
+          },
+        ),
+        actions: [
+          Stack(
+            children: [
+              IconButton(
+                key: _cartIconKey,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ShoppingCartPage(),
                     ),
-                ],
+                  ).then((_) {
+                    setState(() {});
+                  });
+                },
+                icon: Icon(Icons.shopping_cart),
               ),
+              if (cartItems.isNotEmpty)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '${cartItems.length}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
             ],
           ),
-          drawer: DrawerHome(),
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(height: 20),
-                if (recentBuysMapped.isNotEmpty) ...[
-                  Container(
-                    margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
-                    child: Text(
-                      "Comprados Recentemente",
-                      style: TextStyle(
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blueGrey[900],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    margin: EdgeInsets.symmetric(vertical: 5.0),
-                    constraints: BoxConstraints(maxHeight: 120),
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: recentBuysMapped.length,
-                      itemBuilder: (context, index) {
-                        var product = recentBuysMapped[index];
-                        var title = product['Descricao'];
-                        var price = product['Preco'].toString();
-                        var imageBase64 = product['Imagem'];
-                        var prencado = product['Prencado'].toString();
+        ],
+      ),
+      drawer: DrawerHome(),
+      body: WillPopScope(
+        onWillPop: () async {
+          // Check if user data is available before processing permission
+          if (users == null || users.isEmpty) {
+            // If user data is not available yet, allow default back behavior (minimize)
+            return true;
+          }
 
-                        return buildProductSection(
-                          imagePath: imageBase64,
-                          title: title,
-                          price: price,
-                          prencado: prencado
-                        );
-                      },
-                    ),
-                  ),
-                ],
-                Container(
-                  margin: EdgeInsets.only(
-                    left: 16.0,
-                    right: 16.0,
-                    top: 16.0,
-                  ),
+          // User data is available, proceed with permission check and navigation
+          String permission = users[0]['Permissao'] ?? '';
+
+          if (permission == 'Aluno' || permission == 'Professor') {
+            // Navigate to HomeAluno and remove all previous routes
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => HomeAluno()),
+              (Route<dynamic> route) => false,
+            );
+            return false; // Prevent default back behavior
+          } else if (permission == 'Bar') {
+            // TODO: Navigate to Bar home page and remove all previous routes
+            // Replace BarHomePage() with the actual widget for the Bar home page
+            /*
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => BarHomePage()),
+              (Route<dynamic> route) => false,
+            );
+            */
+            return false; // Prevent default back behavior
+          } else {
+            // If permission is unknown, allow default back behavior (optional)
+            return true;
+          }
+        },
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: SizedBox(height: 20),
+            ),
+            if (recentBuysMapped.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
                   child: Text(
-                    "Categorias",
+                    "Comprados Recentemente",
                     style: TextStyle(
                       fontSize: 18.0,
                       fontWeight: FontWeight.bold,
@@ -349,136 +358,237 @@ class _HomeAlunoState extends State<HomeAluno> {
                     ),
                   ),
                 ),
-                SizedBox(height: 15),
-                Expanded(
-                  child: Container(
-                    child: GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 1,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                      ),
-                      itemCount: 6,
-                      itemBuilder: (context, index) {
-                        switch (index) {
-                          case 0:
-                            return buildCategoryCard(
-                              title: 'Bebidas',
-                              backgroundImagePath: 'lib/assets/bebida.png',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CategoryPage(
-                                      title: 'Bebidas',
+              ),
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: EdgeInsets.symmetric(vertical: 5.0),
+                  constraints: BoxConstraints(maxHeight: 120), // Maintain fixed height for horizontal list
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: recentBuysMapped.length,
+                    itemBuilder: (context, index) {
+                      var product = recentBuysMapped[index];
+                      final RenderBox? cartIconBox = _cartIconKey.currentContext?.findRenderObject() as RenderBox?;
+                      final Offset cartPosition = cartIconBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+
+                      return AddToCartAnimation(
+                        key: ValueKey(product['Descricao']), // Add a unique key based on product description
+                        cartPosition: cartPosition,
+                        onTap: () {
+                          addToCart(
+                            product['Imagem'],
+                            product['Descricao'],
+                            product['Preco'].toString(),
+                            product['Prencado'].toString(),
+                          );
+                        },
+                        child: Container(
+                          width: MediaQuery.of(context).size.width / 3.2,
+                          margin: EdgeInsets.symmetric(horizontal: 2.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(3.0),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.5),
+                                spreadRadius: 1.0,
+                                blurRadius: 2.0,
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(5.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  height: 45.0,
+                                  child: Image.memory(
+                                    base64.decode(product['Imagem']),
+                                    fit: BoxFit.contain,
+                                    gaplessPlayback: true,
+                                    cacheWidth: 100,
+                                    cacheHeight: 100,
+                                  ),
+                                ),
+                                Text(
+                                  product['Descricao'].replaceAll('"', ''),
+                                  style: TextStyle(
+                                    fontSize: 11.0,
+                                    fontWeight: FontWeight.bold,
+                                    overflow: TextOverflow.fade,
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Preço:',
+                                      style: TextStyle(fontSize: 8.0),
                                     ),
-                                  ),
-                                ).then((_) {
-                                  setState(() {});
-                                });
-                              },
-                            );
-                          case 1:
-                            return buildCategoryCard(
-                              title: 'Quentes',
-                              backgroundImagePath: 'lib/assets/cafe.JPG',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CategoryPage(
-                                      title: 'Quentes',
+                                    Text(
+                                      "${double.parse(product['Preco'].toString()).toStringAsFixed(2).replaceAll('.', ',')}€",
+                                      style: TextStyle(fontSize: 10.0, color: Colors.black), // Remove yellow background and set text color to black
                                     ),
-                                  ),
-                                ).then((_) {
-                                  setState(() {});
-                                });
-                              },
-                            );
-                          case 2:
-                            return buildCategoryCard(
-                              title: 'Comidas',
-                              backgroundImagePath: 'lib/assets/comida.jpg',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CategoryPage(
-                                      title: 'Comidas',
-                                    ),
-                                  ),
-                                ).then((_) {
-                                  setState(() {});
-                                });
-                              },
-                            );
-                          case 3:
-                            return buildCategoryCard(
-                              title: 'Snacks',
-                              backgroundImagePath: 'lib/assets/snacks.jpg',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CategoryPage(
-                                      title: 'Snacks',
-                                    ),
-                                  ),
-                                ).then((_) {
-                                  setState(() {});
-                                });
-                              },
-                            );
-                          case 4:
-                            return buildCategoryCard(
-                              title: 'Doces',
-                              backgroundImagePath: 'lib/assets/doces.jpg',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CategoryPage(
-                                      title: 'Doces',
-                                    ),
-                                  ),
-                                ).then((_) {
-                                  setState(() {});
-                                });
-                              },
-                            );
-                          case 5:
-                            return buildCategoryCard(
-                              title: 'Restaurante',
-                              backgroundImagePath: 'lib/assets/monteRestaurante.jpg',
-                              isAvailable: false,
-                              onTap: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: Text('Em Desenvolvimento'),
-                                    content: Text('O Restaurante não está disponível no momento.'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: Text('OK'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            );
-                          default:
-                            return Container();
-                        }
-                      },
-                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              ],
+              ),
+            ],
+            SliverToBoxAdapter(
+              child: Container(
+                margin: EdgeInsets.only(
+                  left: 16.0,
+                  right: 16.0,
+                  top: 16.0,
+                ),
+                child: Text(
+                  "Categorias",
+                  style: TextStyle(
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueGrey[900],
+                  ),
+                ),
+              ),
             ),
-          ),
-        )));
+            SliverToBoxAdapter(
+              child: SizedBox(height: 15),
+            ),
+            SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 1,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  switch (index) {
+                    case 0:
+                      return buildCategoryCard(
+                        title: 'Bebidas',
+                        backgroundImagePath: 'lib/assets/bebida.png',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryPage(
+                                title: 'Bebidas',
+                              ),
+                            ),
+                          ).then((_) {
+                            setState(() {});
+                          });
+                        },
+                      );
+                    case 1:
+                      return buildCategoryCard(
+                        title: 'Quentes',
+                        backgroundImagePath: 'lib/assets/cafe.JPG',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryPage(
+                                title: 'Quentes',
+                              ),
+                            ),
+                          ).then((_) {
+                            setState(() {});
+                          });
+                        },
+                      );
+                    case 2:
+                      return buildCategoryCard(
+                        title: 'Comidas',
+                        backgroundImagePath: 'lib/assets/comida.jpg',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryPage(
+                                title: 'Comidas',
+                              ),
+                            ),
+                          ).then((_) {
+                            setState(() {});
+                          });
+                        },
+                      );
+                    case 3:
+                      return buildCategoryCard(
+                        title: 'Snacks',
+                        backgroundImagePath: 'lib/assets/snacks.jpg',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryPage(
+                                title: 'Snacks',
+                              ),
+                            ),
+                          ).then((_) {
+                            setState(() {});
+                          });
+                        },
+                      );
+                    case 4:
+                      return buildCategoryCard(
+                        title: 'Doces',
+                        backgroundImagePath: 'lib/assets/doces.jpg',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryPage(
+                                title: 'Doces',
+                              ),
+                            ),
+                          ).then((_) {
+                            setState(() {});
+                          });
+                        },
+                      );
+                    case 5:
+                      return buildCategoryCard(
+                        title: 'Restaurante',
+                        backgroundImagePath: 'lib/assets/monteRestaurante.jpg',
+                        isAvailable: false,
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('Em Desenvolvimento'),
+                              content: Text('O Restaurante não está disponível no momento.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: Text('OK'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    default:
+                      return Container();
+                  }
+                },
+                childCount: 6,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget buildProductSection({
@@ -777,6 +887,7 @@ class _CategoryPageState extends State<CategoryPage> {
   double? minPrice;
   double? maxPrice;
   bool _isLoading = false;
+  final GlobalKey _cartIconKey = GlobalKey();
 
   @override
   void initState() {
@@ -1021,6 +1132,7 @@ class _CategoryPageState extends State<CategoryPage> {
             Stack(
               children: [
                 IconButton(
+                  key: _cartIconKey,
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -1593,7 +1705,7 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
                       children: [
                         ListTile(
                             leading: Image.memory(
-                              base64.decode(item['imagem']),
+                              base64.decode(item['Imagem']),
                               fit: BoxFit.cover,
                               height: 50,
                               width: 50,
@@ -3236,11 +3348,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                         onPressed: _isLoading ? null : () {
                                           setState(() {
                                             _isLoading = true;
-                                            if (itemCount > 1) {
+                                            // if (itemCount > 1) { // Remove this condition
                                               int index = cartItems.indexWhere((element) => element['Nome'] == itemName);
                                               if (index != -1) {
                                                 cartItems.removeAt(index);
-                                                itemCountMap[itemName] = itemCount - 1;
+                                                // itemCountMap[itemName] = itemCount - 1; // This will be updated by updateItemCountMap()
                                                 ScaffoldMessenger.of(context).showSnackBar(
                                                   SnackBar(
                                                     content: Text('Item removido'),
@@ -3248,17 +3360,19 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                                   ),
                                                 );
                                               }
-                                            } else {
-                                              cartItems.removeWhere((element) => element['Nome'] == itemName);
-                                              itemCountMap.remove(itemName);
-                                              orderedItems.remove(itemName);
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('Item removido do carrinho'),
-                                                  duration: Duration(milliseconds: 500),
-                                                ),
-                                              );
-                                            }
+                                            // } else { // Remove this else block
+                                            //   cartItems.removeWhere((element) => element['Nome'] == itemName);
+                                            //   itemCountMap.remove(itemName);
+                                            //   orderedItems.remove(itemName);
+                                            //   ScaffoldMessenger.of(context).showSnackBar(
+                                            //     SnackBar(
+                                            //       content: Text('Item removido do carrinho'),
+                                            //       duration: Duration(milliseconds: 500),
+                                            //     ),
+                                            //   );
+                                            // }
+                                            updateItemCountMap(); // Call this after modifying cartItems
+                                            _isLoading = false; // Set loading to false after state update
                                           });
                                         },
                                         color: _isLoading ? Colors.grey[400] : Colors.grey[700],

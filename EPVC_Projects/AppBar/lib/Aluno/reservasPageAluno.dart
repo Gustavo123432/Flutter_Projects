@@ -112,14 +112,16 @@ class _ReservaspagealunoState extends State<Reservaspagealuno> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(), // Fecha o diálogo
-              child: Text("Cancelar"),
+              child: Text("Cancelar", style: TextStyle(color: Colors.white)),
+              style: TextButton.styleFrom(backgroundColor: Colors.orange),
             ),
             TextButton(
               onPressed: () {
                 deleteReservation(order["id"]);
                 Navigator.of(context).pop(); // Fecha o diálogo
               },
-              child: Text("Confirmar", style: TextStyle(color: Colors.red)),
+              child: Text("Confirmar", style: TextStyle(color: Colors.white)),
+              style: TextButton.styleFrom(backgroundColor: Colors.orange),
             ),
           ],
         );

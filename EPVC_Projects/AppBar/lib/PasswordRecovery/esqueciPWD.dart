@@ -16,40 +16,78 @@ class EmailRequestPage extends StatefulWidget {
   _EmailRequestPageState createState() => _EmailRequestPageState();
 }
 
-
 class _EmailRequestPageState extends State<EmailRequestPage> {
   final TextEditingController emailController = TextEditingController();
+  bool _isLoading = false;
+  http.Client? _client;
   
   @override
   void initState() {
     super.initState();
     emailController.text = widget.email;
-    // Não é necessário chamar SystemNavigator.pop aqui, pode causar problemas
+    emailController.addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    emailController.removeListener(_onTextChanged);
+    emailController.dispose();
+    _client?.close();
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    if (_isLoading) {
+      _client?.close();
+      _client = null;
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> sendCodePWD() async {
-    var email = emailController.text.trim();
+    if (emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Campo Vazio.\nPreencha o Campo'),
+        ),
+      );
+      return;
+    }
 
-    if (!email.isEmpty) {
+    setState(() {
+      _isLoading = true;
+      _client = http.Client();
+    });
+
+    try {
+      var email = emailController.text.trim();
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('email', email);
       var tentativa = widget.tentativa;
 
-      var response = await http.get(Uri.parse(
-                    'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14&email=$email&tentativa=$tentativa'));
+      var response = await _client!.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14&email=$email&tentativa=$tentativa'));
+      
+      if (!mounted) return;
+      
       if (response.statusCode == 200) {
         var responseData = json.decode(response.body);
 
-        // Check if responseData is not null and contains the key "emailSent"
         if (responseData != null && responseData.containsKey("emailSent")) {
           var emailSent = responseData["emailSent"];
           print(emailSent);
           if (emailSent == "true") {
-            // Check for boolean value, not string "true"
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content:
-                    Text('Código de redefinição de senha enviado com sucesso!'),
+                content: Text('Código de redefinição de senha enviado com sucesso!'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                margin: EdgeInsets.all(8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             );
             Navigator.push(context,
@@ -58,8 +96,13 @@ class _EmailRequestPageState extends State<EmailRequestPage> {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                    'Email não se encontra registado.\nVerifique e tente novamente.'),
+                content: Text('Email não se encontra registado.\nVerifique e tente novamente.'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                margin: EdgeInsets.all(8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             );
           }
@@ -67,6 +110,12 @@ class _EmailRequestPageState extends State<EmailRequestPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Resposta inválida do servidor.'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.all(8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           );
         }
@@ -74,15 +123,36 @@ class _EmailRequestPageState extends State<EmailRequestPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erro ao conectar ao servidor.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
       }
-    } else {
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Campo Vazio.\nPreencha o Campo'),
+          content: Text('Erro ao processar a solicitação: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _client?.close();
+          _client = null;
+        });
+      }
     }
   }
 
@@ -128,19 +198,35 @@ class _EmailRequestPageState extends State<EmailRequestPage> {
                   ),
                 ),
                 SizedBox(height: 20),
-                ElevatedButton(
-                  style: ButtonStyle(
-                    backgroundColor: MaterialStateProperty.all<Color>(
-                      Color.fromARGB(255, 246, 141, 45), // Button color
+                SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.all<Color>(
+                        _isLoading ? Colors.grey : Color.fromARGB(255, 246, 141, 45),
+                      ),
                     ),
+                    onPressed: _isLoading ? null : () {
+                      sendCodePWD();
+                    },
+                    child: _isLoading
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                strokeWidth: 2,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text('Processando...'),
+                          ],
+                        )
+                      : Text('Seguinte'),
                   ),
-                  onPressed: () {
-                    // Handle Next button press
-                    String email = emailController.text;
-                    sendCodePWD();
-                    print('Email submitted: $email');
-                  },
-                  child: Text('Seguinte'),
                 ),
               ],
             ),

@@ -15,12 +15,14 @@ class _InserirCodePWDState extends State<InserirCodePWD> {
   TextEditingController _digitController = TextEditingController();
   String _result = '';
   bool _isResendingEmail = false;
+  bool _isLoading = false;
   int contador = 30; // Defina o contador inicial para 30 segundos
+  http.Client? _client;
 
   @override
   void initState() {
     super.initState();
-    // Ative o timer após a tela ser construída pela primeira vez
+    _digitController.addListener(_onTextChanged);
 
     Timer.periodic(Duration(seconds: 1), (timer) {
       if (contador > 0) {
@@ -36,29 +38,71 @@ class _InserirCodePWDState extends State<InserirCodePWD> {
     });
   }
 
+  @override
+  void dispose() {
+    _digitController.removeListener(_onTextChanged);
+    _digitController.dispose();
+    _client?.close();
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    if (_isLoading) {
+      _client?.close();
+      _client = null;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   Future<void> resendEmail() async {
+    if (!_isResendingEmail) return;
+
+    setState(() {
+      _isLoading = true;
+      _client = http.Client();
+    });
+
+    try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       var email = prefs.getString("email");
-    var response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14&email=$email&tentativa=1'));
-    if (response.statusCode == 200) {
+      
+      var response = await _client!.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14&email=$email&tentativa=1'));
+      
+      if (!mounted) return;
+
       var responseData = json.decode(response.body);
-      print(responseData);
 
       if (responseData != null && responseData.containsKey("emailSent")) {
         var emailSent = responseData["emailSent"];
         if (emailSent == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                  'Email Reenviado com Sucesso.\n Volte a Introduzir o Código.'),
+              content: Text('Email Reenviado com Sucesso.\n Volte a Introduzir o Código.'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.all(8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           );
+          setState(() {
+            contador = 30;
+            _isResendingEmail = false;
+          });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                  'Email não se encontra registado. \nVerifique e tente novamente.'),
+              content: Text('Email não se encontra registado.\nVerifique e tente novamente.'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.all(8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           );
         }
@@ -66,72 +110,139 @@ class _InserirCodePWDState extends State<InserirCodePWD> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Resposta inválida do servidor.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
       }
-    } else {
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao conectar ao servidor.'),
+          content: Text('Erro ao processar a solicitação: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _client?.close();
+          _client = null;
+        });
+      }
     }
   }
 
- Future<void> checkCode() async {
-  var code = _digitController.text.toString();
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  var email = prefs.getString("email");
-  
-  if (!code.isEmpty && email != null) {
-    try {
-      var response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=15&code=$code&email=$email'));
+  Future<void> checkCode() async {
+    if (_digitController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Campo Vazio.\nPreencha o Campo'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+      return;
+    }
 
-      if (response.statusCode == 200) {
-        var responseData = json.decode(response.body);
-        var success = responseData["success"];
-        if (success) {
-          setState(() {
+    setState(() {
+      _isLoading = true;
+      _client = http.Client();
+    });
+
+    try {
+      var code = _digitController.text.toString();
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      var email = prefs.getString("email");
+      
+      if (email != null) {
+        var response = await _client!.get(Uri.parse(
+            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=15&code=$code&email=$email'));
+
+        if (!mounted) return;
+
+        if (response.statusCode == 200) {
+          var responseData = json.decode(response.body);
+          var success = responseData["success"];
+          if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Código Correto.'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                margin: EdgeInsets.all(8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             );
-          });
-          Navigator.push(context,
-              MaterialPageRoute(builder: (context) => ReenserirPassword()));
-          _digitController.clear();
+            Navigator.push(context,
+                MaterialPageRoute(builder: (context) => ReenserirPassword()));
+            _digitController.clear();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Introduza um Código Válido.'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                margin: EdgeInsets.all(8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Introduza um Código Válido.'),
+              content: Text('Erro ao conectar-se à API.'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.all(8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           );
         }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao conectar-se à API.'),
-          ),
-        );
       }
     } catch (error) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erro: $error'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _client?.close();
+          _client = null;
+        });
+      }
     }
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Campo Vazio.\nPreencha o Campo'),
-      ),
-    );
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -168,24 +279,21 @@ class _InserirCodePWDState extends State<InserirCodePWD> {
               ),
               Text("Verifique o SPAM do seu email!\n"),
               GestureDetector(
-                onTap: _isResendingEmail
-                    ? resendEmail
-                    : null, // Desative o onTap quando não estiver pronto para reenviar o email
+                onTap: _isResendingEmail && !_isLoading ? resendEmail : null,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       'Reenviar Email? ',
                       style: TextStyle(
-                        color: _isResendingEmail
+                        color: _isResendingEmail && !_isLoading
                             ? Colors.blue
-                            : Colors
-                                .grey, // Altere a cor do texto com base no estado de reenvio do email
+                            : Colors.grey,
                         fontSize: 12,
                         decoration: TextDecoration.underline,
                       ),
                     ),
-                    if (!_isResendingEmail) // Mostrar o contador se não estiver pronto para reenviar o email
+                    if (!_isResendingEmail)
                       Text(
                         '($contador s)',
                         style: TextStyle(
@@ -197,14 +305,33 @@ class _InserirCodePWDState extends State<InserirCodePWD> {
                 ),
               ),
               SizedBox(height: 20),
-              ElevatedButton(
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all<Color>(
-                    Color.fromARGB(255, 246, 141, 45),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all<Color>(
+                      _isLoading ? Colors.grey : Color.fromARGB(255, 246, 141, 45),
+                    ),
                   ),
+                  onPressed: _isLoading ? null : checkCode,
+                  child: _isLoading
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Text('Processando...'),
+                        ],
+                      )
+                    : Text('Enviar'),
                 ),
-                onPressed: checkCode,
-                child: Text('Enviar'),
               ),
               SizedBox(height: 20),
               Text(

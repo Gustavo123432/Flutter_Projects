@@ -116,9 +116,11 @@ class _SettingsPageState extends State<SettingsPage> {
           title: Text('Alterações não guardadas'),
           content: Text(
               'Tem alterações não guardadas. Deseja guardar antes de sair?'),
-          actions: [ TextButton(
+          actions: [
+            TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancelar'),
+              child: Text('Cancelar', style: TextStyle(color: Colors.white)),
+              style: TextButton.styleFrom(backgroundColor: Colors.orange),
             ),
 
             TextButton(
@@ -129,11 +131,13 @@ class _SettingsPageState extends State<SettingsPage> {
                   MaterialPageRoute(builder: (context) => HomeAluno()),
                 );
               },
-              child: Text('Não guardar'),
+              child: Text('Não guardar', style: TextStyle(color: Colors.white)),
+              style: TextButton.styleFrom(backgroundColor: Colors.orange),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text('Guardar'),
+              child: Text('Guardar', style: TextStyle(color: Colors.white)),
+              style: TextButton.styleFrom(backgroundColor: Colors.orange),
             ) ,
 
           ],
