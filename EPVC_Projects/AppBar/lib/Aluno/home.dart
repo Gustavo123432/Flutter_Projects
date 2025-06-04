@@ -3,20 +3,20 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:my_flutter_project/Aluno/drawerHome.dart';
-import 'package:my_flutter_project/SIBS/Orders/cash_confirmation_page.dart';
-import 'package:my_flutter_project/SIBS/Orders/order_declined_page.dart';
-import 'package:my_flutter_project/login.dart';
-import 'package:my_flutter_project/widgets/add_to_cart_animation.dart';
-import 'package:my_flutter_project/widgets/loading_button.dart';
-import 'package:my_flutter_project/widgets/loading_overlay.dart';
+import 'package:appbar_epvc/Aluno/drawerHome.dart';
+import 'package:appbar_epvc/SIBS/Orders/cash_confirmation_page.dart';
+import 'package:appbar_epvc/SIBS/Orders/order_declined_page.dart';
+import 'package:appbar_epvc/login.dart';
+import 'package:appbar_epvc/widgets/add_to_cart_animation.dart';
+import 'package:appbar_epvc/widgets/loading_button.dart';
+import 'package:appbar_epvc/widgets/loading_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:intl/intl.dart';
 import 'package:diacritic/diacritic.dart'; // Import the diacritic package
-import 'package:my_flutter_project/SIBS/sibs_service.dart';
+import 'package:appbar_epvc/SIBS/sibs_service.dart';
 import '../SIBS/Orders/mbway_waiting_page.dart';
 import '../SIBS/Orders/order_confirmation_page.dart';
 import '../SIBS/Orders/mbway_phone_page.dart';
@@ -52,10 +52,60 @@ class HomeAlunoMain extends StatelessWidget {
 
     return MaterialApp(
       theme: ThemeData(
-        primarySwatch: Colors.blueGrey, // Define o tema da aplicação
+        primarySwatch: Colors.orange,
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.orange,
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: IconThemeData(color: Colors.white),
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Roboto',
+          ),
+        ),
+        textTheme: TextTheme(
+          headlineLarge: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF333333),
+            fontFamily: 'Roboto',
+          ),
+          headlineMedium: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF333333),
+            fontFamily: 'Roboto',
+          ),
+          bodyLarge: TextStyle(
+            fontSize: 16,
+            color: Color(0xFF333333),
+            fontFamily: 'Roboto',
+          ),
+          bodyMedium: TextStyle(
+            fontSize: 14,
+            color: Color(0xFF666666),
+            fontFamily: 'Roboto',
+          ),
+        ),
+        
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
       ),
       home: Scaffold(
-        body: HomeAluno(), // Substitua pelo widget que desejar
+        backgroundColor: Colors.white,
+        body: HomeAluno(),
       ),
     );
   }
@@ -348,23 +398,52 @@ class _HomeAlunoState extends State<HomeAluno> {
             if (recentBuysMapped.isNotEmpty) ...[
               SliverToBoxAdapter(
                 child: Container(
-                  margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
-                  child: Text(
-                    "Comprados Recentemente",
-                    style: TextStyle(
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blueGrey[900],
-                    ),
+                  margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 8.0, top: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.history,
+                            color: Colors.orange,
+                            size: 24,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            "Comprados Recentemente",
+                            style: TextStyle(
+                              fontSize: 18.0,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF333333),
+                              fontFamily: 'Roboto',
+                            ),
+                          ),
+                        ],
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // TODO: Implement view all functionality
+                        },
+                        child: Text(
+                          'Ver Todos',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               SliverToBoxAdapter(
                 child: Container(
-                  margin: EdgeInsets.symmetric(vertical: 5.0),
-                  constraints: BoxConstraints(maxHeight: 120), // Maintain fixed height for horizontal list
+                  margin: EdgeInsets.symmetric(vertical: 8.0),
+                  height: 140,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(horizontal: 12.0),
                     itemCount: recentBuysMapped.length,
                     itemBuilder: (context, index) {
                       var product = recentBuysMapped[index];
@@ -372,68 +451,94 @@ class _HomeAlunoState extends State<HomeAluno> {
                       final Offset cartPosition = cartIconBox?.localToGlobal(Offset.zero) ?? Offset.zero;
 
                       return AddToCartAnimation(
-                        key: ValueKey(product['Descricao']), // Add a unique key based on product description
+                        key: ValueKey(product['Descricao']),
                         cartPosition: cartPosition,
-                        onTap: () {
-                          addToCart(
-                            product['Imagem'],
-                            product['Descricao'],
-                            product['Preco'].toString(),
-                            product['Prencado'].toString(),
-                          );
+                        onTap: () async {
+                          try {
+                            int availableQuantity = await checkQuantidade(product['Descricao'].replaceAll('"', ''));
+                            int currentQuantity = cartItems.where((item) => item['Nome'] == product['Descricao'].replaceAll('"', '')).length;
+                            
+                            if (currentQuantity < availableQuantity) {
+                              addToCart(
+                                product['Imagem'],
+                                product['Descricao'],
+                                product['Preco'].toString(),
+                                product['Prencado'].toString(),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Quantidade máxima disponível atingida'),
+                                  backgroundColor: Colors.red,
+                                  duration: Duration(milliseconds: 2000),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erro ao verificar quantidade disponível'),
+                                backgroundColor: Colors.red,
+                                duration: Duration(milliseconds: 2000),
+                              ),
+                            );
+                          }
                         },
                         child: Container(
-                          width: MediaQuery.of(context).size.width / 3.2,
-                          margin: EdgeInsets.symmetric(horizontal: 2.0),
+                          width: 120,
+                          margin: EdgeInsets.symmetric(horizontal: 4.0),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(3.0),
+                            borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withOpacity(0.5),
-                                spreadRadius: 1.0,
-                                blurRadius: 2.0,
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
                               ),
                             ],
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(5.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  height: 45.0,
-                                  child: Image.memory(
-                                    base64.decode(product['Imagem']),
-                                    fit: BoxFit.contain,
-                                    gaplessPlayback: true,
-                                    cacheWidth: 100,
-                                    cacheHeight: 100,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                                  image: DecorationImage(
+                                    image: MemoryImage(base64.decode(product['Imagem'])),
+                                    fit: BoxFit.cover,
                                   ),
                                 ),
-                                Text(
-                                  product['Descricao'].replaceAll('"', ''),
-                                  style: TextStyle(
-                                    fontSize: 11.0,
-                                    fontWeight: FontWeight.bold,
-                                    overflow: TextOverflow.fade,
-                                  ),
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              ),
+                              Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Preço:',
-                                      style: TextStyle(fontSize: 8.0),
+                                      product['Descricao'].replaceAll('"', ''),
+                                      style: TextStyle(
+                                        fontSize: 12.0,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF333333),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
+                                    SizedBox(height: 4),
                                     Text(
                                       "${double.parse(product['Preco'].toString()).toStringAsFixed(2).replaceAll('.', ',')}€",
-                                      style: TextStyle(fontSize: 10.0, color: Colors.black), // Remove yellow background and set text color to black
+                                      style: TextStyle(
+                                        fontSize: 14.0,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange,
+                                      ),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -492,7 +597,7 @@ class _HomeAlunoState extends State<HomeAluno> {
                     case 1:
                       return buildCategoryCard(
                         title: 'Quentes',
-                        backgroundImagePath: 'lib/assets/cafe.JPG',
+                        backgroundImagePath: 'assets/cafe.JPG',
                         onTap: () {
                           Navigator.push(
                             context,
@@ -560,7 +665,7 @@ class _HomeAlunoState extends State<HomeAluno> {
                     case 5:
                       return buildCategoryCard(
                         title: 'Restaurante',
-                        backgroundImagePath: 'lib/assets/monteRestaurante.jpg',
+                        backgroundImagePath: 'assets/monteRestaurante.jpg',
                         isAvailable: false,
                         onTap: () {
                           showDialog(
@@ -724,20 +829,25 @@ class _HomeAlunoState extends State<HomeAluno> {
     required String backgroundImagePath,
     required VoidCallback onTap,
     bool isAvailable = true,
-    bool showImage = true, // Add this new parameter
+    bool showImage = true,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 150.0,
-        margin: EdgeInsets.symmetric(vertical: 8.0),
+        margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20.0),
-          color: Colors.grey[300], // Always gray background when not available
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Stack(
           children: [
-            // Only show image if available AND showImage is true
             if (isAvailable && showImage)
               Container(
                 decoration: BoxDecoration(
@@ -748,124 +858,137 @@ class _HomeAlunoState extends State<HomeAluno> {
                   ),
                 ),
               ),
-            // Panel to highlight the text
+            // Gradient overlay for better text visibility
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.7),
+                  ],
+                ),
+              ),
+            ),
+            // Category title with icon
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: Container(
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 29, 29, 29).withOpacity(0.5),
-                  borderRadius:
-                      BorderRadius.vertical(bottom: Radius.circular(20.0)),
-                  border: Border.all(color: Colors.white, width: 1),
-                ),
-                padding: EdgeInsets.all(8.0),
-                child: Center(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 24.0,
+                padding: EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getCategoryIcon(title),
                       color: Colors.white,
+                      size: 24,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ),
-            // "Not Available" indicator
-            if (!isAvailable)
-              Stack(
-                children: [
-                  // Background image with gray overlay
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: const Color.fromARGB(33, 49, 49, 49),
-                      image: DecorationImage(
-                        image: AssetImage(backgroundImagePath),
-                        fit: BoxFit.cover,
-                        colorFilter: ColorFilter.mode(
-                          const Color.fromARGB(255, 36, 36, 36)
-                              .withOpacity(0.7), // Gray overlay on image
-                          BlendMode.darken,
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 20.0,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'Roboto',
                         ),
                       ),
                     ),
-                  ),
-                  // "EM DESENVOLVIMENTO" text
-                  Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 30),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.construction,
-                            size: 30,
-                            color: Colors.white,
-                          ),
-                          SizedBox(height: 8),
-                          Container(
-                            width:
-                                200, // Set a specific width to control wrapping
-                            child: Text(
-                              'EM DESENVOLVIMENTO',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                shadows: [
-                                  Shadow(
-                                    blurRadius: 10,
-                                    color: Colors.black,
-                                    offset: Offset(2, 2),
-                                  ),
-                                ],
-                              ),
-                              textAlign:
-                                  TextAlign.center, // Optional: Center the text
-                              maxLines:
-                                  1, // Optional: Limit the number of lines
-                              overflow: TextOverflow
-                                  .ellipsis, // Optional: Handle overflow
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                  )
-                ],
-              ),
-// Panel to highlight the text
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  borderRadius:
-                      BorderRadius.vertical(bottom: Radius.circular(20.0)),
-                  border: Border.all(color: Colors.white, width: 1),
-                ),
-                padding: EdgeInsets.all(8.0),
-                child: Center(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 24.0,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  ],
                 ),
               ),
             ),
+            if (!isAvailable)
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.black.withOpacity(0.5),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.construction,
+                        size: 32,
+                        color: Colors.white,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'EM DESENVOLVIMENTO',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'Roboto',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'bebidas':
+        return Icons.local_drink;
+      case 'quentes':
+        return Icons.local_cafe;
+      case 'comidas':
+        return Icons.restaurant;
+      case 'snacks':
+        return Icons.fastfood;
+      case 'doces':
+        return Icons.cake;
+      case 'restaurante':
+        return Icons.restaurant_menu;
+      default:
+        return Icons.category;
+    }
+  }
+
+  Future<int> checkQuantidade(String productName) async {
+    try {
+      // Remove double quotes and trim the product name
+      String cleanProductName = productName.replaceAll('"', '').trim();
+      
+      // Make the API request
+      var response = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
+
+      if (response.statusCode == 200) {
+        // Parse the response
+        var data = json.decode(response.body);
+        
+        // Check if there's an error in the response
+        if (data is Map && data.containsKey('error')) {
+          print('Error checking quantity: ${data['error']}');
+          return 0; // Return 0 if product not found
+        }
+        
+        // If data is a list and not empty
+        if (data is List && data.isNotEmpty) {
+          return data[0]['Qtd'] ?? 0;
+        }
+        
+        return 0; // Return 0 if no data found
+      } else {
+        print('Error checking quantity: HTTP ${response.statusCode}');
+        return 0; // Return 0 on HTTP error
+      }
+    } catch (e) {
+      print('Exception checking quantity: $e');
+      return 0; // Return 0 on any exception
+    }
   }
 }
 
@@ -1745,7 +1868,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   int orderNumber = 0;
   bool _isLoading = false;
   String? _loadingMessage;
-
   void _setLoading(bool loading, {String? message}) {
     setState(() {
       _isLoading = loading;
@@ -2606,29 +2728,37 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Future<int> checkQuantidade(String productName) async {
-    // Remove double quotes from the product name
-    String productNamee = productName.replaceAll('"', '');
+    try {
+      // Remove double quotes and trim the product name
+      String cleanProductName = productName.replaceAll('"', '').trim();
+      
+      // Make the API request
+      var response = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
 
-    var response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$productNamee'));
-
-    if (response.statusCode == 200) {
-      // Decode the response body into a list of maps
-      List<Map<String, dynamic>> data =
-          json.decode(response.body).cast<Map<String, dynamic>>();
-
-      if (data.isNotEmpty) {
-        // Retrieve the quantity of the product
-        int quantidade = data[0]['Qtd'];
-        return quantidade;
+      if (response.statusCode == 200) {
+        // Parse the response
+        var data = json.decode(response.body);
+        
+        // Check if there's an error in the response
+        if (data is Map && data.containsKey('error')) {
+          print('Error checking quantity: ${data['error']}');
+          return 0; // Return 0 if product not found
+        }
+        
+        // If data is a list and not empty
+        if (data is List && data.isNotEmpty) {
+          return data[0]['Qtd'] ?? 0;
+        }
+        
+        return 0; // Return 0 if no data found
       } else {
-        // Return a default value or throw an exception if data is empty
-        throw Exception('Data is empty');
+        print('Error checking quantity: HTTP ${response.statusCode}');
+        return 0; // Return 0 on HTTP error
       }
-    } else {
-      // Throw an exception if the request fails
-      throw Exception(
-          'Failed to fetch data. Status code: ${response.statusCode}');
+    } catch (e) {
+      print('Exception checking quantity: $e');
+      return 0; // Return 0 on any exception
     }
   }
 
@@ -3268,8 +3398,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                               children: [
                                 // Imagem do produto
                                 Container(
-                                  width: 60,
-                                  height: 60,
+                                  width: 50,
+                                  height: 50,
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(10),
                                     boxShadow: [
@@ -3287,28 +3417,17 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                             image,
                                             fit: BoxFit.cover,
                                             gaplessPlayback: true,
-                                            cacheWidth: 120,
-                                            cacheHeight: 120,
-                                            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                              if (wasSynchronouslyLoaded) return child;
-                                              return AnimatedSwitcher(
-                                                duration: Duration(milliseconds: 200),
-                                                child: frame != null ? child : Container(
-                                                  color: Colors.grey[200],
-                                                  child: Icon(
-                                                    Icons.fastfood,
-                                                    size: 40,
-                                                    color: Colors.grey[400],
-                                                  ),
-                                                ),
-                                              );
-                                            },
+                                            cacheWidth: 100,
+                                            cacheHeight: 100,
+                                            filterQuality: FilterQuality.high,
+                                            isAntiAlias: true,
+                                            key: ValueKey(itemName), // Add a stable key
                                           )
                                         : Container(
                                             color: Colors.grey[200],
                                             child: Icon(
                                               Icons.fastfood,
-                                              size: 40,
+                                              size: 30,
                                               color: Colors.grey[400],
                                             ),
                                           ),
@@ -3345,34 +3464,59 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                     children: [
                                       IconButton(
                                         icon: Icon(Icons.remove, size: 16),
-                                        onPressed: _isLoading ? null : () {
+                                        onPressed: _isLoading ? null : () async {
+                                          if (_isLoading) return;
+                                          
+                                          // Check if this is the last item of this product
+                                          if (itemCount == 1) {
+                                            // Show confirmation dialog
+                                            bool? confirm = await showDialog<bool>(
+                                              context: context,
+                                              builder: (BuildContext context) {
+                                                return AlertDialog(
+                                                  title: Text('Remover Item'),
+                                                  content: Text('Tem certeza que deseja remover ${itemName} do carrinho?'),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () => Navigator.of(context).pop(false),
+                                                      style: TextButton.styleFrom(
+                                                        backgroundColor: Colors.orange,
+                                                        foregroundColor: Colors.white,
+                                                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                      ),
+                                                      child: Text('Cancelar'),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed: () => Navigator.of(context).pop(true),
+                                                      style: TextButton.styleFrom(
+                                                        backgroundColor: Colors.orange,
+                                                        foregroundColor: Colors.white,
+                                                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                      ),
+                                                      child: Text('Remover'),
+                                                    ),
+                                                  ],
+                                                );
+                                              },
+                                            );
+                                            
+                                            if (confirm != true) return; // User cancelled
+                                          }
+                                          
                                           setState(() {
                                             _isLoading = true;
-                                            // if (itemCount > 1) { // Remove this condition
-                                              int index = cartItems.indexWhere((element) => element['Nome'] == itemName);
-                                              if (index != -1) {
-                                                cartItems.removeAt(index);
-                                                // itemCountMap[itemName] = itemCount - 1; // This will be updated by updateItemCountMap()
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('Item removido'),
-                                                    duration: Duration(milliseconds: 500),
-                                                  ),
-                                                );
-                                              }
-                                            // } else { // Remove this else block
-                                            //   cartItems.removeWhere((element) => element['Nome'] == itemName);
-                                            //   itemCountMap.remove(itemName);
-                                            //   orderedItems.remove(itemName);
-                                            //   ScaffoldMessenger.of(context).showSnackBar(
-                                            //     SnackBar(
-                                            //       content: Text('Item removido do carrinho'),
-                                            //       duration: Duration(milliseconds: 500),
-                                            //     ),
-                                            //   );
-                                            // }
-                                            updateItemCountMap(); // Call this after modifying cartItems
-                                            _isLoading = false; // Set loading to false after state update
+                                            int index = cartItems.indexWhere((element) => element['Nome'] == itemName);
+                                            if (index != -1) {
+                                              cartItems.removeAt(index);
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Item removido'),
+                                                  duration: Duration(milliseconds: 500),
+                                                ),
+                                              );
+                                            }
+                                            updateItemCountMap();
+                                            _isLoading = false;
                                           });
                                         },
                                         color: _isLoading ? Colors.grey[400] : Colors.grey[700],
@@ -3395,19 +3539,80 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                       ),
                                       IconButton(
                                         icon: Icon(Icons.add, size: 16),
-                                        onPressed: _isLoading ? null : () {
-                                          setState(() {
-                                            _isLoading = true;
-                                            cartItems.add(Map<String, dynamic>.from(item));
-                                            itemCountMap[itemName] = itemCount + 1;
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text('Item adicionado'),
-                                                duration: Duration(milliseconds: 500),
-                                              ),
+                                        onPressed: _isLoading ? null : () async {
+                                          if (_isLoading) return;
+                                          
+                                          setState(() => _isLoading = true);
+                                          
+                                          try {
+                                            // Check available quantity
+                                            int availableQuantity = await checkQuantidade(itemName);
+                                            int currentQuantity = itemCountMap[itemName] ?? 0;
+                                            
+                                            if (currentQuantity < availableQuantity) {
+                                              // Create a new map to avoid reference issues
+                                              final newItem = Map<String, dynamic>.from(item);
+                                              
+                                              // Update state in a single setState call
+                                              setState(() {
+                                                cartItems.add(newItem);
+                                                itemCountMap[itemName] = itemCount + 1;
+                                              });
+                                              
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Item adicionado'),
+                                                  duration: Duration(milliseconds: 500),
+                                                ),
+                                              );
+                                            } else {
+                                              showDialog(
+                                                context: context,
+                                                builder: (BuildContext context) {
+                                                  return AlertDialog(
+                                                    title: Text('Quantidade Máxima'),
+                                                    content: Text('Quantidade máxima disponível atingida'),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(context).pop(),
+                                                        style: TextButton.styleFrom(
+                                                          backgroundColor: Colors.orange,
+                                                          foregroundColor: Colors.white,
+                                                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                        ),
+                                                        child: Text('OK'),
+                                                      ),
+                                                    ],
+                                                  );
+                                                },
+                                              );
+                                            }
+                                          } catch (e) {
+                                            showDialog(
+                                              context: context,
+                                              builder: (BuildContext context) {
+                                                return AlertDialog(
+                                                  title: Text('Erro'),
+                                                  content: Text('Erro ao verificar quantidade disponível'),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () => Navigator.of(context).pop(),
+                                                      style: TextButton.styleFrom(
+                                                        backgroundColor: Colors.orange,
+                                                        foregroundColor: Colors.white,
+                                                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                      ),
+                                                      child: Text('OK'),
+                                                    ),
+                                                  ],
+                                                );
+                                              },
                                             );
-                                            _isLoading = false;
-                                          });
+                                          } finally {
+                                            if (mounted) {
+                                              setState(() => _isLoading = false);
+                                            }
+                                          }
                                         },
                                         color: _isLoading ? Colors.grey[400] : Colors.grey[700],
                                         padding: EdgeInsets.all(4),
@@ -3739,5 +3944,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     );
   }
 }
+
 
 

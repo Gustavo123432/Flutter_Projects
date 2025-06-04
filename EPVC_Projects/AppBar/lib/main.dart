@@ -230,9 +230,10 @@ class _ConnectionCheckScreenState extends State<ConnectionCheckScreen> {
               children: [
                 // Logo ou imagem da app
                 Image.asset(
-                  'lib/assets/barapp.png',
+                  'assets/barapp.png',
                   height: 120,
                   errorBuilder: (context, error, stackTrace) {
+                    print('Error loading image: $error');
                     return const Icon(
                       Icons.school,
                       size: 120,

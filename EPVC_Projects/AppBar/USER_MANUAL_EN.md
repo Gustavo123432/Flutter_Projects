@@ -7,13 +7,12 @@
 4. [First Access](#first-access)
 5. [Application Interface](#application-interface)
 6. [Main Features](#main-features)
-7. [Student Area](#student-area)
-8. [Payment System](#payment-system)
-9. [Profile Management](#profile-management)
-10. [Settings](#settings)
-11. [Password Recovery](#password-recovery)
-12. [Troubleshooting](#troubleshooting)
-13. [Support](#support)
+7. [Payment System](#payment-system)
+8. [Profile Management](#profile-management)
+9. [Settings](#settings)
+10. [Password Recovery](#password-recovery)
+11. [Troubleshooting](#troubleshooting)
+12. [Support](#support)
 
 ## Introduction
 Welcome to the EPVC App user manual. This application was developed to facilitate order management and payments at Escola Profissional de Viana do Castelo. This manual will guide you through all available features.
@@ -101,11 +100,21 @@ Welcome to the EPVC App user manual. This application was developed to facilitat
 5. Approve payment in MB WAY app
 6. Wait for confirmation in the application
 
-### 2. Balance Loading
+### 2. Cash Payment
+1. Select "Cash" as payment method
+2. Confirm total amount
+3. Wait for order confirmation
+
+### 3. Balance Payment
+1. Select "Balance" as payment method (only available if authorized)
+2. Confirm amount
+3. Wait for transaction confirmation
+
+### 4. Balance Loading
 1. Access "Balance" in the main menu
 2. Click "Load Balance"
-3. Select desired amount
-4. Choose payment method
+3. Select desired amount (€2, €5, €10, €20, or custom amount)
+4. Choose payment method (MB WAY)
 5. Follow on-screen instructions
 6. Wait for confirmation
 
@@ -122,7 +131,12 @@ Welcome to the EPVC App user manual. This application was developed to facilitat
 ### 2. Information Editing
 1. Access "Profile"
 2. Click "Edit"
-3. Modify desired fields
+3. Modify desired fields:
+   - Tax ID (for invoicing)
+   - Address
+   - City
+   - Postal Code
+   - Phone
 4. Click "Save"
 5. Confirm changes
 
@@ -167,6 +181,8 @@ Welcome to the EPVC App user manual. This application was developed to facilitat
    - Check if number is correct
    - Confirm if MB WAY app is installed
    - Verify if account is active
+   - Error E0506: MB WAY number not registered
+   - Error E9999: Invalid or inactive MB WAY number
 
 2. **Incomplete transaction**
    - Do not close the application
@@ -180,7 +196,7 @@ Welcome to the EPVC App user manual. This application was developed to facilitat
    - Restart device
 
 2. **Connection error**
-   - Check internet
+   - Check internet connection
    - Try again
    - Contact support
 

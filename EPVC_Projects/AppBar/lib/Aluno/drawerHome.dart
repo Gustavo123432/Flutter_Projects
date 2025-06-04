@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:my_flutter_project/Admin/produtoPage.dart';
-import 'package:my_flutter_project/Aluno/home.dart';
-import 'package:my_flutter_project/Aluno/pedidosPageAluno.dart';
-import 'package:my_flutter_project/Aluno/reservasPageAluno.dart';
-import 'package:my_flutter_project/Aluno/settingsPage.dart';
-import 'package:my_flutter_project/login.dart';
+import 'package:appbar_epvc/Admin/produtoPage.dart';
+import 'package:appbar_epvc/Aluno/home.dart';
+import 'package:appbar_epvc/Aluno/pedidosPageAluno.dart';
+import 'package:appbar_epvc/Aluno/reservasPageAluno.dart';
+import 'package:appbar_epvc/Aluno/settingsPage.dart';
+import 'package:appbar_epvc/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:my_flutter_project/Aluno/support_page.dart';
+import 'package:appbar_epvc/Aluno/support_page.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 

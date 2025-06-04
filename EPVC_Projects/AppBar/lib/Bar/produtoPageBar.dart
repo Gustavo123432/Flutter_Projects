@@ -4,9 +4,9 @@ import 'package:diacritic/diacritic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
-import 'package:my_flutter_project/Bar/drawerBar.dart';
-import 'package:my_flutter_project/login.dart';
-import 'package:my_flutter_project/models/product.dart';
+import 'package:appbar_epvc/Bar/drawerBar.dart';
+import 'package:appbar_epvc/login.dart';
+import 'package:appbar_epvc/models/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 List<Product> filteredProducts =
@@ -54,23 +54,12 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
       if (response.statusCode == 200) {
         List<dynamic> responseBody = json.decode(response.body);
         List<Product> fetchedProducts = responseBody.map((productData) {
-          return Product(
-            id: productData['Id'] ?? 0,
-            name: productData['Nome'] ?? '',
-            description: productData['Nome'] ?? '',
-            price:
-                double.tryParse(productData['Preco']?.toString() ?? '0') ?? 0.0,
-            quantity: int.tryParse(productData['Qtd']?.toString() ?? '0') ?? 0,
-            available: productData['Qtd'] != null &&
-                int.tryParse(productData['Qtd']) == 1,
-            category: productData['Categoria'] ?? '',
-            base64Image: productData['Imagem'] ?? '',
-          );
+          return Product.fromJson(productData);
         }).toList();
 
         setState(() {
           products = fetchedProducts;
-          filteredProducts = List.from(products); // Initialize filteredProducts
+          filteredProducts = List.from(products);
           isLoading = false;
         });
       } else {
@@ -216,6 +205,24 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
     });
   }
 
+  void updateProductQuantity(String id, int quantity) async {
+    var response = await http.get(
+      Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&id=$id&qtd=$quantity'),
+    );
+    if (response.statusCode == 200) {
+      setState(() {
+        var index = products.indexWhere((product) => product.id == id);
+        if (index != -1) {
+          products[index].quantity = quantity;
+          products[index].available = quantity >= 1;
+        }
+      });
+    } else {
+      print('Erro ao atualizar a quantidade do produto\nPor favor contacte o responsável!');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -279,6 +286,9 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
                             updateProduct(
                                 filteredProducts[index].id, newAvailability);
                           },
+                          onQuantityChange: (id, quantity) {
+                            updateProductQuantity(id, quantity);
+                          },
                         );
                       },
                     ),
@@ -303,16 +313,46 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
   }
 }
 
-class ProductCard extends StatelessWidget {
+class ProductCard extends StatefulWidget {
   final Product product;
   final Function(bool) onUpdate;
+  final Function(String, int) onQuantityChange;
 
-  ProductCard({required this.product, required this.onUpdate});
+  ProductCard({
+    required this.product,
+    required this.onUpdate,
+    required this.onQuantityChange,
+  });
+
+  @override
+  _ProductCardState createState() => _ProductCardState();
+}
+
+class _ProductCardState extends State<ProductCard> {
+  late TextEditingController _quantityController;
+  late TextEditingController _slideQuantityController;
+
+  @override
+  void initState() {
+    super.initState();
+    _quantityController = TextEditingController(text: widget.product.quantity.toString());
+    _slideQuantityController = TextEditingController(text: widget.product.quantity.toString());
+  }
+
+  @override
+  void dispose() {
+    _quantityController.dispose();
+    _slideQuantityController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Update availability based on quantity
+    bool isAvailable = widget.product.quantity >= 1;
+    
     return Dismissible(
-      key: Key(product.id),
+      key: Key(widget.product.id),
       direction: DismissDirection.endToStart,
       background: Container(
         color: Color.fromARGB(255, 130, 201, 189),
@@ -328,23 +368,46 @@ class ProductCard extends StatelessWidget {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: Text("Estado do Produto"),
+              title: Text("Atualizar Quantidade"),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  ListTile(
-                    title: Text("Disponível"),
-                    onTap: () {
-                      onUpdate(true);
-                      Navigator.of(context).pop(false);
-                    },
+                  TextField(
+                    controller: _slideQuantityController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Nova Quantidade',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-                  ListTile(
-                    title: Text("Indisponível"),
-                    onTap: () {
-                      onUpdate(false);
-                      Navigator.of(context).pop(false);
-                    },
+                  SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton(
+                        child: Text("Cancelar"),
+                        onPressed: () {
+                          Navigator.of(context).pop(false);
+                        },
+                      ),
+                      ElevatedButton(
+                        child: Text("Guardar"),
+                        onPressed: () {
+                          int? newQuantity = int.tryParse(_slideQuantityController.text);
+                          if (newQuantity != null && newQuantity >= 0) {
+                            widget.onQuantityChange(widget.product.id, newQuantity);
+                            Navigator.of(context).pop(false);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Por favor, insira uma quantidade válida'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -354,22 +417,81 @@ class ProductCard extends StatelessWidget {
       },
       child: Card(
         margin: EdgeInsets.all(8.0),
-        child: ListTile(
-          leading: Image.memory(
-            base64Decode(product.base64Image),
-            width: 50,
-            height: 50,
-            fit: BoxFit.cover,
-          ),
-          title: Text(product.name),
-          subtitle: Column(
+        child: Padding(
+          padding: EdgeInsets.all(12.0),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                  'Preço: ${product.price.toStringAsFixed(2).replaceAll('.', ',')}€'),
-              Text(
-                  'Estado: ${product.available ? 'Disponível' : 'Indisponível'}'),
-              Text('Categoria: ${product.category}'),
+              Row(
+                children: [
+                  Image.memory(
+                    base64Decode(widget.product.base64Image),
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.product.name,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Preço: ${widget.product.price.toStringAsFixed(2).replaceAll('.', ',')}€',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        Text(
+                          'Estado: ${isAvailable ? 'Disponível' : 'Indisponível'}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isAvailable ? Colors.green : Colors.red,
+                          ),
+                        ),
+                        Text(
+                          'Categoria: ${widget.product.category}',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    'Quantidade:',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  SizedBox(width: 8),
+                  Container(
+                    width: 60,
+                    child: TextField(
+                      controller: _quantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        int? quantity = int.tryParse(value);
+                        if (quantity != null && quantity >= 0) {
+                          widget.onQuantityChange(widget.product.id, quantity);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

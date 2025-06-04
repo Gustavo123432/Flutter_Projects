@@ -3,14 +3,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:my_flutter_project/Admin/dashboard.dart';
-import 'package:my_flutter_project/Admin/users.dart';
-import 'package:my_flutter_project/Aluno/formatPWDFirst.dart';
-import 'package:my_flutter_project/Aluno/home.dart';
-import 'package:my_flutter_project/Bar/barPage.dart';
-import 'package:my_flutter_project/Drawer/drawer.dart';
-import 'package:my_flutter_project/PasswordRecovery/esqueciPWD.dart';
-import 'package:my_flutter_project/PasswordRecovery/reenserirPWD.dart';
+import 'package:appbar_epvc/Admin/dashboard.dart';
+import 'package:appbar_epvc/Admin/users.dart';
+import 'package:appbar_epvc/Aluno/formatPWDFirst.dart';
+import 'package:appbar_epvc/Aluno/home.dart';
+import 'package:appbar_epvc/Bar/barPage.dart';
+import 'package:appbar_epvc/Drawer/drawer.dart';
+import 'package:appbar_epvc/PasswordRecovery/esqueciPWD.dart';
+import 'package:appbar_epvc/PasswordRecovery/reenserirPWD.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
@@ -26,134 +26,127 @@ class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
-
   _LoginFormState createState() => _LoginFormState();
 }
 
 class _LoginFormState extends State<LoginForm> {
   final TextEditingController NameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
   final TextEditingController PwdController = TextEditingController();
   bool _obscureText = true;
+  bool _isLoading = false;
 
   void _togglePasswordVisibility() {
     setState(() {
       _obscureText = !_obscureText;
     });
-    Future.delayed(Duration(seconds: 10), () {
-      setState(() {
-        _obscureText = true;
-      });
-    });
   }
 
-  void login() async {
-    final name = NameController.text;
-    final pwd = PwdController.text;
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text(
+          message,
+          style: const TextStyle(fontSize: 16),
+        ),
+        backgroundColor: Colors.red,
+        elevation: 6.0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+      ),
+    );
+  }
 
-    // Verificar se a senha é 'epvc' - Prioridade máxima
-    if (pwd.trim().toLowerCase() == 'epvc') {
-      if (name.isNotEmpty) {
-        PwdController.clear();
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => EmailRequestPage(
-                      tentativa: 2,
-                      email: name,
-                    )));
-        return;
-      } else {
-        PwdController.clear();
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => EmailRequestPage(
-                      tentativa: 2,
-                      email: "",
-                    )));
-        return;
-      }
+  Future<void> login() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final name = NameController.text.trim();
+    final pwd = PwdController.text.trim();
+
+    if (name.isEmpty || pwd.isEmpty) {
+      _showErrorSnackBar('Por favor, preencha todos os campos.');
+      setState(() {
+        _isLoading = false;
+      });
+      return;
     }
 
     // Encrypt password with MD5
     final encryptedPwd = generateMD5(pwd);
 
     try {
-      dynamic response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$encryptedPwd'));
+      final response = await http.get(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$encryptedPwd'),
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        dynamic tar = json.decode(response.body);
+        final data = json.decode(response.body);
 
-        if (tar == 'false') {
-          // Show error message for invalid credentials
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              content: Text(
-                'Falha no Login. Verifique o email e a password.',
-                style: TextStyle(fontSize: 16),
-              ),
-              backgroundColor: Colors.red,
-              elevation: 6.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-            ),
-          );
+        if (data == 'false') {
+          _showErrorSnackBar('Falha no Login. Verifique o email e a password.');
           return;
         }
 
         // Authentication successful
         final SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('permissao', tar[0]['Permissao'].toString());
-        await prefs.setString('username', tar[0]['Email'].toString());
-        await prefs.setString('idUser', tar[0]['IdUser'].toString());
+        await prefs.setString('permissao', data[0]['Permissao'].toString());
+        await prefs.setString('username', data[0]['Email'].toString());
+        await prefs.setString('idUser', data[0]['IdUser'].toString());
 
-        String tipo = tar[0]['Permissao'].toString();
+        String tipo = data[0]['Permissao'].toString();
         PwdController.clear();
 
-        if (tipo == "Administrador") {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AdminDrawer(
-                currentPage: DashboardPage(),
-                numero: 0,
+        if (!mounted) return;
+
+        switch (tipo) {
+          case "Administrador":
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AdminDrawer(
+                  currentPage: DashboardPage(),
+                  numero: 0,
+                ),
               ),
-            ),
-          );
-        } else if (tipo == "Professor" ||
-            tipo == "Funcionária" ||
-            tipo == "Aluno") {
-          Navigator.pushReplacement(context,
-              MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-        } else if (tipo == "Bar") {
-          Navigator.pushReplacement(context,
-              MaterialPageRoute(builder: (context) => BarPagePedidos()));
+            );
+            break;
+          case "Professor":
+          case "Funcionária":
+          case "Aluno":
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeAlunoMain()),
+            );
+            break;
+          case "Bar":
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => BarPagePedidos()),
+            );
+            break;
+          default:
+            _showErrorSnackBar('Tipo de usuário não reconhecido.');
         }
+      } else {
+        _showErrorSnackBar('Erro no servidor. Tente novamente mais tarde.');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            'Login Inválido. Verifique o Email e a Password e tente novamente!',
-            style: TextStyle(fontSize: 16),
-          ),
-          backgroundColor: Colors.red,
-          elevation: 6.0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-        ),
-      );
+      _showErrorSnackBar('Erro de conexão. Verifique sua internet e tente novamente.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    setState(() {});
   }
 
   double opacityLevel = 1.0;
@@ -209,11 +202,19 @@ class _LoginFormState extends State<LoginForm> {
                       Container(
                         width: 350,
                         height: 150,
-                        color: Color.fromARGB(255, 130, 201, 189),
+                        color: const Color.fromARGB(255, 130, 201, 189),
                         child: Image.asset(
-                          'lib/assets/barapp.png',
+                          'assets/barapp.png',
                           width: 350,
                           height: 150,
+                          errorBuilder: (context, error, stackTrace) {
+                            print('Error loading image: $error');
+                            return const Icon(
+                              Icons.school,
+                              size: 120,
+                              color: Colors.white,
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(

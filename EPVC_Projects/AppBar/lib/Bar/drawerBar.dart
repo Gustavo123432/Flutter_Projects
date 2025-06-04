@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:my_flutter_project/Bar/barPage.dart';
-import 'package:my_flutter_project/Bar/pedidosRegistados.dart';
-import 'package:my_flutter_project/Bar/produtoPageBar.dart';
-import 'package:my_flutter_project/Bar/restaurantePage.dart';
-import 'package:my_flutter_project/Bar/saldoPage.dart';
+import 'package:appbar_epvc/Bar/barPage.dart';
+import 'package:appbar_epvc/Bar/pedidosRegistados.dart';
+import 'package:appbar_epvc/Bar/produtoPageBar.dart';
+import 'package:appbar_epvc/Bar/restaurantePage.dart';
+import 'package:appbar_epvc/Bar/saldoPage.dart';
 
 class DrawerBar extends StatefulWidget {
   const DrawerBar({super.key});

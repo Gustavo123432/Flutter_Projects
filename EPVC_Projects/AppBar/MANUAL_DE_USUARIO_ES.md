@@ -7,13 +7,12 @@
 4. [Primer Acceso](#primer-acceso)
 5. [Interfaz de la Aplicación](#interfaz-de-la-aplicación)
 6. [Funcionalidades Principales](#funcionalidades-principales)
-7. [Área de Estudiante](#área-de-estudiante)
-8. [Sistema de Pagos](#sistema-de-pagos)
-9. [Gestión de Perfil](#gestión-de-perfil)
-10. [Configuración](#configuración)
-11. [Recuperación de Contraseña](#recuperación-de-contraseña)
-12. [Resolución de Problemas](#resolución-de-problemas)
-13. [Soporte](#soporte)
+7. [Sistema de Pagos](#sistema-de-pagos)
+8. [Gestión de Perfil](#gestión-de-perfil)
+9. [Configuración](#configuración)
+10. [Recuperación de Contraseña](#recuperación-de-contraseña)
+11. [Resolución de Problemas](#resolución-de-problemas)
+12. [Soporte](#soporte)
 
 ## Introducción
 Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue desarrollada para facilitar la gestión de pedidos y pagos en la Escola Profissional de Viana do Castelo. Este manual le guiará a través de todas las funcionalidades disponibles.
@@ -35,7 +34,7 @@ Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue des
 1. Abra la aplicación
 2. En la pantalla inicial, haga clic en "Iniciar Sesión"
 3. Introduzca las credenciales proporcionadas por la institución:
-   - Email: [su email]
+   - Correo electrónico: [su correo electrónico]
    - Contraseña: [contraseña temporal]
 4. Haga clic en "Entrar"
 5. En el primer acceso, se le pedirá que cambie su contraseña
@@ -44,7 +43,7 @@ Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue des
 ## Interfaz de la Aplicación
 
 ### Pantalla Inicial
-- Logo de EPVC
+- Logotipo de EPVC
 - Botón de Inicio de Sesión
 - Opción "¿Olvidó su contraseña?"
 
@@ -55,7 +54,7 @@ Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue des
   - Pedidos
   - Saldo
   - Configuración
-  - Salir
+  - Cerrar Sesión
 
 ### Barra de Navegación
 - Botón de retroceso
@@ -86,7 +85,7 @@ Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue des
 2. Visualice información personal:
    - Nombre completo
    - Número de estudiante
-   - Email
+   - Correo electrónico
    - Clase
    - Saldo actual
 3. Opciones de edición disponibles
@@ -101,11 +100,21 @@ Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue des
 5. Apruebe el pago en la aplicación MB WAY
 6. Espere la confirmación en la aplicación
 
-### 2. Carga de Saldo
+### 2. Pago en Efectivo
+1. Seleccione "Efectivo" como método de pago
+2. Confirme el importe total
+3. Espere la confirmación del pedido
+
+### 3. Pago con Saldo
+1. Seleccione "Saldo" como método de pago (solo disponible si está autorizado)
+2. Confirme el importe
+3. Espere la confirmación de la transacción
+
+### 4. Carga de Saldo
 1. Acceda a "Saldo" en el menú principal
 2. Haga clic en "Cargar Saldo"
-3. Seleccione el importe deseado
-4. Elija el método de pago
+3. Seleccione el importe deseado (2€, 5€, 10€, 20€ o importe personalizado)
+4. Elija el método de pago (MB WAY)
 5. Siga las instrucciones en pantalla
 6. Espere la confirmación
 
@@ -114,7 +123,7 @@ Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue des
 ### 1. Visualización de Datos
 - Nombre completo
 - Número de estudiante
-- Email
+- Correo electrónico
 - Clase
 - Saldo actual
 - Historial de pedidos
@@ -122,7 +131,12 @@ Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue des
 ### 2. Edición de Información
 1. Acceda a "Perfil"
 2. Haga clic en "Editar"
-3. Modifique los campos deseados
+3. Modifique los campos deseados:
+   - NIF (para facturación)
+   - Dirección
+   - Ciudad
+   - Código Postal
+   - Teléfono
 4. Haga clic en "Guardar"
 5. Confirme los cambios
 
@@ -144,9 +158,9 @@ Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue des
 
 ## Recuperación de Contraseña
 1. En la pantalla de inicio de sesión, haga clic en "¿Olvidó su contraseña?"
-2. Introduzca el email registrado
+2. Introduzca el correo electrónico registrado
 3. Haga clic en "Enviar"
-4. Verifique su email
+4. Verifique su correo electrónico
 5. Siga las instrucciones recibidas
 6. Cree una nueva contraseña
 
@@ -154,7 +168,7 @@ Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue des
 
 ### Problemas de Inicio de Sesión
 1. **Credenciales inválidas**
-   - Verifique el email y contraseña
+   - Verifique el correo electrónico y contraseña
    - Confirme si las teclas Bloq Mayús o Bloq Num están activadas
    - Intente recuperar la contraseña
 
@@ -167,6 +181,8 @@ Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue des
    - Verifique si el número es correcto
    - Confirme si la aplicación MB WAY está instalada
    - Verifique si la cuenta está activa
+   - Error E0506: Número MB WAY no registrado
+   - Error E9999: Número MB WAY inválido o inactivo
 
 2. **Transacción incompleta**
    - No cierre la aplicación
@@ -187,12 +203,12 @@ Bienvenido al manual de usuario de la aplicación EPVC. Esta aplicación fue des
 ## Soporte
 
 ### Contactos
-- Email: [insertar email de soporte]
+- Correo electrónico: [insertar correo electrónico de soporte]
 - Teléfono: [insertar número de soporte]
 - Horario: [insertar horario de atención]
 
 ### Canales de Ayuda
-- Email de soporte
+- Correo electrónico de soporte
 - Teléfono de emergencia
 - Chat de soporte (cuando esté disponible)
 

@@ -7,13 +7,12 @@
 4. [Primeiro Acesso](#primeiro-acesso)
 5. [Interface da Aplicação](#interface-da-aplicação)
 6. [Funcionalidades Principais](#funcionalidades-principais)
-7. [Área do Aluno](#área-do-aluno)
-8. [Sistema de Pagamentos](#sistema-de-pagamentos)
-9. [Gestão de Perfil](#gestão-de-perfil)
-10. [Definições](#definições)
-11. [Recuperação de Palavra-passe](#recuperação-de-palavra-passe)
-12. [Resolução de Problemas](#resolução-de-problemas)
-13. [Suporte](#suporte)
+7. [Sistema de Pagamentos](#sistema-de-pagamentos)
+8. [Gestão de Perfil](#gestão-de-perfil)
+9. [Definições](#definições)
+10. [Recuperação de Palavra-passe](#recuperação-de-palavra-passe)
+11. [Resolução de Problemas](#resolução-de-problemas)
+12. [Suporte](#suporte)
 
 ## Introdução
 Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi desenvolvida para facilitar a gestão de pedidos e pagamentos na Escola Profissional de Viana do Castelo. Este manual irá guiá-lo através de todas as funcionalidades disponíveis.
@@ -101,11 +100,21 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
 5. Aprove o pagamento na aplicação MB WAY
 6. Aguarde a confirmação na aplicação
 
-### 2. Carregamento de Saldo
+### 2. Pagamento em Dinheiro
+1. Selecione "Dinheiro" como método de pagamento
+2. Confirme o valor total
+3. Aguarde a confirmação do pedido
+
+### 3. Pagamento com Saldo
+1. Selecione "Saldo" como método de pagamento (apenas disponível se autorizado)
+2. Confirme o valor
+3. Aguarde a confirmação da transação
+
+### 4. Carregamento de Saldo
 1. Aceda a "Saldo" no menu principal
 2. Clique em "Carregar Saldo"
-3. Selecione o valor desejado
-4. Escolha o método de pagamento
+3. Selecione o valor desejado (2€, 5€, 10€, 20€ ou valor personalizado)
+4. Escolha o método de pagamento (MB WAY)
 5. Siga as instruções no ecrã
 6. Aguarde a confirmação
 
@@ -122,7 +131,12 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
 ### 2. Edição de Informações
 1. Aceda a "Perfil"
 2. Clique em "Editar"
-3. Modifique os campos desejados
+3. Modifique os campos desejados:
+   - NIF (para faturação)
+   - Morada
+   - Cidade
+   - Código Postal
+   - Telefone
 4. Clique em "Guardar"
 5. Confirme as alterações
 
@@ -167,6 +181,8 @@ Bem-vindo ao manual do utilizador da aplicação EPVC. Esta aplicação foi dese
    - Verifique se o número está correto
    - Confirme se a aplicação MB WAY está instalada
    - Verifique se a conta está ativa
+   - Erro E0506: Número MB WAY não registado
+   - Erro E9999: Número MB WAY inválido ou inativo
 
 2. **Transação incompleta**
    - Não feche a aplicação

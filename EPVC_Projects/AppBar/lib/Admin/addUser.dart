@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:my_flutter_project/Admin/users.dart';
-import 'package:my_flutter_project/Drawer/drawer.dart';
+import 'package:appbar_epvc/Admin/users.dart';
+import 'package:appbar_epvc/Drawer/drawer.dart';
 
 class AddUserDialog extends StatefulWidget {
   @override

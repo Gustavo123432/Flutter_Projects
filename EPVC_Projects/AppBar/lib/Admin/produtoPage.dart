@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
-import 'package:my_flutter_project/Admin/addProduto.dart';
-import 'package:my_flutter_project/Admin/drawerAdmin.dart';
-import 'package:my_flutter_project/login.dart';
+import 'package:appbar_epvc/Admin/addProduto.dart';
+import 'package:appbar_epvc/Admin/drawerAdmin.dart';
+import 'package:appbar_epvc/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Product {
@@ -27,6 +27,19 @@ class Product {
     required this.category,
     required this.base64Image,
   });
+
+  factory Product.fromJson(dynamic json) {
+    return Product(
+      id: json['Id'],
+      name: json['Nome'],
+      description: json['Nome'],
+      price: double.parse(json['Preco'].toString()),
+      quantity: int.parse(json['Qtd']),
+      available: int.parse(json['Qtd']) == 1 ? true : false,
+      category: json['Categoria'],
+      base64Image: json['Imagem'],
+    );
+  }
 }
 
 class ProdutoPage extends StatefulWidget {
@@ -53,19 +66,10 @@ class _ProductPageState extends State<ProdutoPage> {
     );
     if (response.statusCode == 200) {
       List<dynamic> responseBody = json.decode(response.body);
-      List<Product> fetchedProducts = [];
-      responseBody.forEach((productData) {
-        fetchedProducts.add(Product(
-          id: productData['Id'],
-          name: productData['Nome'],
-          description: productData['Nome'],
-          price: double.parse(productData['Preco'].toString()),
-          quantity: int.parse(productData['Qtd']),
-          available: int.parse(productData['Qtd']) == 1 ? true : false,
-          category: productData['Categoria'],
-          base64Image: productData['Imagem'],
-        ));
-      });
+      List<Product> fetchedProducts = responseBody.map((productData) {
+        return Product.fromJson(productData);
+      }).toList();
+      
       setState(() {
         products = fetchedProducts;
         isLoading = false;
@@ -78,18 +82,11 @@ class _ProductPageState extends State<ProdutoPage> {
   void updateProduct(String id, Product product) async {
     var nome = product.name;
     var preco = product.price;
-    var available = product.available;
-    var qtd;
-    if (!available) {
-      qtd = "0";
-    } else {
-      qtd = "1";
-    }
+    var qtd = product.quantity.toString();
     var categoria = product.category;
     var response = await http.get(
       Uri.parse(
           'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=6&id=$id&nome=$nome&preco=$preco&available=$qtd&categoria=$categoria'),
-      //body: jsonEncode(product.toJson()),
     );
     print(response);
     if (response.statusCode == 200) {

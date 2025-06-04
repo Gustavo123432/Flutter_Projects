@@ -7,7 +7,7 @@ import '../sibs_service.dart';
 import 'mbway_waiting_page.dart';
 import 'order_confirmation_page.dart';
 import 'order_declined_page.dart';
-import 'package:my_flutter_project/Aluno/home.dart';
+import 'package:appbar_epvc/Aluno/home.dart';
 
 class MBWayPhoneNumberPage extends StatefulWidget {
   final double amount;

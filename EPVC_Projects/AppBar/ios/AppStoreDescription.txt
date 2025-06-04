@@ -1,0 +1,43 @@
+App Name: AppBar EPVC
+
+Short Description (30 characters):
+EPVC's Digital Bar Management
+
+Promotional Text (170 characters):
+Transform your bar experience with EPVC's AppBar! Streamline orders, manage inventory, and enhance customer service with our innovative digital bar management solution.
+
+Description (4000 characters):
+Welcome to AppBar EPVC - Your Complete Bar Management Solution!
+
+AppBar EPVC is a comprehensive digital bar management system designed to streamline operations and enhance customer experience in bars and restaurants. Our app combines powerful features with an intuitive interface to help you manage your establishment more efficiently.
+
+Key Features:
+• Real-time Order Management
+• Inventory Tracking
+• Customer Service Enhancement
+• Payment Processing
+• Staff Management
+• Analytics and Reporting
+
+Perfect for:
+• Bars
+• Restaurants
+• Cafés
+• Event Venues
+• Hospitality Businesses
+
+Why Choose AppBar EPVC?
+• User-friendly Interface
+• Secure Payment Processing
+• Real-time Updates
+• Comprehensive Analytics
+• 24/7 Support
+
+Download AppBar EPVC today and transform your bar management experience!
+
+Keywords:
+bar,management,restaurant,cafe,pos,point of sale,inventory,orders,payments,analytics,staff,service,customer,digital,epvc
+
+Support URL: https://epvc.pt/support
+Marketing URL: https://epvc.pt/appbar
+Privacy Policy URL: https://epvc.pt/privacy 

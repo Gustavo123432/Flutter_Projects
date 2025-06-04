@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:my_flutter_project/Admin/produtoPage.dart';
+import 'package:appbar_epvc/Admin/produtoPage.dart';
 
 class AddProdutoPage extends StatefulWidget {
   @override
