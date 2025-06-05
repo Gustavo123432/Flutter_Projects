@@ -404,43 +404,52 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-        home: WillPopScope(
+    return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-      appBar: AppBar(
-        title: Text('Definições'),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back),
-            onPressed: () async {
-              if (await _onWillPop()) {
-                Navigator.pop(context);
-              }
+        appBar: AppBar(
+          title: Text('Definições'),
+          automaticallyImplyLeading: false,
+          leading: Builder(
+            builder: (BuildContext innerContext) {
+              return IconButton(
+                icon: Icon(Icons.menu),
+                onPressed: () {
+                  Scaffold.of(innerContext).openDrawer();
+                },
+              );
             },
           ),
-      ),
-      drawer: DrawerHome(),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildUserInfoCard(),
-                  SizedBox(height: 16),
-                  if (userData['AutorizadoSaldo'] == '1' ||
-                      userData['AutorizadoSaldo'] == 1)
-                    _buildFinancialInfoCard(),
-                  if (userData['AutorizadoSaldo'] == '1' ||
-                      userData['AutorizadoSaldo'] == 1)
+        ),
+        drawer: DrawerHome(),
+        body: Builder(
+          builder: (BuildContext innerContext) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildUserInfoCard(),
                     SizedBox(height: 16),
-                  _buildEditableAddressCard(),
-                ],
+                    if (userData['AutorizadoSaldo'] == '1' ||
+                        userData['AutorizadoSaldo'] == 1)
+                      _buildFinancialInfoCard(),
+                    if (userData['AutorizadoSaldo'] == '1' ||
+                        userData['AutorizadoSaldo'] == 1)
+                      SizedBox(height: 16),
+                    _buildEditableAddressCard(),
+                  ],
+                ),
               ),
-            ),
+            );
+          },
+        ),
       ),
-    ));
+    );
   }
 
   Widget _buildUserInfoCard() {
@@ -720,7 +729,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>  TransactionDetailsPage(),
+                                builder: (context) =>  MovimentosPage(),
                               ),
                             );
                           },

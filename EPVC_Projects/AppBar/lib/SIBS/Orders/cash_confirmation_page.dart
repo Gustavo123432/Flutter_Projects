@@ -35,7 +35,6 @@ class CashConfirmationPage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                 
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.green[50],
@@ -71,13 +70,6 @@ class CashConfirmationPage extends StatelessWidget {
                         SizedBox(height: 20),
                         Text(
                           'Valor a pagar: ${amount.toStringAsFixed(2).replaceAll('.', ',')}€',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Valor a receber: ${change.toStringAsFixed(2).replaceAll('.', ',')}€',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

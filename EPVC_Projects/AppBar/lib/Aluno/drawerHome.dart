@@ -130,7 +130,7 @@ class _DrawerHomeState extends State<DrawerHome> {
                 );
               },
               leading: Icon(Icons.home),
-              title: Text('Home'),
+              title: Text('Início'),
             ),
             ListTile(
               onTap: () {
@@ -165,27 +165,30 @@ class _DrawerHomeState extends State<DrawerHome> {
             ListTile(
               onTap: () {
                 showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: Text('Em Desenvolvimento'),
-                                  content: Text(
-                                      'O Restaurante não está disponível no momento.'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: Text('OK', style: TextStyle(color: Colors.white)),
-                                      style: TextButton.styleFrom(backgroundColor: Colors.orange),
-                                    ),
-                                  ],
-                                ),
-                              );
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('Em Desenvolvimento'),
+                    content: Text(
+                        'O Restaurante não está disponível no momento.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
               },
               leading: Icon(Icons.restaurant),
               title: Text('Reservas'),
             ),
             ListTile(
               onTap: () {
-                Navigator.push(
+                Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => SettingsPage()),
                 );

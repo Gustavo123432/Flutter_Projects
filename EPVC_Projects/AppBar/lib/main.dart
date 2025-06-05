@@ -122,13 +122,16 @@ class _ConnectionCheckScreenState extends State<ConnectionCheckScreen> {
           return isVersionValid;
         } catch (e) {
           print('Error parsing version data: $e');
-          return false;
+          // If we can't parse the version data, assume the current version is valid
+          return true;
         }
       }
-      return false;
+      // If we can't get the version data, assume the current version is valid
+      return true;
     } catch (e) {
       print('Error checking app version: $e');
-      return false;
+      // If there's any error, assume the current version is valid
+      return true;
     }
   }
 

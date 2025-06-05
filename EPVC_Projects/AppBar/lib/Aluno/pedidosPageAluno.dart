@@ -342,7 +342,7 @@ class _PedidosPageAlunosState extends State<PedidosPageAlunos> {
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
-                                          color: Theme.of(context).primaryColor,
+                                          color: Colors.orange,
                                         ),
                                       ),
                                     ],

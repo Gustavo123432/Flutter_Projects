@@ -154,9 +154,13 @@ class _LoginFormState extends State<LoginForm> {
   /////////////////////////////////////////
   /////////////////////////////////////////
 
-  Widget build(BuildContext context) {
-    // Verificar login apenas quando não estiver processando uma autenticação atual
+  @override
+  void initState() {
+    super.initState();
     verifylogin(context);
+  }
+
+  Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         const webScreenSize = 600;

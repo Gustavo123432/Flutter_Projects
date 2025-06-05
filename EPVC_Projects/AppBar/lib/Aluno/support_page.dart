@@ -1,3 +1,4 @@
+import 'package:appbar_epvc/Aluno/drawerHome.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -27,12 +28,29 @@ class _SupportPageState extends State<SupportPage> {
   ];
   
   String? _selectedReason;
+  Color _reasonBorderColor = Colors.grey;
+  Color _descriptionBorderColor = Colors.grey;
+
+  @override
+  void initState() {
+    super.initState();
+    _descriptionController.addListener(_updateDescriptionBorderColor);
+  }
 
   @override
   void dispose() {
     _customReasonController.dispose();
+    _descriptionController.removeListener(_updateDescriptionBorderColor);
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  void _updateDescriptionBorderColor() {
+    setState(() {
+      _descriptionBorderColor = _descriptionController.text.isNotEmpty
+          ? Color.fromARGB(255, 246, 141, 45) // Orange color
+          : Colors.grey; // Default color
+    });
   }
 
   Future<void> _sendSupportTicket() async {
@@ -109,6 +127,7 @@ class _SupportPageState extends State<SupportPage> {
       appBar: AppBar(
         title: Text('Suporte'),
       ),
+      drawer: DrawerHome(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -123,13 +142,18 @@ class _SupportPageState extends State<SupportPage> {
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(
                   labelText: 'Motivo do Ticket',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: _reasonBorderColor),
+                  ),
                 ),
                 value: _selectedReason,
                 hint: Text('Selecione ou digite o motivo'),
                 onChanged: (String? newValue) {
                   setState(() {
                     _selectedReason = newValue;
+                    _reasonBorderColor = newValue != null && newValue.isNotEmpty
+                        ? Color.fromARGB(255, 246, 141, 45) // Orange color
+                        : Colors.grey; // Default color
                   });
                 },
                 items: _reasons.map((String reason) {
@@ -166,7 +190,21 @@ class _SupportPageState extends State<SupportPage> {
                 controller: _descriptionController,
                 decoration: InputDecoration(
                   labelText: 'Descrição do Problema (Passos, detalhes)',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: _descriptionBorderColor),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: _descriptionBorderColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: _descriptionBorderColor),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: _descriptionBorderColor),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: _descriptionBorderColor),
+                  ),
                 ),
                 maxLines: 5,
                 validator: (value) {

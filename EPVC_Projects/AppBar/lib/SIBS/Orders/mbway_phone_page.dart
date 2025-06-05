@@ -35,6 +35,7 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
   bool _isValidPhone = false;
   bool _isProcessing = false;
   List<dynamic> users = [];
+  Color _borderColor = Colors.grey[300]!;
 
   @override
   void initState() {
@@ -42,10 +43,12 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
     print('MBWayPhoneNumberPage initialized');
     fetchUser();
     _phoneController.addListener(_validatePhone);
+    _phoneController.addListener(_updateBorderColor);
   }
 
   @override
   void dispose() {
+    _phoneController.removeListener(_updateBorderColor);
     _phoneController.dispose();
     super.dispose();
   }
@@ -136,6 +139,14 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
       _isValidPhone = isProperLength && hasCorrectPrefix;
       
       print('Phone validation: Length OK? $isProperLength, Prefix OK? $hasCorrectPrefix, Valid? $_isValidPhone');
+    });
+  }
+
+  void _updateBorderColor() {
+    setState(() {
+      _borderColor = _phoneController.text.isNotEmpty 
+          ? Color.fromARGB(255, 246, 141, 45) // Orange color when filled
+          : Colors.grey[300]!;
     });
   }
 
@@ -468,7 +479,7 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: Colors.grey[300]!,
+                          color: _borderColor,
                           width: 1.0,
                         ),
                         borderRadius: BorderRadius.circular(12),
