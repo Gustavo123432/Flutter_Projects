@@ -148,12 +148,7 @@ class _PedidosPageAlunosState extends State<PedidosPageAlunos> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildStatCard(
-                      'Total', 
-                      '${orders.length}',
-                      Icons.receipt_long,
-                      Colors.blue
-                    ),
+                  
                     _buildStatCard(
                       'Pendentes', 
                       '${orders.where((order) => order['Estado'] == '0').length}',
@@ -165,6 +160,12 @@ class _PedidosPageAlunosState extends State<PedidosPageAlunos> {
                       '${orders.length - orders.where((order) => order['Estado'] == '0').length}',
                       Icons.check_circle_outline,
                       Colors.green
+                    ),
+                      _buildStatCard(
+                      'Total', 
+                      '${orders.length}',
+                      Icons.receipt_long,
+                      Colors.blue
                     ),
                   ],
                 ),
