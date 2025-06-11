@@ -125,6 +125,24 @@ class _MovimentosPageState extends State<MovimentosPage> {
     }
   }
 
+  Map<String, int> _groupItems(String description) {
+    Map<String, int> groupedItems = {};
+    if (description != null && description.isNotEmpty) {
+      // Remove brackets and split by comma
+      String cleanDesc = description.replaceAll('[', '').replaceAll(']', '');
+      List<String> items = cleanDesc.split(',');
+      
+      // Count occurrences of each item
+      for (String item in items) {
+        String trimmedItem = item.trim();
+        if (trimmedItem.isNotEmpty) {
+          groupedItems[trimmedItem] = (groupedItems[trimmedItem] ?? 0) + 1;
+        }
+      }
+    }
+    return groupedItems;
+  }
+
   void _showOrderDetails(String orderNumber) async {
     setState(() {
       isLoading = true;
@@ -215,8 +233,15 @@ class _MovimentosPageState extends State<MovimentosPage> {
                     SizedBox(width: 6),
                     Text('Descrição: ', style: TextStyle(fontWeight: FontWeight.w500)),
                     Expanded(
-                      child: Text(
-                        orderDetails['Descricao']?.toString() ?? 'N/A',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: _groupItems(orderDetails['Descricao']?.toString() ?? '')
+                            .entries
+                            .map((entry) => Text(
+                                  '• ${entry.value}x ${entry.key}',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ))
+                            .toList(),
                       ),
                     ),
                   ],

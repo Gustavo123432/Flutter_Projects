@@ -1132,42 +1132,76 @@ class _CategoryPageState extends State<CategoryPage> {
   }
 
   void addToCart(Map<String, dynamic> item) async {
-    // Ensure the item has all required properties
-    if (!item.containsKey('Prencado')) {
-      item['Prencado'] = "0";  // Default to "0" if not present
-    }
-    if (!item.containsKey('PrepararPrencado')) {
-      item['PrepararPrencado'] = false;
-    }
-    if (!item.containsKey('Fresh')) {
-      item['Fresh'] = false;
-    }
-    
-    // Set default preparation based on Prencado value
-    if (item['Prencado'] == '1' || item['Prencado'] == '2') {
-      item['PrepararPrencado'] = true;  // Default to prensado/aquecido
-    } else if (item['Prencado'] == '3') {
-      item['Fresh'] = true;  // Default to fresh
+    // Ensure the item has all required properties and standardize the structure
+    // Be very defensive about potential nulls and types from the source item map
+    Map<String, dynamic> newItem = {
+      'Imagem': (item['Imagem'] is String && item['Imagem'] != null) ? item['Imagem'] : '', // Ensure Imagem is a non-null string
+      'Nome': (item['Nome'] is String && item['Nome'] != null) ? item['Nome'].replaceAll('"', '') : '', // Ensure Nome is a non-null string, remove quotes
+      'Preco': (item['Preco'] != null) ? item['Preco'].toString() : '0.0', // Ensure Preco is a non-null string representation
+      'Prencado': (item['Prencado'] != null) ? item['Prencado'].toString() : '0', // Ensure Prencado is a non-null string representation
+      // Initialize preparation flags with default values if not explicitly boolean in the source item
+      'PrepararPrencado': (item['PrepararPrencado'] is bool) ? item['PrepararPrencado'] : false,
+      'Fresh': (item['Fresh'] is bool) ? item['Fresh'] : false,
+    };
+
+    // Apply default preparation based on Prencado value only if the flags were not explicitly set as boolean
+    if (newItem['Prencado'] == '1' || newItem['Prencado'] == '2') {
+      if (!(item['PrepararPrencado'] is bool)) { // Only set default if original item didn't have a boolean flag
+        newItem['PrepararPrencado'] = true; // Default to prensado/aquecido
+      }
+    } else if (newItem['Prencado'] == '3') {
+       if (!(item['Fresh'] is bool)) { // Only set default if original item didn't have a boolean flag
+        newItem['Fresh'] = true;  // Default to fresh
+       }
     }
     
     // Check available quantity before adding
-    final String productName = item['Nome']; // Get product name
+    // Use the standardized product name
+    final String productName = newItem['Nome'];
     int availableQuantity = await checkQuantidade(productName); // Check available quantity
     int currentQuantity = cartItems.where((cartItem) => cartItem['Nome'] == productName).length; // Get current quantity in cart
 
     if (availableQuantity >= currentQuantity + 1) {
       setState(() {
-        cartItems.add(item);
+        cartItems.add(newItem); // Add the standardized item
       });
+       // Optionally show a snackbar that item was added
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(
+             content: Text('Item adicionado ao carrinho'),
+             duration: Duration(milliseconds: 500),
+           ),
+         );
+       }
     } else {
-      // Optionally show a message to the user that max quantity is reached
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Quantidade máxima disponível atingida (Disponível: $availableQuantity)'),
-          backgroundColor: Colors.red,
-          duration: Duration(milliseconds: 2000),
-        ),
-      );
+      // Optionally show a message to the user that max quantity is reached or unavailable
+      String message = availableQuantity <= 0
+          ? 'Desculpe, este produto está indisponível no momento.'
+          : 'Quantidade máxima disponível atingida (Disponível: $availableQuantity)';
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text(availableQuantity <= 0 ? 'Produto Indisponível' : 'Quantidade Máxima'),
+              content: Text(message),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  child: Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      }
     }
   }
 
@@ -1501,7 +1535,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                           ],
                                         )
                                       : Visibility(
-                                          visible: item['Qtd'] == "1",
+                                          visible: (int.tryParse(item['Qtd']?.toString() ?? '0') ?? 0) > 0,
                                           child: LoadingButton(
                                             onPressed: _isLoading ? null : () async {
                                               setState(() => _isLoading = true);
@@ -2887,14 +2921,13 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         
         // If data is a list and not empty
         if (data is List && data.isNotEmpty) {
-          // The backend returns a list with a single object containing Qtd
-          return int.tryParse(data[0]['Qtd'].toString()) ?? 0;
+          return int.parse(data[0]['Qtd'].toString());
         }
       }
-      return 0; // Return 0 if no data found
+      return 0; // Return 0 if no data or error
     } catch (e) {
-      print('Exception checking quantity: $e');
-      return 0; // Return 0 on any exception
+      print('Error checking quantity: $e');
+      return 0; // Return 0 on error
     }
   }
 
@@ -3487,7 +3520,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   final item = cartItems.firstWhere(
                     (element) => element['Nome'] == itemName,
                     orElse: () => { // Provide a default map if the item is not found
-                      'Nome': itemName, // Keep the original item name
+                      'Nome': itemName ?? '', // Ensure Nome is not null
                       'Imagem': '', // Provide a default empty image string
                       'Preco': '0.0', // Provide a default price
                       'Prencado': '0', // Provide a default prencado status
@@ -3496,17 +3529,34 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                     },
                   );
 
-                  // If item is null (not found), return an empty container or handle appropriately
-                  // This check is technically no longer strictly necessary with the orElse returning a map,
-                  // but it's good for robustness or if you prefer not to display placeholders.
-                  // If you want to hide items not found, keep this block.
-                  // If you want to display placeholders, remove this block.
-                  // Keeping it for now to match previous behavior of hiding missing items.
-                  if (item['Nome'] != itemName) { // Check if the found item's name matches (i.e., if orElse was triggered)
-                     return Container(); // Hide the item if the placeholder was returned
+                  // Ensure essential properties are not null or of incorrect type after finding the item
+                  final String currentItemName = (item['Nome'] is String && item['Nome'] != null) ? item['Nome'] : itemName ?? ''; // Use original itemName as fallback
+                  final String currentItemPrencado = (item['Prencado'] != null) ? item['Prencado'].toString() : '0';
+                  // Explicitly check for boolean type and provide a default
+                  bool currentPrepararPrencado = (item['PrepararPrencado'] is bool) ? item['PrepararPrencado'] : false; 
+                  bool currentFresh = (item['Fresh'] is bool) ? item['Fresh'] : false;
+
+                  // If the item name is still empty or does not match, hide the item (in case orElse returned a minimal placeholder)
+                  if (currentItemName.isEmpty || (itemName != null && currentItemName != itemName)) {
+                     return Container(); // Hide the item if data is fundamentally missing or mismatched
                   }
 
-                  final image = item['Imagem'] != null && item['Imagem'].isNotEmpty ? base64.decode(item['Imagem']) : null;
+                  // Safely decode the image bytes, handling potential errors
+                  Uint8List? imageBytes;
+                  String? base64Image = (item['Imagem'] is String && item['Imagem'] != null) ? item['Imagem'] : null; // Ensure it's a string and not null
+
+                  // Add an additional check: only attempt decode if the string is not null or empty
+                  if (base64Image != null && base64Image.isNotEmpty) {
+                    try {
+                      // Attempt to decode, catch format errors
+                      imageBytes = base64.decode(base64Image);
+                    } catch (e) {
+                      // Log the error but continue, the errorBuilder will show the fallback
+                      print('Error decoding image for item ${currentItemName}: $e');
+                      // imageBytes remains null, the errorBuilder will handle this
+                    }
+                  }
+
                   final itemPrice = double.tryParse(item['Preco']?.toString() ?? '0') ?? 0;
                   final itemTotal = itemPrice * itemCount;
                   
@@ -3539,8 +3589,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                               children: [
                                 // Imagem do produto
                                 Container(
-                                  width: 50,
-                                  height: 50,
+                                  width: 50, // Ensure width is sufficient
+                                  height: 50, // Ensure height is sufficient
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(10),
                                     boxShadow: [
@@ -3553,25 +3603,36 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(10),
-                                    child: image != null
+                                    child: imageBytes != null
                                         ? Image.memory(
-                                            image,
+                                            imageBytes,
                                             fit: BoxFit.cover,
                                             gaplessPlayback: true,
-                                            cacheWidth: 100,
+                                            cacheWidth: 100, // Explicitly set cache dimensions
                                             cacheHeight: 100,
                                             filterQuality: FilterQuality.high,
                                             isAntiAlias: true,
-                                            key: ValueKey(itemName), // Add a stable key
+                                            key: ValueKey(currentItemName), // Use currentItemName for key
+                                            errorBuilder: (context, error, stackTrace) {
+                                              // Fallback widget if image fails to load or decode
+                                              return Container(
+                                                color: Colors.grey[200], // Use a light grey background
+                                                child: Icon(
+                                                  Icons.broken_image_outlined, // Use a broken image icon
+                                                  size: 30,
+                                                  color: Colors.red, // Use red for error
+                                                ),
+                                              );
+                                            },
                                           )
                                         : Container(
-                                            color: Colors.grey[200],
+                                            color: Colors.grey[200], // Use a light grey background for missing image
                                             child: Icon(
-                                              Icons.fastfood,
+                                              Icons.fastfood, // Generic food icon
                                               size: 30,
-                                              color: Colors.grey[400],
+                                              color: Colors.grey[400], // Use a darker grey for the icon
                                             ),
-                                          ),
+                                          ), // Fallback for missing or invalid image data
                                   ),
                                 ),
                                 SizedBox(width: 12),
@@ -3581,7 +3642,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        item['Nome'],
+                                        currentItemName.isNotEmpty ? currentItemName : 'Item Desconhecido', // Provide fallback text
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
@@ -3590,7 +3651,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       SizedBox(height: 4),
-                                     
+                                      Text(
+                                        '${itemPrice.toStringAsFixed(2).replaceAll('.', ',')}€', // Use itemPrice, already defaulted to 0 if parsing failed
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.orange, // Orange color for price
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -3616,7 +3684,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                               builder: (BuildContext context) {
                                                 return AlertDialog(
                                                   title: Text('Remover Item'),
-                                                  content: Text('Tem certeza que deseja remover ${itemName} do carrinho?'),
+                                                  content: Text('Tem certeza que deseja remover ${currentItemName.isNotEmpty ? currentItemName : 'este item'} do carrinho?'), // Use currentItemName with fallback
                                                   actions: [
                                                     TextButton(
                                                       onPressed: () => Navigator.of(context).pop(false),
@@ -3646,7 +3714,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                           
                                           setState(() {
                                             _isLoading = true;
-                                            int index = cartItems.indexWhere((element) => element['Nome'] == itemName);
+                                            int index = cartItems.indexWhere((element) => element['Nome'] == itemName); // Use original itemName for finding index
                                             if (index != -1) {
                                               cartItems.removeAt(index);
                                               ScaffoldMessenger.of(context).showSnackBar(
@@ -3687,9 +3755,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                           
                                           try {
                                             // Check available quantity
-                                            final String productName = item['Nome']; // Get product name consistently
+                                            final String productName = currentItemName; // Use standardized product name
                                             int availableQuantity = await checkQuantidade(productName); // Use product name
-                                            int currentQuantity = cartItems.where((cartItem) => cartItem['Nome'] == productName).length; // Get current quantity from cartItems
+                                            int currentQuantity = cartItems.where((cartItem) => (cartItem['Nome'] is String ? cartItem['Nome'] : '') == productName).length; // Explicitly check type
                                             int desiredQuantity = currentQuantity + 1; // Calculate desired quantity
 
                                             if (availableQuantity >= desiredQuantity) {
@@ -3700,9 +3768,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                               if (!newItem.containsKey('PrepararPrencado')) newItem['PrepararPrencado'] = false;
                                               if (!newItem.containsKey('Fresh')) newItem['Fresh'] = false;
                                               // Apply default preparation based on Prencado value if not already set
-                                              if ((newItem['Prencado'] == '1' || newItem['Prencado'] == '2') && !(newItem['PrepararPrencado'] ?? false)) {
+                                              if ((newItem['Prencado'] == '1' || newItem['Prencado'] == '2') && !(newItem['PrepararPrencado'] is bool ? newItem['PrepararPrencado'] : false)) { // Explicit type check
                                                  newItem['PrepararPrencado'] = true;
-                                              } else if (newItem['Prencado'] == '3' && !(newItem['Fresh'] ?? false)) {
+                                              } else if (newItem['Prencado'] == '3' && !(newItem['Fresh'] is bool ? newItem['Fresh'] : false)) { // Explicit type check
                                                  newItem['Fresh'] = true;
                                               }
 
@@ -3802,7 +3870,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                             ),
                             SizedBox(height: 8),
                             // Preparation options at the bottom
-                            if (item['Prencado'] == '1' || item['Prencado'] == '2')
+                            // Add robust checks before accessing item['Prencado']
+                            if ((item['Prencado']?.toString() ?? '0') == '1' || (item['Prencado']?.toString() ?? '0') == '2')
                               Center(
                                 child: Container(
                                   width: double.infinity,
@@ -3815,7 +3884,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(
-                                        item['Prencado'] == '1' ? Icons.coffee : Icons.local_cafe,
+                                        // Add robust check here as well
+                                        (item['Prencado']?.toString() ?? '0') == '1' ? Icons.coffee : Icons.local_cafe,
                                         size: 16,
                                         color: Colors.orange[700],
                                       ),
@@ -3827,15 +3897,27 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                           color: Colors.grey[700],
                                         ),
                                       ),
-                                      Expanded( // Let ToggleButtons take available space
-                                        child: ToggleButtons(
-                                          isSelected: [
-                                            item['PrepararPrencado'] ?? false,
-                                            !(item['PrepararPrencado'] ?? false),
+                                      SizedBox(
+                                        width: 150, // Explicit width for ToggleButtons container
+                                        child: Flexible( // Changed from Expanded
+                                          child: ToggleButtons(
+                                            // Ensure isSelected list is always valid with boolean values
+                                            isSelected: [
+                                            currentPrepararPrencado, // currentPrepararPrencado is already safely derived
+                                            !currentPrepararPrencado, // Ensure negation is safe
                                           ],
                                           onPressed: (index) {
                                             setState(() {
-                                              item['PrepararPrencado'] = index == 0;
+                                               // Find the index of the item in the main list based on the unique itemName
+                                              int itemIndex = cartItems.indexWhere((element) => element['Nome'] == itemName);
+                                              if (itemIndex != -1) {
+                                                // Create a copy of the item
+                                                Map<String, dynamic> updatedItem = Map<String, dynamic>.from(cartItems[itemIndex]);
+                                                // Update the property on the copy
+                                                updatedItem['PrepararPrencado'] = index == 0; // Assign boolean directly
+                                                // Replace the item in the main list with the updated copy
+                                                cartItems[itemIndex] = updatedItem;
+                                              }
                                             });
                                           },
                                           borderRadius: BorderRadius.circular(6),
@@ -3850,7 +3932,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                               child: Padding(
                                                 padding: EdgeInsets.symmetric(horizontal: 4),
                                                 child: Text(
-                                                  item['Prencado'] == '1' ? 'Prensado' : 'Aquecido',
+                                                  // Add robust check here as well
+                                                  (item['Prencado']?.toString() ?? '0') == '1' ? 'Prensado' : 'Aquecido',
                                                   style: TextStyle(fontSize: 12),
                                                   textAlign: TextAlign.center,
                                                   overflow: TextOverflow.ellipsis,
@@ -3871,11 +3954,12 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                           ],
                                         ),
                                       ),
-                                    ],
+                                  )],
                                   ),
                                 ),
                               ),
-                            if (item['Prencado'] == '3')
+                            // Add robust checks before accessing item['Prencado'] for this condition
+                            if ((item['Prencado']?.toString() ?? '0') == '3')
                               Center(
                                 child: Container(
                                   width: double.infinity,
@@ -3900,15 +3984,27 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                           color: Colors.grey[700],
                                         ),
                                       ),
-                                      Expanded( // Let ToggleButtons take available space
-                                        child: ToggleButtons(
-                                          isSelected: [
-                                            item['Fresh'] ?? false,
-                                            !(item['Fresh'] ?? false),
+                                      SizedBox(
+                                        width: 150, // Explicit width for ToggleButtons container
+                                        child: Flexible( // Changed from Expanded
+                                          child: ToggleButtons(
+                                            // Ensure isSelected list is always valid with boolean values
+                                            isSelected: [
+                                            currentFresh, // currentFresh is already safely derived
+                                            !currentFresh, // Ensure negation is safe
                                           ],
                                           onPressed: (index) {
                                             setState(() {
-                                              item['Fresh'] = index == 0;
+                                               // Find the index of the item in the main list based on the unique itemName
+                                              int itemIndex = cartItems.indexWhere((element) => element['Nome'] == itemName);
+                                              if (itemIndex != -1) {
+                                                // Create a copy of the item
+                                                Map<String, dynamic> updatedItem = Map<String, dynamic>.from(cartItems[itemIndex]);
+                                                // Update the property on the copy
+                                                updatedItem['Fresh'] = index == 0; // Assign boolean directly
+                                                // Replace the item in the main list with the updated copy
+                                                cartItems[itemIndex] = updatedItem;
+                                              }
                                             });
                                           },
                                           borderRadius: BorderRadius.circular(6),
@@ -3944,7 +4040,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                           ],
                                         ),
                                       ),
-                                    ],
+                                   ) ],
                                   ),
                                 ),
                               ),
