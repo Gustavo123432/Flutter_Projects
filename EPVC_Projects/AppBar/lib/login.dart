@@ -101,6 +101,21 @@ class _LoginFormState extends State<LoginForm> {
         await prefs.setString('username', data[0]['Email'].toString());
         await prefs.setString('idUser', data[0]['IdUser'].toString());
 
+        // Check if user needs to reset password
+        if (data[0]['defaultPWD'] == '1') {
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EmailRequestPage(
+                tentativa: 2,
+                email: data[0]['Email'].toString(),
+              ),
+            ),
+          );
+          return;
+        }
+
         String tipo = data[0]['Permissao'].toString();
         PwdController.clear();
 
@@ -208,7 +223,7 @@ class _LoginFormState extends State<LoginForm> {
                         height: 150,
                         color: const Color.fromARGB(255, 130, 201, 189),
                         child: Image.asset(
-                          'assets/barapp.png',
+                          'lib/assets/barapp.png',
                           width: 350,
                           height: 150,
                           errorBuilder: (context, error, stackTrace) {
