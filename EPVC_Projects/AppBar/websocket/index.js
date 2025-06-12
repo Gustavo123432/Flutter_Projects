@@ -1,71 +1,113 @@
 const WebSocket = require('ws');
-const http = require('http');
+const crypto = require('crypto');
 
-// Create HTTP server
-const server = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('WebSocket server is running');
-});
-
-// Create WebSocket server
-const wss = new WebSocket.Server({ server });
-
-// Store connected clients
+// WebSocket Server Setup (Listening on port 2536)
+const wss = new WebSocket.Server({ port: 2536 });
 const clients = new Set();
 
-// Handle WebSocket connections
-wss.on('connection', (ws) => {
-  console.log('New client connected');
+// WebSocket Client Setup (Connecting to another WebSocket server)
+const socket = new WebSocket('ws://websocket.appbar.epvc.pt:80');
+
+// Track recent messages to avoid duplicates
+const recentMessages = new Set();
+const MESSAGE_TTL = 5000; // 5 seconds
+
+// Função para gerar um hash único com base no conteúdo da mensagem
+function generateHashId(data) {
+  return crypto.createHash('sha256').update(data).digest('hex');
+}
+
+// Handle incoming WebSocket server connections
+wss.on('connection', function connection(ws) {
+  console.log('Client connected!');
   clients.add(ws);
 
-  // Handle incoming messages
-  ws.on('message', (message) => {
+  // Handle incoming messages from clients
+  ws.on('message', function message(data) {
     try {
-      // Parse the incoming message as JSON
-      const data = JSON.parse(message);
-      console.log('Received message:', data);
+      const messageStr = data.toString();
+      console.log(`Received message from client: ${messageStr}`);
 
-      // Broadcast the message to all connected clients
-      clients.forEach((client) => {
-        if (client !== ws && client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({
-            status: 'success',
-            message: 'Order received',
-            data: data
-          }));
+      const value = JSON.parse(messageStr);
+      const messageId = value.NPedido
+        ? `client-${value.NPedido}`
+        : `client-${generateHashId(messageStr)}`;
+
+      if (!recentMessages.has(messageId)) {
+        recentMessages.add(messageId);
+        setTimeout(() => recentMessages.delete(messageId), MESSAGE_TTL);
+
+        // Broadcast to other clients
+        clients.forEach((client) => {
+          if (client !== ws && client.readyState === WebSocket.OPEN) {
+            client.send(messageStr);
+          }
+        });
+
+        // Send to external server if needed
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(messageStr);
         }
-      });
-
-      // Send acknowledgment back to the sender
-      ws.send(JSON.stringify({
-        status: 'success',
-        message: 'Order received'
-      }));
-
+      } else {
+        console.log('Ignoring duplicate message from client');
+      }
     } catch (error) {
-      console.error('Error parsing message:', error);
-      ws.send(JSON.stringify({
-        status: 'error',
-        message: 'Invalid message format'
-      }));
+      console.error('Error handling client message:', error);
     }
   });
 
-  // Handle client disconnection
   ws.on('close', () => {
+    clients.delete(ws);
     console.log('Client disconnected');
-    clients.delete(ws);
-  });
-
-  // Handle errors
-  ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
-    clients.delete(ws);
   });
 });
 
-// Start the server
-const PORT = process.env.PORT || 2536;
-server.listen(PORT, () => {
-  console.log(`WebSocket server is running on port ${PORT}`);
-}); 
+// Handle external WebSocket connection
+socket.on('open', () => {
+  console.log('Connected to external WebSocket server');
+});
+
+socket.on('message', (data) => {
+  try {
+    const messageStr = data.toString();
+    console.log(`Received message from external server: ${messageStr}`);
+
+    const value = JSON.parse(messageStr);
+    const messageId = value.NPedido
+      ? `external-${value.NPedido}`
+      : `external-${generateHashId(messageStr)}`;
+
+    if (!recentMessages.has(messageId)) {
+      recentMessages.add(messageId);
+      setTimeout(() => recentMessages.delete(messageId), MESSAGE_TTL);
+
+      // Broadcast to all clients
+      clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(messageStr);
+        }
+      });
+    } else {
+      console.log('Ignoring duplicate message from external server');
+    }
+  } catch (error) {
+    console.error('Error handling external message:', error);
+  }
+});
+
+socket.on('error', (err) => {
+  console.error('External WebSocket error:', err);
+});
+
+socket.on('close', () => {
+  console.log('Disconnected from external WebSocket server');
+});
+
+// Ping external server periodically
+setInterval(() => {
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.ping();
+  }
+}, 60000);
+
+console.log('WebSocket server running on ws://localhost:2536');

@@ -98,43 +98,68 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   }
 
   void _connectToWebSocket() {
-    _channel = WebSocketChannel.connect(
-      Uri.parse('ws://192.168.25.94:2536'),
-    );
+    try {
+      _channel = WebSocketChannel.connect(
+        Uri.parse('ws://192.168.25.94:2536'),
+      );
 
-    _channel!.stream.listen(
-      (message) {
-        if (message != null && message.isNotEmpty) {
-          try {
-            Map<String, dynamic> data = jsonDecode(message);
-            PurchaseOrder order = PurchaseOrder.fromJson(data);
+      _channel!.stream.listen(
+        (message) {
+          if (message != null && message.isNotEmpty) {
+            try {
+              Map<String, dynamic> data = jsonDecode(message);
+              PurchaseOrder order = PurchaseOrder.fromJson(data);
 
-            setState(() {
-              // Remove completed orders (status 2)
-              if (order.status == '2') {
-                currentOrders.removeWhere((o) => o.number == order.number);
-              } 
-              // Update existing orders
-              else {
-                int index = currentOrders.indexWhere((o) => o.number == order.number);
-                if (index >= 0) {
-                  currentOrders[index] = order;
-                } else if (order.status == '0') {
-                  currentOrders.add(order);
+              setState(() {
+                // Remove completed orders (status 2)
+                if (order.status == '2') {
+                  currentOrders.removeWhere((o) => o.number == order.number);
+                } 
+                // Update existing orders
+                else {
+                  int index = currentOrders.indexWhere((o) => o.number == order.number);
+                  if (index >= 0) {
+                    currentOrders[index] = order;
+                  } else if (order.status == '0') {
+                    currentOrders.add(order);
+                  }
                 }
-              }
-              purchaseOrderController.add(currentOrders);
-            });
-          } catch (e) {
-            print('Erro ao processar a mensagem: $e');
+                purchaseOrderController.add(currentOrders);
+              });
+            } catch (e) {
+              print('Erro ao processar a mensagem: $e');
+            }
           }
+        },
+        onError: (error) {
+          print('Erro WebSocket: $error');
+          // Tentar reconectar após um erro
+          Future.delayed(Duration(seconds: 5), () {
+            if (mounted) {
+              _connectToWebSocket();
+            }
+          });
+        },
+        onDone: () {
+          print('Conexão WebSocket fechada');
+          // Tentar reconectar quando a conexão for fechada
+          Future.delayed(Duration(seconds: 5), () {
+            if (mounted) {
+              _connectToWebSocket();
+            }
+          });
+        },
+        cancelOnError: false, // Não cancelar a inscrição em caso de erro
+      );
+    } catch (e) {
+      print('Erro ao estabelecer conexão WebSocket: $e');
+      // Tentar reconectar em caso de erro na conexão inicial
+      Future.delayed(Duration(seconds: 5), () {
+        if (mounted) {
+          _connectToWebSocket();
         }
-      },
-      onError: (error) {
-        print('Erro WebSocket: $error');
-        Future.delayed(Duration(seconds: 5), _connectToWebSocket);
-      },
-    );
+      });
+    }
   }
 
   Stream<List<PurchaseOrder>> getPurchaseOrdersStream() {
@@ -157,42 +182,68 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     return input.replaceAll(RegExp(r'[^A-Za-z0-9+/=]'), '');
   }
 
-  void _prepareOrder(PurchaseOrder currentOrder, List<PurchaseOrder> allOrders) {
-    List<String> currentProducts = currentOrder.description
+  // Função auxiliar para processar a descrição e agrupar itens iguais
+  Map<String, int> processDescription(String description) {
+    Map<String, int> items = {};
+    
+    // Primeiro, substituir vírgulas em números decimais por ponto
+    String processedDesc = description.replaceAllMapped(
+      RegExp(r'(\d+),(\d+)'),
+      (match) => '${match.group(1)}.${match.group(2)}'
+    );
+    
+    // Agora dividir por vírgulas, mas apenas as que não estão dentro de números
+    List<String> products = processedDesc
+        .replaceAll('[', '')
+        .replaceAll(']', '')
         .split(',')
         .map((product) => product.trim())
+        .where((product) => product.isNotEmpty)
         .toList();
 
-    // Find orders with similar products
+    for (String product in products) {
+      // Extrair quantidade e nome do produto
+      RegExp regex = RegExp(r'(\d+)\s*x\s*(.*)');
+      Match? match = regex.firstMatch(product);
+      
+      if (match != null) {
+        int quantity = int.parse(match.group(1)!);
+        String itemName = match.group(2)!.trim();
+        // Substituir ponto de volta por vírgula para exibição
+        itemName = itemName.replaceAll('.', ',');
+        items[itemName] = (items[itemName] ?? 0) + quantity;
+      } else {
+        // Se não encontrar o padrão de quantidade, assume 1
+        // Substituir ponto de volta por vírgula para exibição
+        String itemName = product.replaceAll('.', ',');
+        items[itemName] = (items[itemName] ?? 0) + 1;
+      }
+    }
+    return items;
+  }
+
+  void _prepareOrder(PurchaseOrder currentOrder, List<PurchaseOrder> allOrders) {
+    // Processar produtos do pedido atual
+    Map<String, int> currentProducts = processDescription(currentOrder.description);
+
+    // Encontrar pedidos com produtos semelhantes
     List<PurchaseOrder> matchingOrders = allOrders.where((order) {
-      List<String> orderProducts = order.description
-          .split(',')
-          .map((product) => product.trim())
-          .toList();
-      return orderProducts.any((product) => currentProducts.contains(product));
+      Map<String, int> orderProducts = processDescription(order.description);
+      return orderProducts.keys.any((product) => currentProducts.containsKey(product));
     }).toList();
 
     matchingOrders.removeWhere((order) => order.number == currentOrder.number);
     matchingOrders.removeWhere((order) => int.parse(order.status) != 0);
 
-    // Aggregate products from all relevant orders (current order + matching orders)
-    Map<String, int> productCounts = {};
+    // Agregar produtos de todos os pedidos relevantes
+    Map<String, int> productCounts = Map.from(currentProducts);
     
-    // Add products from current orders
-    for (String product in currentProducts) {
-      productCounts[product] = (productCounts[product] ?? 0) + 1;
-    }
-    
-    // Add products from matching orders
+    // Adicionar produtos dos pedidos correspondentes
     for (PurchaseOrder order in matchingOrders) {
-      List<String> orderProducts = order.description
-          .split(',')
-          .map((product) => product.trim())
-          .toList();
-      
-      for (String product in orderProducts) {
-        productCounts[product] = (productCounts[product] ?? 0) + 1;
-      }
+      Map<String, int> orderProducts = processDescription(order.description);
+      orderProducts.forEach((product, quantity) {
+        productCounts[product] = (productCounts[product] ?? 0) + quantity;
+      });
     }
 
     showDialog(
@@ -227,15 +278,12 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                 Text('Produtos no pedido atual:'),
                 Text.rich(
                   TextSpan(
-                    children: currentOrder.description
-                        .replaceAll('[', '')
-                        .replaceAll(']', '')
-                        .split(',')
-                        .map((item) => TextSpan(
-                              text: '\t\t\t• ${item.trim()}\n',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ))
-                        .toList(),
+                    children: currentProducts.entries.map((entry) {
+                      return TextSpan(
+                        text: '\t\t\t• ${entry.value}x ${entry.key}\n',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      );
+                    }).toList(),
                   ),
                 ),
                 
@@ -243,10 +291,12 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                   SizedBox(height: 10),
                   Text('Os seguintes pedidos contêm produtos semelhantes:'),
                   ...matchingOrders.map((order) {
+                    Map<String, int> orderProducts = processDescription(order.description);
                     return ListTile(
                       title: Text('Pedido ${order.number} - ${order.requester}'),
                       subtitle: Text(
-                          'Produtos: ${order.description.replaceAll("[", "").replaceAll("]", "")}'),
+                        'Produtos: ${orderProducts.entries.map((e) => '${e.value}x ${e.key}').join(', ')}'
+                      ),
                     );
                   }).toList(),
                 ],
@@ -302,10 +352,6 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
             purchaseOrderController.add(currentOrders);
           }
         });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Pedido ${order.number} em preparação.')),
-        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao preparar pedido. Código: ${response.statusCode}')),
@@ -330,9 +376,52 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
           purchaseOrderController.add(currentOrders);
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Pedido ${order.number} concluído.')),
-        );
+        // Mostrar diálogo em vez do SnackBar
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                title: Text(
+                  'Pedido Concluído',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                content: Text(
+                  'O pedido ${order.number} foi concluído com sucesso!',
+                  style: TextStyle(fontSize: 16),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Color.fromARGB(255, 246, 141, 45),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'OK',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao concluir pedido. Código: ${response.statusCode}')),
@@ -489,6 +578,12 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                   String cleanedBase64 = cleanBase64(base64String);
                   Uint8List decodedBytes = safeBase64Decode(cleanedBase64);
 
+                  // Processar a descrição para agrupar itens
+                  Map<String, int> groupedItems = processDescription(order.description);
+                  String groupedDescription = groupedItems.entries
+                      .map((e) => '${e.value}x ${e.key}')
+                      .join(', ');
+
                   Color buttonColor;
                   String? buttonText;
                   switch (int.parse(order.status)) {
@@ -547,15 +642,12 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                   Text.rich(
                                     TextSpan(
                                       style: TextStyle(fontWeight: FontWeight.bold),
-                                      children: order.description
-                                          .replaceAll('[', '')
-                                          .replaceAll(']', '')
-                                          .split(',')
-                                          .map((item) => TextSpan(
-                                                text: '• ${item.trim()}\n',
-                                                style: TextStyle(fontWeight: FontWeight.bold),
-                                              ))
-                                          .toList(),
+                                      children: groupedItems.entries.map((entry) {
+                                        return TextSpan(
+                                          text: '• ${entry.value}x ${entry.key}\n',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        );
+                                      }).toList(),
                                     ),
                                   ),
                                   SizedBox(height: 8),
@@ -747,7 +839,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                       ),
                                       SizedBox(height: 4),
                                       Text(
-                                        'Descrição: ${order.description.replaceAll("[", "").replaceAll("]", "")}',
+                                        'Descrição: $groupedDescription',
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Colors.grey[800],

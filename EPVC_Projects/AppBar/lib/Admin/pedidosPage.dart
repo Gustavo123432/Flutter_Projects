@@ -8,14 +8,14 @@ import 'package:appbar_epvc/Admin/drawerAdmin.dart';
 import 'package:appbar_epvc/Bar/produtoPageBar.dart';
 import 'package:appbar_epvc/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
-import 'package:flutter/services.dart';
+// import 'dart:io';
+// import 'package:pdf/pdf.dart';
+// import 'package:pdf/widgets.dart' as pw;
+// import 'package:path_provider/path_provider.dart';
+// import 'package:flutter/services.dart';
 
 // Conditional imports for web platform
-import 'dart:html' if (dart.library.io) 'dart:io' as platform;
+// import 'dart:html' if (dart.library.io) 'dart:io' as platform;
 
 class PurchaseOrder {
   final String number;
@@ -101,297 +101,99 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     );
   }
   //coment
-Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildContext context) async {
-  try {
-    final pdf = pw.Document();
-    double total = 0;
+  /*
+  Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildContext context) async {
+    try {
+      final pdf = pw.Document();
+      double total = 0;
 
-    // Load a font that supports Euro symbol
-    final font = await rootBundle.load("lib/assets/fonts/Roboto-Regular.ttf");
-    final ttf = pw.Font.ttf(font);
+      // Load a font that supports Euro symbol
+      final font = await rootBundle.load("lib/assets/fonts/Roboto-Regular.ttf");
+      final ttf = pw.Font.ttf(font);
 
-    pdf.addPage(
-      pw.MultiPage(
-        build: (pw.Context context) => [
-          pw.Table.fromTextArray(
-            headerStyle: pw.TextStyle(font: ttf, fontSize: 12),
-            cellStyle: pw.TextStyle(font: ttf, fontSize: 10),
-            data: <List<String>>[
-              [
-                'Nº Pedido',
-                'Quem pediu',
-                'Turma',
-                'Descrição',
-                'Total',
-                'Estado'
+      pdf.addPage(
+        pw.MultiPage(
+          build: (pw.Context context) => [
+            pw.Table.fromTextArray(
+              headerStyle: pw.TextStyle(font: ttf, fontSize: 12),
+              cellStyle: pw.TextStyle(font: ttf, fontSize: 10),
+              data: <List<String>>[
+                [
+                  'Nº Pedido',
+                  'Quem pediu',
+                  'Turma',
+                  'Descrição',
+                  'Total',
+                  'Estado'
+                ],
+                for (var order in orders)
+                  if (order.data.split(' ').first == selectedDate)
+                    [
+                      order.number,
+                      order.requester,
+                      order.group,
+                      order.description.replaceAll('[', '').replaceAll(']', ''),
+                      order.total,
+                      order.status == '0' ? 'Por Fazer' : 'Concluído',
+                    ],
               ],
-              for (var order in orders)
-                if (order.data.split(' ').first == selectedDate)
-                  [
-                    order.number,
-                    order.requester,
-                    order.group,
-                    order.description.replaceAll('[', '').replaceAll(']', ''),
-                    order.total,
-                    order.status == '0' ? 'Por Fazer' : 'Concluído',
-                  ],
-            ],
-          ),
-        ],
-      ),
-    );
-    for (var order in orders) {
-      if (order.data.split(' ').first == selectedDate) {
-        total += double.tryParse(order.total.replaceAll(',', '.')) ?? 0;
-      }
-    }
-    pdf.addPage(pw.Page(
-      build: (pw.Context context) {
-        return pw.Center(
-          child: pw.Text(
-            'Total: ${total.toStringAsFixed(2)}€',
-            style: pw.TextStyle(font: ttf, fontSize: 14),
-          ),
-        );
-      },
-    ));
-
-    final bytes = await pdf.save();
-    
-    if (kIsWeb) {
-      // For web platform
-      final blob = platform.Blob([bytes], 'application/pdf');
-      final url = platform.Url.createObjectUrlFromBlob(blob);
-      final anchor = platform.AnchorElement(href: url)
-        ..setAttribute('download', 'pedidos_$selectedDate.pdf')
-        ..click();
-      platform.Url.revokeObjectUrl(url);
-    } else {
-      // For mobile/desktop platforms
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/pedidos_$selectedDate.pdf');
-      await file.writeAsBytes(bytes);
-      
-      // Show success message
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('PDF exportado com sucesso!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.all(8),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        );
-      }
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao gerar PDF: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.all(8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      );
-    }
-  }
-}
-//finish coment
-
-Future<void> _showDatePicker(List<PurchaseOrder> orders) async {
-  final DateTime? selectedDate = await showDatePicker(
-    context: context,
-    initialDate: DateTime.now(),
-    firstDate: DateTime(2000),
-    lastDate: DateTime(2100),
-    builder: (BuildContext context, Widget? child) {
-      return Theme(
-        data: ThemeData.light().copyWith(
-          colorScheme: ColorScheme.light(primary: Color.fromARGB(255, 130, 201, 189)),
-        ),
-        child: child!,
-      );
-    },
-  );
-  if (selectedDate != null) {
-    final formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-    await exportToPdf(orders, formattedDate, context);
-  }
-}
-
-Future<void> _showExportOptions(List<PurchaseOrder> orders) async {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text('Exportar'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.receipt_long),
-              title: Text('Exportar Pedidos'),
-              onTap: () {
-                Navigator.pop(context);
-                _showDatePicker(orders);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.inventory),
-              title: Text('Exportar Produtos Vendidos'),
-              onTap: () {
-                Navigator.pop(context);
-                _showDatePickerForProducts(orders);
-              },
             ),
           ],
         ),
       );
-    },
-  );
-}
-
-Future<void> _showDatePickerForProducts(List<PurchaseOrder> orders) async {
-  final DateTime? selectedDate = await showDatePicker(
-    context: context,
-    initialDate: DateTime.now(),
-    firstDate: DateTime(2000),
-    lastDate: DateTime(2100),
-    builder: (BuildContext context, Widget? child) {
-      return Theme(
-        data: ThemeData.light().copyWith(
-          colorScheme: ColorScheme.light(primary: Color.fromARGB(255, 130, 201, 189)),
-        ),
-        child: child!,
-      );
-    },
-  );
-  if (selectedDate != null) {
-    final formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-    await exportProductsToPdf(orders, formattedDate, context);
-  }
-}
-
-Future<void> exportProductsToPdf(List<PurchaseOrder> orders, String selectedDate, BuildContext context) async {
-  try {
-    final pdf = pw.Document();
-    
-    // Load a font that supports Euro symbol
-    final font = await rootBundle.load("lib/assets/fonts/Roboto-Regular.ttf");
-    final ttf = pw.Font.ttf(font);
-
-    // Group products by name and count occurrences
-    Map<String, int> productCount = {};
-    Map<String, double> productTotal = {};
-    
-    for (var order in orders) {
-      if (order.data.split(' ').first == selectedDate) {
-        // Split the description into individual products
-        final products = order.description
-            .replaceAll('[', '')
-            .replaceAll(']', '')
-            .split(',')
-            .map((e) => e.trim())
-            .where((e) => e.isNotEmpty)
-            .toList();
-            
-        for (var product in products) {
-          productCount[product] = (productCount[product] ?? 0) + 1;
-          // Add the total value divided by the number of products
-          final orderTotal = double.tryParse(order.total.replaceAll(',', '.')) ?? 0;
-          productTotal[product] = (productTotal[product] ?? 0) + (orderTotal / products.length);
+      for (var order in orders) {
+        if (order.data.split(' ').first == selectedDate) {
+          total += double.tryParse(order.total.replaceAll(',', '.')) ?? 0;
         }
       }
-    }
-
-    // Sort products by count
-    var sortedProducts = productCount.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    pdf.addPage(
-      pw.MultiPage(
-        build: (pw.Context context) => [
-          pw.Header(
-            level: 0,
+      pdf.addPage(pw.Page(
+        build: (pw.Context context) {
+          return pw.Center(
             child: pw.Text(
-              'Produtos Vendidos - $selectedDate',
-              style: pw.TextStyle(font: ttf, fontSize: 20),
+              'Total: ${total.toStringAsFixed(2)}€',
+              style: pw.TextStyle(font: ttf, fontSize: 14),
             ),
-          ),
-          pw.SizedBox(height: 20),
-          pw.Table.fromTextArray(
-            headerStyle: pw.TextStyle(font: ttf, fontSize: 12, fontWeight: pw.FontWeight.bold),
-            cellStyle: pw.TextStyle(font: ttf, fontSize: 10),
-            headerDecoration: pw.BoxDecoration(
-              color: PdfColors.grey300,
-            ),
-            cellHeight: 30,
-            cellAlignments: {
-              0: pw.Alignment.centerLeft,
-              1: pw.Alignment.center,
-              2: pw.Alignment.centerRight,
-              3: pw.Alignment.centerRight,
-              4: pw.Alignment.centerRight,
-            },
-            data: <List<String>>[
-              ['Produto', 'Quantidade', 'Preço Unitário', 'Total', 'Média'],
-              ...sortedProducts.map((entry) {
-                final total = productTotal[entry.key] ?? 0;
-                final quantity = entry.value;
-                final unitPrice = total / quantity;
-                final averagePrice = total / quantity;
-                return [
-                  entry.key,
-                  entry.value.toString(),
-                  '${unitPrice.toStringAsFixed(2)}€',
-                  '${total.toStringAsFixed(2)}€',
-                  '${averagePrice.toStringAsFixed(2)}€',
-                ];
-              }),
-            ],
-          ),
-          pw.SizedBox(height: 20),
-          pw.Text(
-            'Total de Produtos Vendidos: ${productCount.values.fold(0, (sum, count) => sum + count)}',
-            style: pw.TextStyle(font: ttf, fontSize: 12),
-          ),
-          pw.Text(
-            'Total em Vendas: ${productTotal.values.fold(0.0, (sum, total) => sum + total).toStringAsFixed(2)}€',
-            style: pw.TextStyle(font: ttf, fontSize: 12),
-          ),
-        ],
-      ),
-    );
+          );
+        },
+      ));
 
-    final bytes = await pdf.save();
-    
-    if (kIsWeb) {
-      // For web platform
-      final blob = platform.Blob([bytes], 'application/pdf');
-      final url = platform.Url.createObjectUrlFromBlob(blob);
-      final anchor = platform.AnchorElement(href: url)
-        ..setAttribute('download', 'produtos_vendidos_$selectedDate.pdf')
-        ..click();
-      platform.Url.revokeObjectUrl(url);
-    } else {
-      // For mobile/desktop platforms
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/produtos_vendidos_$selectedDate.pdf');
-      await file.writeAsBytes(bytes);
+      final bytes = await pdf.save();
       
-      // Show success message with file path
+      if (kIsWeb) {
+        // For web platform
+        final blob = platform.Blob([bytes], 'application/pdf');
+        final url = platform.Url.createObjectUrlFromBlob(blob);
+        final anchor = platform.AnchorElement(href: url)
+          ..setAttribute('download', 'pedidos_$selectedDate.pdf')
+          ..click();
+        platform.Url.revokeObjectUrl(url);
+      } else {
+        // For mobile/desktop platforms
+        final directory = await getApplicationDocumentsDirectory();
+        final file = File('${directory.path}/pedidos_$selectedDate.pdf');
+        await file.writeAsBytes(bytes);
+        
+        // Show success message
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('PDF exportado com sucesso!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.all(8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('PDF exportado com sucesso!'),
-            backgroundColor: Colors.green,
+            content: Text('Erro ao gerar PDF: $e'),
+            backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
             margin: EdgeInsets.all(8),
             shape: RoundedRectangleBorder(
@@ -401,22 +203,76 @@ Future<void> exportProductsToPdf(List<PurchaseOrder> orders, String selectedDate
         );
       }
     }
-  } catch (e) {
-    if (context.mounted) {
+  }
+  */
+  //finish coment
+
+  Future<void> _showDatePicker(List<PurchaseOrder> orders) async {
+    final DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(primary: Color.fromARGB(255, 130, 201, 189)),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (selectedDate != null) {
+      final formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+      // await exportToPdf(orders, formattedDate, context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao gerar PDF: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.all(8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          content: Text('Funcionalidade temporariamente indisponível'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
         ),
       );
     }
   }
-}
+
+  Future<void> _showExportOptions(List<PurchaseOrder> orders) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Exportar'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.receipt_long),
+                title: Text('Exportar Pedidos'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDatePicker(orders);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.inventory),
+                title: Text('Exportar Produtos Vendidos'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // _showDatePickerForProducts(orders);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Funcionalidade temporariamente indisponível'),
+                      backgroundColor: Colors.orange,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
