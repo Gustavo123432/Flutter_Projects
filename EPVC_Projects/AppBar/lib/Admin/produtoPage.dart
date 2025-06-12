@@ -35,7 +35,7 @@ class Product {
       description: json['Nome'],
       price: double.parse(json['Preco'].toString()),
       quantity: int.parse(json['Qtd']),
-      available: int.parse(json['Qtd']) == 1 ? true : false,
+      available: int.parse(json['Qtd']) >= 1 ? true : false,
       category: json['Categoria'],
       base64Image: json['Imagem'],
     );
@@ -202,10 +202,16 @@ Widget build(BuildContext context) {
         SpeedDialChild(
           child: Icon(Icons.add),
           onTap: () async {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AddProdutoPage()),
+            final result = await showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AddProdutoPage();
+              },
             );
+            if (result == true) {
+              // Refresh the product list
+              fetchData();
+            }
           },
         ),
         /*SpeedDialChild(
@@ -231,9 +237,9 @@ class _ProductCardState extends State<ProductCard> {
   late TextEditingController _descriptionController;
   late TextEditingController _priceController;
   late TextEditingController _quantityController;
-  String _availability = '';
   String _categoryValue = '';
   bool _isEditing = false;
+  final List<String> _categories = ['Bebidas', 'Café', 'Comidas', 'Snacks', 'Doces', 'Quentes'];
 
   @override
   void initState() {
@@ -242,8 +248,7 @@ class _ProductCardState extends State<ProductCard> {
     _descriptionController = TextEditingController(text: widget.product.description);
     _priceController = TextEditingController(text: widget.product.price.toString());
     _quantityController = TextEditingController(text: widget.product.quantity.toString());
-    _availability = widget.product.available ? 'Disponível' : 'Indisponível';
-    _categoryValue = widget.product.category;
+    _categoryValue = _categories.contains(widget.product.category) ? widget.product.category : 'Comidas';
   }
 
   @override
@@ -257,8 +262,9 @@ class _ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
-    Color statusColor = widget.product.available ? Colors.green : Colors.orange;
-    String statusText = widget.product.available ? 'Disponível' : 'Indisponível';
+    bool isAvailable = widget.product.quantity >= 1;
+    Color statusColor = isAvailable ? Colors.green : Colors.orange;
+    String statusText = isAvailable ? 'Disponível' : 'Indisponível';
     return Card(
       elevation: 4,
       margin: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
@@ -280,40 +286,19 @@ class _ProductCardState extends State<ProductCard> {
               ),
             ),
             SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: _isEditing
-                      ? TextFormField(
-                          controller: _nameController,
-                          decoration: InputDecoration(labelText: 'Nome'),
-                        )
-                      : Row(
-                          children: [
-                            Icon(Icons.label, size: 18, color: Colors.blueGrey),
-                            SizedBox(width: 6),
-                            Flexible(
-                              child: Text(widget.product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                            ),
-                          ],
-                        ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.15),
-                    border: Border.all(color: statusColor),
-                    borderRadius: BorderRadius.circular(12),
+            _isEditing
+                ? TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(labelText: 'Nome'),
+                  )
+                : Text(
+                    widget.product.name,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  child: Text(
-                    _isEditing ? _availability : statusText,
-                    style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8),
+            SizedBox(height: 4),
             _isEditing
                 ? TextFormField(
                     controller: _priceController,
@@ -330,34 +315,33 @@ class _ProductCardState extends State<ProductCard> {
                   ),
             SizedBox(height: 4),
             _isEditing
-                ? DropdownButtonFormField<String>(
-                    value: _availability,
-                    items: <String>['Disponível', 'Indisponível']
-                        .map<DropdownMenuItem<String>>((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                    onChanged: (String? value) {
-                      setState(() {
-                        _availability = value!;
-                      });
-                    },
+                ? TextFormField(
+                    controller: _quantityController,
+                    decoration: InputDecoration(labelText: 'Quantidade'),
+                    keyboardType: TextInputType.number,
                   )
                 : Row(
                     children: [
-                      Icon(Icons.check_circle, size: 18, color: statusColor),
+                      Icon(Icons.inventory_2, size: 18, color: Colors.blueGrey),
                       SizedBox(width: 6),
-                      Text('Estado: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                      Text(statusText, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold)),
+                      Text('Quantidade: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                      Text(widget.product.quantity.toString(), style: TextStyle(fontWeight: FontWeight.bold)),
                     ],
                   ),
+            SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.check_circle, size: 18, color: statusColor),
+                SizedBox(width: 6),
+                Text('Estado: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                Text(statusText, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold)),
+              ],
+            ),
             SizedBox(height: 4),
             _isEditing
                 ? DropdownButtonFormField<String>(
                     value: _categoryValue,
-                    items: ['Bebidas', 'Café', 'Comidas', 'Snacks', 'Doces']
+                    items: _categories
                         .map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
@@ -397,13 +381,13 @@ class _ProductCardState extends State<ProductCard> {
                       if (!_isEditing) {
                         widget.product.name = _nameController.text;
                         widget.product.price = double.parse(_priceController.text);
-                        widget.product.available = _availability == 'Disponível';
+                        widget.product.quantity = int.parse(_quantityController.text);
+                        widget.product.available = widget.product.quantity >= 1;
                         widget.product.category = _categoryValue;
                         widget.onUpdate(widget.product.id, widget.product);
                         _nameController.text = widget.product.name;
                         _priceController.text = widget.product.price.toString();
                         _quantityController.text = widget.product.quantity.toString();
-                        _availability = widget.product.available ? 'Disponível' : 'Indisponível';
                         _categoryValue = widget.product.category;
                       }
                     });

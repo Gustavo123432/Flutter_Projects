@@ -95,7 +95,7 @@ class _LoginFormState extends State<LoginForm> {
           return;
         }
 
-        // Check if user needs to reset password
+        // Check if user needs to reset password (only if defaultPWD is 1)
         if (data[0]['defaultPWD'] == '1') {
           if (!mounted) return;
           Navigator.pushReplacement(
@@ -110,26 +110,11 @@ class _LoginFormState extends State<LoginForm> {
           return;
         }
 
-        // Only store preferences if not defaultPWD
+        // Store preferences
         final SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('permissao', data[0]['Permissao'].toString());
         await prefs.setString('username', data[0]['Email'].toString());
         await prefs.setString('idUser', data[0]['IdUser'].toString());
-
-        // Check if user needs to reset password
-        if (data[0]['defaultPWD'] == '1') {
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => EmailRequestPage(
-                tentativa: 2,
-                email: data[0]['Email'].toString(),
-              ),
-            ),
-          );
-          return;
-        }
 
         String tipo = data[0]['Permissao'].toString();
         PwdController.clear();
@@ -499,34 +484,11 @@ void verifylogin(context) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     var id = prefs.getString("username");
     var type = prefs.getString("permissao");
-    var pwd = prefs.getString("pwd");
 
     // Verificar se há um usuário logado
     if (id == null) {
       // Não há usuário logado, apenas retornar
       return;
-    }
-
-    // Verificar se a senha é 'epvc' - tem prioridade sobre qualquer outra verificação
-    if (pwd != null && pwd.trim().toLowerCase() == "epvc") {
-      // Remover a senha para evitar loops
-      await prefs.remove("pwd");
-      if (id != null || id != "") {
-        Navigator.of(context).push(MaterialPageRoute(
-            builder: (context) => EmailRequestPage(
-                  tentativa: 2,
-                  email: id,
-                )));
-        return;
-      } else {
-        Navigator.of(context).push(MaterialPageRoute(
-            builder: (context) => EmailRequestPage(
-                  tentativa: 2,
-                  email: "",
-                )));
-        return;
-      }
-      // Navegar para EmailRequestPage com tentativa 2
     }
 
     // Processar navegação normal baseada no tipo de usuário
@@ -539,27 +501,16 @@ void verifylogin(context) async {
           ),
         ),
       );
-    } else if (type == "Professor") {
+    } else if (type == "Professor" || type == "Funcionária" || type == "Aluno") {
       Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-    } else if (type == "Funcionária") {
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => HomeAlunoMain()));
+        MaterialPageRoute(builder: (context) => HomeAlunoMain()),
+      );
     } else if (type == "Bar") {
       Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => BarPagePedidos()));
-    } else if (type == "Aluno") {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Bem-vindo, Aluno!")));
-
-      Future.delayed(Duration(seconds: 1), () {
-        if (context.mounted) {
-          Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => HomeAlunoMain()));
-        }
-      });
+        MaterialPageRoute(builder: (context) => BarPagePedidos()),
+      );
     }
   } catch (e) {
-    print("Erro na Verificação");
+    print('Erro ao verificar login: $e');
   }
 }
