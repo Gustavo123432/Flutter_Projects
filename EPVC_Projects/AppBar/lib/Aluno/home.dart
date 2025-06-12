@@ -4142,119 +4142,74 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                 (item['Prencado']?.toString() ?? '0') == '2')
                               Center(
                                 child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        // Add robust check here as well
-                                        (item['Prencado']?.toString() ?? '0') ==
-                                                '1'
-                                            ? Icons.coffee
-                                            : Icons.local_cafe,
-                                        size: 16,
-                                        color: Colors.orange[700],
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Selecione o Tipo: ',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width:
-                                            150, // Explicit width for ToggleButtons container
-                                        child: Flexible(
-                                          // Changed from Expanded
-                                          child: ToggleButtons(
-                                            // Ensure isSelected list is always valid with boolean values
-                                            isSelected: [
-                                              currentPrepararPrencado, // currentPrepararPrencado is already safely derived
-                                              !currentPrepararPrencado, // Ensure negation is safe
-                                            ],
-                                            onPressed: (index) {
-                                              setState(() {
-                                                // Find the index of the item in the main list based on the unique itemName
-                                                int itemIndex = cartItems
-                                                    .indexWhere((element) =>
-                                                        element['Nome'] ==
-                                                        itemName);
-                                                if (itemIndex != -1) {
-                                                  // Create a copy of the item
-                                                  Map<String, dynamic>
-                                                      updatedItem =
-                                                      Map<String, dynamic>.from(
-                                                          cartItems[itemIndex]);
-                                                  // Update the property on the copy
-                                                  updatedItem[
-                                                          'PrepararPrencado'] =
-                                                      index ==
-                                                          0; // Assign boolean directly
-                                                  // Replace the item in the main list with the updated copy
-                                                  cartItems[itemIndex] =
-                                                      updatedItem;
-                                                }
-                                              });
-                                            },
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                            selectedColor: Colors.white,
-                                            fillColor: Colors.orange[700],
-                                            borderColor: Colors.orange[700],
-                                            color: Colors.orange[700],
-                                            borderWidth: 1.0,
-                                            selectedBorderColor:
-                                                Colors.orange[700],
-                                            children: [
-                                              Expanded(
-                                                child: Padding(
-                                                  padding: EdgeInsets.symmetric(
-                                                      horizontal: 4),
-                                                  child: Text(
-                                                    // Add robust check here as well
-                                                    (item['Prencado']
-                                                                    ?.toString() ??
-                                                                '0') ==
-                                                            '1'
-                                                        ? 'Prensado'
-                                                        : 'Aquecido',
-                                                    style:
-                                                        TextStyle(fontSize: 12),
-                                                    textAlign: TextAlign.center,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: Padding(
-                                                  padding: EdgeInsets.symmetric(
-                                                      horizontal: 4),
-                                                  child: Text(
-                                                    'Normal',
-                                                    style:
-                                                        TextStyle(fontSize: 12),
-                                                    textAlign: TextAlign.center,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                ),
+  width: double.infinity,
+  decoration: BoxDecoration(
+    color: Colors.orange.withOpacity(0.1),
+    borderRadius: BorderRadius.circular(8),
+  ),
+  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2), // Menos espaço vertical
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Icon(
+        (item['Prencado']?.toString() ?? '0') == '1'
+            ? Icons.coffee
+            : Icons.local_cafe,
+        size: 14, // Ícone menor
+        color: Colors.orange[700],
+      ),
+      SizedBox(width: 4),
+      Text(
+        'Tipo:',
+        style: TextStyle(
+          fontSize: 11,
+          color: Colors.grey[700],
+        ),
+      ),
+      SizedBox(width: 8),
+      ToggleButtons(
+        constraints: BoxConstraints(minHeight: 28), // Controla altura dos botões
+        isSelected: [currentPrepararPrencado, !currentPrepararPrencado],
+        onPressed: (index) {
+          setState(() {
+            int itemIndex = cartItems.indexWhere((e) => e['Nome'] == itemName);
+            if (itemIndex != -1) {
+              final updatedItem = Map<String, dynamic>.from(cartItems[itemIndex]);
+              updatedItem['PrepararPrencado'] = index == 0;
+              cartItems[itemIndex] = updatedItem;
+            }
+          });
+        },
+        borderRadius: BorderRadius.circular(6),
+        selectedColor: Colors.white,
+        fillColor: Colors.orange[700],
+        borderColor: Colors.orange[700],
+        color: Colors.orange[700],
+        borderWidth: 1.0,
+        selectedBorderColor: Colors.orange[700],
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              (item['Prencado']?.toString() ?? '0') == '1'
+                  ? 'Prensado'
+                  : 'Aquecido',
+              style: TextStyle(fontSize: 11), // Letra mais pequena
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              'Normal',
+              style: TextStyle(fontSize: 11),
+            ),
+          ),
+        ],
+      ),
+    ],
+  ),
+),
+
                               ),
                             // Add robust checks before accessing item['Prencado'] for this condition
                             if ((item['Prencado']?.toString() ?? '0') == '3')
