@@ -49,12 +49,61 @@ class ProdutoPage extends StatefulWidget {
 
 class _ProductPageState extends State<ProdutoPage> {
   List<Product> products = []; // Initialize with empty list
+  List<Product> filteredProducts = []; // List for filtered products
   bool isLoading = true;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     fetchData(); // Fetch data when the widget initializes
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  String normalizeText(String text) {
+    return text
+        .toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('à', 'a')
+        .replaceAll('ã', 'a')
+        .replaceAll('â', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('ê', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('õ', 'o')
+        .replaceAll('ô', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ü', 'u')
+        .replaceAll('ç', 'c')
+        .replaceAll('Á', 'a')
+        .replaceAll('À', 'a')
+        .replaceAll('Ã', 'a')
+        .replaceAll('Â', 'a')
+        .replaceAll('É', 'e')
+        .replaceAll('Ê', 'e')
+        .replaceAll('Í', 'i')
+        .replaceAll('Ó', 'o')
+        .replaceAll('Õ', 'o')
+        .replaceAll('Ô', 'o')
+        .replaceAll('Ú', 'u')
+        .replaceAll('Ü', 'u')
+        .replaceAll('Ç', 'c');
+  }
+
+  void filterProducts(String query) {
+    setState(() {
+      final normalizedQuery = normalizeText(query);
+      filteredProducts = products.where((product) {
+        final normalizedName = normalizeText(product.name);
+        return normalizedName.contains(normalizedQuery);
+      }).toList();
+    });
   }
 
   Future<void> fetchData() async {
@@ -72,6 +121,7 @@ class _ProductPageState extends State<ProdutoPage> {
       
       setState(() {
         products = fetchedProducts;
+        filteredProducts = fetchedProducts; // Initialize filtered products
         isLoading = false;
       });
     } else {
@@ -132,95 +182,107 @@ class _ProductPageState extends State<ProdutoPage> {
     );
   }
 
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-   /* appBar: AppBar(
-      backgroundColor: Color.fromARGB(255, 246, 141, 45),
-      title: Text(
-        'Produtos',
-        style: TextStyle(color: Colors.white),
-      ),
-      actions: [
-        IconButton(
-          onPressed: () {
-            logout(context);
-          },
-          icon: Icon(
-            Icons.logout,
-            color: Colors.white, // Definindo a cor como branco
-          ),
-        ),
-      ],
-    ),
-    drawer: DrawerAdmin(),*/
-    body: Stack(
-      children: [
-       Container(
-        width: double.infinity, // Usar toda a largura disponível
-        height: double.infinity, // Usar toda a altura disponível
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(
-                'lib/assets/epvc.png'), // Caminho para a sua imagem de fundo
-            // fit: BoxFit.cover,
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Imagem de fundo
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Color.fromARGB(255, 255, 255, 255)
-                      .withOpacity(0.80), // Cor preta com opacidade de 40%
-                ),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('lib/assets/epvc.png'),
               ),
             ),
-        isLoading
-            ? Center(
-                child: CircularProgressIndicator(),
-              )
-            : ListView.builder(
-                itemCount: products.length,
-                itemBuilder: (context, index) {
-                  return ProductCard(
-                    product: products[index],
-                    onUpdate: (updatedId, updatedProduct) {
-                      updateProduct(updatedId, updatedProduct);
-                    },
-                  );
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Color.fromARGB(255, 255, 255, 255).withOpacity(0.80),
+                    ),
+                  ),
+                ),
+                Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.2),
+                              spreadRadius: 2,
+                              blurRadius: 5,
+                              offset: Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Pesquisar produto...',
+                            prefixIcon: Icon(Icons.search, color: Color.fromARGB(255, 130, 201, 189)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.symmetric(vertical: 15),
+                          ),
+                          onChanged: filterProducts,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: isLoading
+                          ? Center(child: CircularProgressIndicator())
+                          : ListView.builder(
+                              itemCount: filteredProducts.length,
+                              itemBuilder: (context, index) {
+                                return ProductCard(
+                                  product: filteredProducts[index],
+                                  onUpdate: (updatedId, updatedProduct) {
+                                    updateProduct(updatedId, updatedProduct);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: SpeedDial(
+        icon: Icons.more_horiz,
+        iconTheme: IconThemeData(color: Colors.white),
+        backgroundColor: Color.fromARGB(255, 130, 201, 189),
+        children: [
+          SpeedDialChild(
+            child: Icon(Icons.add),
+            onTap: () async {
+              final result = await showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AddProdutoPage();
                 },
-              ),
-      ],
-  ))]),
-    floatingActionButton: SpeedDial(
-      icon: Icons.more_horiz,
-      iconTheme: IconThemeData(color: Colors.white),
-      backgroundColor: Color.fromARGB(255, 130, 201, 189),
-      children: [
-        SpeedDialChild(
-          child: Icon(Icons.add),
-          onTap: () async {
-            final result = await showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AddProdutoPage();
-              },
-            );
-            if (result == true) {
-              // Refresh the product list
-              fetchData();
-            }
-          },
-        ),
-        /*SpeedDialChild(
-          child: Icon(Icons.recycling),
-          onTap: () {},
-        ),*/
-      ],
-    ),
-  );}}
+              );
+              if (result == true) {
+                // Refresh the product list
+                fetchData();
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class ProductCard extends StatefulWidget {
   final Product product;
