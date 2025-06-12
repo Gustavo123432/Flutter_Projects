@@ -752,7 +752,7 @@ class _HomeAlunoState extends State<HomeAluno> {
                           });
                         },
                       );
-                    case 5:
+                    /*case 5:
                       return buildCategoryCard(
                         title: 'Restaurante',
                         backgroundImagePath: 'lib/assets/monteRestaurante.jpg',
@@ -777,7 +777,7 @@ class _HomeAlunoState extends State<HomeAluno> {
                             ),
                           );
                         },
-                      );
+                      );*/
                     default:
                       return Container();
                   }
@@ -836,53 +836,64 @@ class _HomeAlunoState extends State<HomeAluno> {
         margin: EdgeInsets.symmetric(horizontal: 2.0),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(3.0),
+          borderRadius: BorderRadius.circular(12.0),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.5),
+              color: Colors.grey.withOpacity(0.2),
               spreadRadius: 1.0,
-              blurRadius: 2.0,
+              blurRadius: 3.0,
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(5.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                height: 45.0,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Imagem em cima
+            ClipRRect(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+              child: Container(
+                height: 80.0,
                 child: Image.memory(
                   base64.decode(imagePath),
-                  fit: BoxFit.contain,
-                  gaplessPlayback: true, // Prevents image flickering
-                  cacheWidth: 100, // Cache width for better performance
-                  cacheHeight: 100, // Cache height for better performance
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  cacheWidth: 100,
+                  cacheHeight: 100,
                 ),
               ),
-              Text(
-                title.replaceAll('"', ''),
-                style: TextStyle(
-                  fontSize: 11.0,
-                  fontWeight: FontWeight.bold,
-                  overflow: TextOverflow.fade,
-                ),
+            ),
+            // Caixa de texto abaixo da imagem
+            Container(
+              padding: EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Preço:',
-                    style: TextStyle(fontSize: 8.0),
+                    title.replaceAll('"', ''),
+                    style: TextStyle(
+                      fontSize: 12.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  SizedBox(height: 4),
                   Text(
                     "${double.parse(price).toStringAsFixed(2).replaceAll('.', ',')}€",
-                    style: TextStyle(fontSize: 10.0),
+                    style: TextStyle(
+                      fontSize: 14.0,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -950,88 +961,83 @@ class _HomeAlunoState extends State<HomeAluno> {
             ),
           ],
         ),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Imagem da categoria em cima
             if (isAvailable && showImage)
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  image: DecorationImage(
-                    image: AssetImage(backgroundImagePath),
+              Expanded(
+                flex: 2, // A imagem ocupa 2/3 da altura
+                child: ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  child: Image.asset(
+                    backgroundImagePath,
                     fit: BoxFit.cover,
+                    width: double.infinity,
                   ),
                 ),
               ),
-            // Gradient overlay for better text visibility
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                  ],
-                ),
-              ),
-            ),
-            // Category title with icon
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
+            // Caixa de texto branca abaixo da imagem
+            Expanded(
+              flex: 1, // O texto ocupa 1/3 da altura
               child: Container(
-                padding: EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+                ),
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(horizontal: 8.0),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
                       _getCategoryIcon(title),
-                      color: Colors.white,
-                      size: 24,
+                      size: 18, // Tamanho do ícone
+                      color: Colors.orange, // Cor do ícone
                     ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 20.0,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontFamily: 'Roboto',
-                        ),
+                    SizedBox(width: 8), // Espaçamento entre o ícone e o texto
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                        fontFamily: 'Roboto',
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               ),
             ),
             if (!isAvailable)
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  color: Colors.black.withOpacity(0.5),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.construction,
-                        size: 32,
-                        color: Colors.white,
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'EM DESENVOLVIMENTO',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.black.withOpacity(0.5),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.construction,
+                          size: 32,
                           color: Colors.white,
-                          fontFamily: 'Roboto',
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 8),
+                        Text(
+                          'EM DESENVOLVIMENTO',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Roboto',
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -2762,11 +2768,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       // Format item names with preparation preferences
       List<String> formattedNames = cartItems.map((item) {
         String name = item['Nome'] as String;
-        bool prepararPrencado = item['PrepararPrencado'] ??
-            false; // Indica se alguma opção de preparação foi marcada no diálogo (usado para tipos 1 e 2)
+        bool prepararPrencado = item['PrepararPrencado'] ?? false;
         String prencado = item['Prencado'] ?? '0';
-        bool isFresh =
-            item['Fresh'] ?? false; // Usado para a opção "Fresco" (tipo 3)
+        bool isFresh = item['Fresh'] ?? false;
 
         String suffix = '';
 
@@ -2789,8 +2793,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       var imagem = users[0]['Imagem'];
 
       // Calcular o troco usando o dinheiroAtual passado como parâmetro
-      double troco =
-          (dinheiroAtual ?? double.parse(total)) - double.parse(total);
+      double troco = (dinheiroAtual ?? double.parse(total)) - double.parse(total);
       String trocos = troco.toStringAsFixed(2);
 
       final channel = WebSocketChannel.connect(
@@ -2809,8 +2812,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         'Total': total,
         'Imagem': imagem,
         'MetodoDePagamento': paymentMethod,
-        'DinheiroAtual': dinheiroAtual?.toString() ??
-            total, // Incluir o valor do dinheiro atual
+        'DinheiroAtual': dinheiroAtual?.toString() ?? total,
       };
 
       // Add invoice information if requested
@@ -2819,76 +2821,23 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         orderData['NIF'] = nif;
       }
 
+      // Send the order and close the connection immediately
       channel.sink.add(json.encode(orderData));
+      channel.sink.close();
 
-      channel.stream.listen(
-        (message) {
-          // Add a basic check to see if the message looks like JSON
-          if (message != null &&
-              message.startsWith('{') &&
-              message.endsWith('}')) {
-            try {
-              var serverResponse = json.decode(message);
-              if (serverResponse['status'] == 'success') {
-                if (mounted) {
-                  // Check if the widget is still mounted
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          'Pedido enviado com sucesso! Pedido Nº $orderNumber'),
-                    ),
-                  );
-                }
-              } else {
-                if (mounted) {
-                  // Check if the widget is still mounted
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
-                    ),
-                  );
-                }
-              }
-            } catch (e) {
-              print('Erro ao processar a mensagem WebSocket: $e');
-              if (mounted) {
-                // Check if the widget is still mounted
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                        'Erro ao processar resposta do WebSocket. Contacte o Administrador!'),
-                  ),
-                );
-              }
-            }
-          } else {
-            print('Received non-JSON message from WebSocket: $message');
-            // Optionally, you can show a different message to the user for non-JSON responses
-          }
-          channel.sink.close();
-        },
-        onError: (error) {
-          print('Erro ao fazer a requisição WebSocket: $error');
-          if (mounted) {
-            // Check if the widget is still mounted
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
-              ),
-            );
-          }
-        },
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pedido enviado com sucesso! Pedido Nº $orderNumber'),
+          ),
+        );
+      }
     } catch (e) {
       print('Erro ao estabelecer conexão WebSocket: $e');
       if (mounted) {
-        // Check if the widget is still mounted
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+            content: Text('Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
           ),
         );
       }
