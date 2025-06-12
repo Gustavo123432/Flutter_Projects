@@ -95,7 +95,22 @@ class _LoginFormState extends State<LoginForm> {
           return;
         }
 
-        // Authentication successful
+        // Check if user needs to reset password
+        if (data[0]['defaultPWD'] == '1') {
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EmailRequestPage(
+                tentativa: 2,
+                email: data[0]['Email'].toString(),
+              ),
+            ),
+          );
+          return;
+        }
+
+        // Only store preferences if not defaultPWD
         final SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('permissao', data[0]['Permissao'].toString());
         await prefs.setString('username', data[0]['Email'].toString());

@@ -159,13 +159,11 @@ class _EmailRequestPageState extends State<EmailRequestPage> {
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      // Interceptar quando o usuário pressiona o botão voltar
       onWillPop: () async {
-        // Navegar para a tela de login
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => LoginForm())
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginForm()),
         );
-        // Retornar false para não usar o comportamento padrão do botão voltar
         return false;
       },
       child: Scaffold(
@@ -175,9 +173,9 @@ class _EmailRequestPageState extends State<EmailRequestPage> {
           leading: IconButton(
             icon: Icon(Icons.arrow_back),
             onPressed: () {
-              // Navegar para a tela de login quando o botão voltar for pressionado
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => LoginForm())
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginForm()),
               );
             },
           ),

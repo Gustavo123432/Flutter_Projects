@@ -155,16 +155,25 @@ class _ReenserirPasswordState extends State<ReenserirPassword> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // Navegue para a tela de login (LoginForm) quando o botão voltar for pressionado
-        Navigator.of(context).pushReplacement(MaterialPageRoute(
-          builder: (context) => LoginForm(),
-        ));
-        return true; // Indica que a ação de voltar foi tratada
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginForm()),
+        );
+        return false;
       },
       child: Scaffold(
         appBar: AppBar(
           title: Text('Recuperar Password'),
           backgroundColor: Color.fromARGB(255, 246, 141, 45),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginForm()),
+              );
+            },
+          ),
         ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
