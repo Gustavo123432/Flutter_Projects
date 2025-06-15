@@ -21,6 +21,7 @@ import '../SIBS/Orders/mbway_waiting_page.dart';
 import '../SIBS/Orders/order_confirmation_page.dart';
 import '../SIBS/Orders/mbway_phone_page.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(HomeAlunoMain());
@@ -65,6 +66,7 @@ class HomeAlunoMain extends StatelessWidget {
             fontWeight: FontWeight.bold,
             fontFamily: 'Roboto',
           ),
+          systemOverlayStyle: SystemUiOverlayStyle.light, // Adiciona esta linha
         ),
         textTheme: TextTheme(
           headlineLarge: TextStyle(
@@ -542,7 +544,8 @@ class _HomeAlunoState extends State<HomeAluno> {
                                   product['Imagem'],
                                   product['Descricao'],
                                   product['Preco'].toString(),
-                                  product['Prencado']?.toString() ?? '');
+                                  product['Prencado']?.toString() ?? '',
+                                  product['Id'].toString());
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -686,14 +689,14 @@ class _HomeAlunoState extends State<HomeAluno> {
                       );
                     case 1:
                       return buildCategoryCard(
-                        title: 'Quentes',
+                        title: 'Cafetaria',
                         backgroundImagePath: 'lib/assets/cafe.JPG',
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => CategoryPage(
-                                title: 'Quentes',
+                                title: 'Cafetaria',
                               ),
                             ),
                           ).then((_) {
@@ -775,7 +778,7 @@ class _HomeAlunoState extends State<HomeAluno> {
                                 ),
                               ],
                             ),
-                          );
+                          ); 
                         },
                       );*/
                     default:
@@ -808,7 +811,7 @@ class _HomeAlunoState extends State<HomeAluno> {
         var quantidadeDisponivel = data[0]['Qtd'];
 
         if (quantidadeDisponivel == 1) {
-          addToCart(imagePath, title, price, prencado);
+          addToCart(imagePath, title, price, prencado, '0');
         } else {
           showDialog(
             context: context,
@@ -900,7 +903,7 @@ class _HomeAlunoState extends State<HomeAluno> {
   }
 
   void addToCart(
-      String imagePath, String title, String price, String prencado) async {
+      String imagePath, String title, String price, String prencado, String id) async {
     try {
       // Check available quantity first
       int availableQuantity = await checkQuantidade(title.replaceAll('"', ''));
@@ -917,6 +920,7 @@ class _HomeAlunoState extends State<HomeAluno> {
             'Prencado': prencado,
             'PrepararPrencado': false,
             'Fresh': false,
+            'Id': id, // Adiciona o ID do produto
           });
         });
       } else {
@@ -1051,7 +1055,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     switch (category.toLowerCase()) {
       case 'bebidas':
         return Icons.local_drink;
-      case 'quentes':
+      case 'cafetaria':
         return Icons.local_cafe;
       case 'comidas':
         return Icons.restaurant;
@@ -1108,249 +1112,170 @@ class CategoryPage extends StatefulWidget {
 }
 
 class _CategoryPageState extends State<CategoryPage> {
-  List<dynamic> items = [];
-  List<dynamic> filteredItems = [];
-  late StreamController<List<dynamic>> _streamController;
-  final TextEditingController _searchController = TextEditingController();
-  String? selectedSortOption;
-  double? minPrice;
-  double? maxPrice;
   bool _isLoading = false;
   final GlobalKey _cartIconKey = GlobalKey();
-  Map<String, bool> _itemLoadingStatus =
-      {}; // New map to track loading status per item
+  List<dynamic> filteredCategoryItems = [];
+  late StreamController<List<dynamic>> _categoryStreamController;
+  final TextEditingController _categorySearchController = TextEditingController();
+  String? _selectedCategorySortOption;
+  double? _minCategoryPrice;
+  double? _maxCategoryPrice;
+  Map<String, bool> _itemLoadingStatus = {};
 
   Future<int> checkQuantidade(String productName) async {
     try {
-      // Remove double quotes and trim the product name
       String cleanProductName = productName.replaceAll('"', '').trim();
-
-      // Make the API request
       var response = await http.get(Uri.parse(
           'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
-
       if (response.statusCode == 200) {
-        // Parse the response
         var data = json.decode(response.body);
-
-        // Check if there's an error in the response
         if (data is Map && data.containsKey('error')) {
           print('Error checking quantity: ${data['error']}');
-          return 0; // Return 0 if product not found
+          return 0;
         }
-
-        // If data is a list and not empty
         if (data is List && data.isNotEmpty) {
-          return int.parse(data[0]['Qtd'].toString());
+          return int.tryParse(data[0]['Qtd'].toString()) ?? 0;
         }
+        return 0;
+      } else {
+        print('Error checking quantity: HTTP ${response.statusCode}');
+        return 0;
       }
-      return 0; // Return 0 if no data or error
     } catch (e) {
-      print('Error checking quantity: $e');
-      return 0; // Return 0 on error
+      print('Exception checking quantity: $e');
+      return 0;
+    }
+  }
+
+  void addToCart(Map<String, dynamic> item) async {
+    Map<String, dynamic> newItem = {
+      'Imagem': item['Imagem'] ?? '',
+      'Nome': item['Nome']?.replaceAll('"', '') ?? '',
+      'Preco': item['Preco']?.toString() ?? '0.0',
+      'Prencado': item['Prencado']?.toString() ?? '0',
+      'PrepararPrencado': false,
+      'Fresh': false,
+      'Id': item['Id'], // Adiciona o ID do produto
+    };
+    if (newItem['Prencado'] == '1' || newItem['Prencado'] == '2') {
+      newItem['PrepararPrencado'] = true;
+    } else if (newItem['Prencado'] == '3') {
+      newItem['Fresh'] = true;
+    }
+    final String productName = newItem['Nome'];
+    int availableQuantity = await checkQuantidade(productName);
+    int currentQuantity = cartItems.where((cartItem) => cartItem['Nome'] == productName).length;
+    if (availableQuantity >= currentQuantity + 1) {
+      setState(() {
+        cartItems.add(newItem);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Item adicionado'),
+          duration: Duration(milliseconds: 500),
+        ),
+      );
+    } else if (availableQuantity <= 0) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Produto Indisponível'),
+            content: Text('Desculpe, este produto está indisponível no momento.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                child: Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Quantidade Máxima'),
+            content: Text('Quantidade máxima disponível atingida (Disponível: $availableQuantity)'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                child: Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
     }
   }
 
   @override
   void initState() {
     super.initState();
-    _streamController = StreamController<List<dynamic>>();
-    fetchData(widget.title);
-    _searchController.addListener(_filterItems);
+    _categoryStreamController = StreamController<List<dynamic>>();
+    filteredCategoryItems = allProducts.where((item) => item['Categoria'] == widget.title ).toList();
+    _categoryStreamController.add(filteredCategoryItems);
+    _categorySearchController.addListener(_filterCategoryItems);
   }
 
   @override
   void dispose() {
-    _streamController.close();
-    _searchController.dispose();
+    _categoryStreamController.close();
+    _categorySearchController.dispose();
     super.dispose();
   }
 
-  void addToCart(Map<String, dynamic> item) async {
-    // Ensure the item has all required properties and standardize the structure
-    // Be very defensive about potential nulls and types from the source item map
-    Map<String, dynamic> newItem = {
-      'Imagem': (item['Imagem'] is String && item['Imagem'] != null)
-          ? item['Imagem']
-          : '', // Ensure Imagem is a non-null string
-      'Nome': (item['Nome'] is String && item['Nome'] != null)
-          ? item['Nome'].replaceAll('"', '')
-          : '', // Ensure Nome is a non-null string, remove quotes
-      'Preco': (item['Preco'] != null)
-          ? item['Preco'].toString()
-          : '0.0', // Ensure Preco is a non-null string representation
-      'Prencado': (item['Prencado'] != null)
-          ? item['Prencado'].toString()
-          : '0', // Ensure Prencado is a non-null string representation
-      // Initialize preparation flags with default values if not explicitly boolean in the source item
-      'PrepararPrencado':
-          (item['PrepararPrencado'] is bool) ? item['PrepararPrencado'] : false,
-      'Fresh': (item['Fresh'] is bool) ? item['Fresh'] : false,
-    };
-
-    // Apply default preparation based on Prencado value only if the flags were not explicitly set as boolean
-    if (newItem['Prencado'] == '1' || newItem['Prencado'] == '2') {
-      if (!(item['PrepararPrencado'] is bool)) {
-        // Only set default if original item didn't have a boolean flag
-        newItem['PrepararPrencado'] = true; // Default to prensado/aquecido
-      }
-    } else if (newItem['Prencado'] == '3') {
-      if (!(item['Fresh'] is bool)) {
-        // Only set default if original item didn't have a boolean flag
-        newItem['Fresh'] = true; // Default to fresh
-      }
-    }
-
-    // Check available quantity before adding
-    // Use the standardized product name
-    final String productName = newItem['Nome'];
-    int availableQuantity =
-        await checkQuantidade(productName); // Check available quantity
-    int currentQuantity = cartItems
-        .where((cartItem) => cartItem['Nome'] == productName)
-        .length; // Get current quantity in cart
-
-    if (availableQuantity >= currentQuantity + 1) {
-      setState(() {
-        cartItems.add(newItem); // Add the standardized item
-      });
-      // Optionally show a snackbar that item was added
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Item adicionado ao carrinho'),
-            duration: Duration(milliseconds: 500),
-          ),
-        );
-      }
-    } else {
-      // Optionally show a message to the user that max quantity is reached or unavailable
-      String message = availableQuantity <= 0
-          ? 'Desculpe, este produto está indisponível no momento.'
-          : 'Quantidade máxima disponível atingida (Disponível: $availableQuantity)';
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text(availableQuantity <= 0
-                  ? 'Produto Indisponível'
-                  : 'Quantidade Máxima'),
-              content: Text(message),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                  child: Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
-      }
-    }
-  }
-
-  Future<void> fetchData(String categoria) async {
-    try {
-      final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-        body: {
-          'query_param': '5',
-          'categoria': '$categoria',
-        },
-      );
-      if (response.statusCode == 200) {
-        final dynamic responseData = json.decode(response.body);
-        if (responseData is List<dynamic>) {
-          items = responseData.cast<Map<String, dynamic>>();
-          filteredItems = items; // Initialize filteredItems
-          _streamController.add(filteredItems);
-        } else {
-          throw Exception('Response data is not a List<dynamic>');
-        }
-      } else {
-        throw Exception('Failed to load data');
-      }
-    } catch (e) {
-      print('Erro ao carregar data: $e');
-    }
-  }
-
-  void _filterItems() {
-    final query = removeDiacritics(
-        _searchController.text.toLowerCase()); // Normalize query
-    print('Search Query: $query'); // Debugging line
-
+  void _filterCategoryItems() {
+    final query = removeDiacritics(_categorySearchController.text.toLowerCase());
     setState(() {
-      // Check if items are loaded
-      if (items.isEmpty) {
-        print('No items to search through.'); // Debugging line
-        filteredItems = [];
-        return;
-      }
-
-      // Filter items based on the search query
-      filteredItems = items.where((item) {
-        // Ensure 'Nome' exists and is a string
-        if (item['Nome'] != null && item['Nome'] is String) {
-          // Normalize 'Nome' for comparison
+      filteredCategoryItems = allProducts.where((item) {
+        if (item['Categoria'] == widget.title && item['Nome'] != null && item['Nome'] is String) {
           final normalizedNome = removeDiacritics(item['Nome'].toLowerCase());
           return normalizedNome.contains(query);
         }
-        return false; // Exclude items without a valid 'Nome'
+        return false;
       }).toList();
-
-      _streamController.add(filteredItems);
+      _categoryStreamController.add(filteredCategoryItems);
     });
   }
 
-  Future<void> _onRefresh() async {
-    // Call fetchData to refresh the data
-    await fetchData(widget.title);
-  }
-
-  Future<bool> _onWillPop() async {
-    // Navigate to home page
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-          builder: (context) =>
-              HomeAluno()), // Replace with your Home page widget
-      (Route<dynamic> route) => false,
-    );
-    return false; // Prevent default back navigation
-  }
-
-  void _sortItems() {
+  void _sortCategoryItems() {
     setState(() {
-      if (selectedSortOption == 'asc') {
-        filteredItems.sort((a, b) =>
-            double.parse(a['Preco']).compareTo(double.parse(b['Preco'])));
-      } else {
-        filteredItems.sort((a, b) =>
-            double.parse(b['Preco']).compareTo(double.parse(a['Preco'])));
+      if (_selectedCategorySortOption == 'asc') {
+        filteredCategoryItems.sort((a, b) => double.parse(a['Preco']).compareTo(double.parse(b['Preco'])));
+      } else if (_selectedCategorySortOption == 'desc') {
+        filteredCategoryItems.sort((a, b) => double.parse(b['Preco']).compareTo(double.parse(a['Preco'])));
       }
-      _streamController.add(filteredItems);
+      _categoryStreamController.add(filteredCategoryItems);
     });
   }
 
-  void _filterByPrice() {
+  void _filterCategoryByPrice() {
     setState(() {
-      filteredItems = items.where((item) {
-        double price = double.parse(item['Preco']);
-        return (minPrice == null || price >= minPrice!) &&
-            (maxPrice == null || price <= maxPrice!);
+      filteredCategoryItems = allProducts.where((item) {
+        if (item['Categoria'] == widget.title) {
+          double price = double.parse(item['Preco']);
+          return (_minCategoryPrice == null || price >= _minCategoryPrice!) &&
+              (_maxCategoryPrice == null || price <= _maxCategoryPrice!);
+        }
+        return false;
       }).toList();
-      _streamController.add(filteredItems);
+      _categoryStreamController.add(filteredCategoryItems);
     });
   }
 
-  void _showFilterDialog() {
+  void _showCategoryFilterDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1361,37 +1286,30 @@ class _CategoryPageState extends State<CategoryPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButton<String>(
-                  value: selectedSortOption, // This can be null
-                  hint: Text(
-                      'Selecione uma opção'), // Hint text when no value is selected
+                  value: _selectedCategorySortOption,
+                  hint: Text('Selecione uma opção'),
                   items: [
                     DropdownMenuItem(
-                      value: 'asc', // Value for ascending
-                      child: Row(
-                        children: [
-                          Icon(Icons.arrow_upward), // Icon for ascending
+                        value: 'asc',
+                        child: Row(children: [
+                          Icon(Icons.arrow_upward, color: Colors.orange),
                           SizedBox(width: 8),
-                          Text('Ascendente'),
-                        ],
-                      ),
-                    ),
+                          Text('Preço: Ascendente', style: TextStyle(color: Colors.orange))
+                        ])),
                     DropdownMenuItem(
-                      value: 'desc', // Value for descending
-                      child: Row(
-                        children: [
-                          Icon(Icons.arrow_downward), // Icon for descending
+                        value: 'desc',
+                        child: Row(children: [
+                          Icon(Icons.arrow_downward, color: Colors.orange),
                           SizedBox(width: 8),
-                          Text('Descendente'),
-                        ],
-                      ),
-                    ),
+                          Text('Preço: Descendente', style: TextStyle(color: Colors.orange))
+                        ])),
                   ],
                   onChanged: (String? newValue) {
                     if (newValue != null) {
                       setState(() {
-                        selectedSortOption = newValue; // Update the selection
-                        _sortItems(); // Call the sorting function
-                        Navigator.pop(context); // Close the dialog
+                        _selectedCategorySortOption = newValue;
+                        _sortCategoryItems();
+                        Navigator.pop(context);
                       });
                     }
                   },
@@ -1399,21 +1317,42 @@ class _CategoryPageState extends State<CategoryPage> {
                 TextField(
                   decoration: InputDecoration(
                     labelText: 'Preço Mínimo',
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.orange),
+                    ),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.orange), // Set default border to orange
+                    ),
                   ),
-                  keyboardType: TextInputType.number,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*[,|\.]?\d*')),
+                  ],
                   onChanged: (value) {
-                    minPrice = value.isNotEmpty ? double.tryParse(value) : null;
-                    _filterByPrice();
+                    String normalized = value.replaceAll(',', '.');
+                    _minCategoryPrice = normalized.isNotEmpty ? double.tryParse(normalized) : null;
+                    _filterCategoryByPrice();
                   },
                 ),
+                SizedBox(height: 16),
                 TextField(
                   decoration: InputDecoration(
                     labelText: 'Preço Máximo',
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.orange),
+                    ),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.orange), // Set default border to orange
+                    ),
                   ),
-                  keyboardType: TextInputType.number,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*[,|\.]?\d*')),
+                  ],
                   onChanged: (value) {
-                    maxPrice = value.isNotEmpty ? double.tryParse(value) : null;
-                    _filterByPrice();
+                    String normalized = value.replaceAll(',', '.');
+                    _maxCategoryPrice = normalized.isNotEmpty ? double.tryParse(normalized) : null;
+                    _filterCategoryByPrice();
                   },
                 ),
               ],
@@ -1424,6 +1363,11 @@ class _CategoryPageState extends State<CategoryPage> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
               child: Text('Fechar'),
             ),
           ],
@@ -1434,720 +1378,275 @@ class _CategoryPageState extends State<CategoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => HomeAluno(),
-          ),
-        );
-        return false;
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(widget.title),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => HomeAluno(),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+        elevation: 0,
+        actions: [
+          Stack(
+            children: [
+              IconButton(
+                key: _cartIconKey,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ShoppingCartPage(),
+                    ),
+                  );
+                },
+                icon: Icon(Icons.shopping_cart),
+              ),
+              if (cartItems.isNotEmpty)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '${cartItems.length}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
-              );
-            },
+            ],
           ),
-          actions: [
-            Stack(
-              children: [
-                IconButton(
-                  key: _cartIconKey,
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ShoppingCartPage(),
-                      ),
-                    ).then((_) {
-                      // Removed setState(() {}); to prevent unnecessary rebuilds and flickering
-                      // The cart count will be updated through other means if needed, e.g., on cart item changes.
-                    });
-                  },
-                  icon: Icon(Icons.shopping_cart),
+         
+        ],
+      ),
+      body: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    controller: _categorySearchController,
+                    decoration: InputDecoration(
+                      labelText: 'Procurar...',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      _filterCategoryItems();
+                    },
+                  ),
                 ),
-                if (cartItems.isNotEmpty)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      constraints: BoxConstraints(
-                        minWidth: 16,
-                        minHeight: 16,
-                      ),
-                      child: Text(
-                        '${cartItems.length}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
+              ),
+              IconButton(
+                icon: Icon(Icons.filter_list, color: Colors.orange),
+                onPressed: _showCategoryFilterDialog,
+              ),
+            ],
+          ),
+          Expanded(
+            child: StreamBuilder<List<dynamic>>(
+              stream: _categoryStreamController.stream,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  List<dynamic> items = snapshot.data!;
+                  if (items.isEmpty) {
+                    return Center(child: Text('Nenhum produto encontrado'));
+                  }
+                  return ListView.builder(
+                    padding: EdgeInsets.all(16.0),
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      var product = items[index];
+                      final String productName = product['Nome'].replaceAll('"', '');
+                      final int itemCount = cartItems
+                          .where((item) => item['Nome'] == productName)
+                          .length;
+                      return Card(
+                        margin: EdgeInsets.only(bottom: 16),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        labelText: 'Procurar...',
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (value) {
-                        _filterItems(); // Call filter on text change
-                      },
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.filter_list),
-                  onPressed: _showFilterDialog,
-                ),
-              ],
-            ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _onRefresh,
-                child: StreamBuilder<List<dynamic>>(
-                  stream: _streamController.stream,
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      List<dynamic> items = snapshot.data!;
-                      return ListView.builder(
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          final double preco = double.parse(item['Preco']);
-                          return Card(
-                            key: ValueKey(item[
-                                'Nome']), // Use a chave para ajudar o Flutter a otimizar a reconstrução
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white,
+                                Colors.grey[50]!,
+                              ],
+                            ),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(12),
+                            child: Row(
                               children: [
-                                ListTile(
-                                  leading: Image.memory(
-                                    base64.decode(item['Imagem']),
-                                    fit: BoxFit.cover,
-                                    height: 50,
-                                    width: 50,
-                                    gaplessPlayback: true,
-                                    cacheWidth: 100,
-                                    cacheHeight: 100,
+                                Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                  title: Text(item['Nome']),
-                                  subtitle: Text(
-                                    item['Qtd'] != null
-                                        ? "Disponível - ${preco.toStringAsFixed(2).replaceAll('.', ',')}€"
-                                        : "Indisponível",
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Image.memory(
+                                      base64.decode(product['Imagem']),
+                                      fit: BoxFit.cover,
+                                      gaplessPlayback: true,
+                                      cacheWidth: 160,
+                                      cacheHeight: 160,
+                                      filterQuality: FilterQuality.high,
+                                      isAntiAlias: true,
+                                    ),
                                   ),
-                                  trailing:
-                                      cartItems.any((cartItem) =>
-                                              cartItem['Nome'] == item['Nome'])
-                                          ? Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                /*IconButton(
-                                              onPressed: () {
-                                                removeFromCart(item);
-                                              },
-                                              icon: Icon(Icons.remove),
-                                            ),*/
-                                                Text(
-                                                  cartItems
-                                                      .where((element) =>
-                                                          element['Nome'] ==
-                                                          item['Nome'])
-                                                      .length
-                                                      .toString(),
-                                                  style:
-                                                      TextStyle(fontSize: 15.0),
-                                                ),
-                                                IconButton(
-                                                  onPressed: () {
-                                                    addToCart(item);
-                                                  },
-                                                  icon: Icon(Icons.add),
-                                                ),
-                                              ],
-                                            )
-                                          : Visibility(
-                                              visible: (int.tryParse(item['Qtd']
-                                                              ?.toString() ??
-                                                          '0') ??
-                                                      0) >
-                                                  0,
-                                              child: LoadingButton(
-                                                onPressed:
-                                                    _itemLoadingStatus[
-                                                                item['Nome']] ==
-                                                            true
-                                                        ? null
-                                                        : () async {
-                                                            setState(() {
-                                                              _itemLoadingStatus[
-                                                                      item[
-                                                                          'Nome']] =
-                                                                  true;
-                                                            });
-                                                            try {
-                                                              final String
-                                                                  productName =
-                                                                  item['Nome'];
-                                                              int availableQuantity =
-                                                                  await checkQuantidade(
-                                                                      productName);
-                                                              int currentQuantity = cartItems
-                                                                  .where((cartItem) =>
-                                                                      cartItem[
-                                                                          'Nome'] ==
-                                                                      productName)
-                                                                  .length;
-                                                              int desiredQuantity =
-                                                                  currentQuantity +
-                                                                      1;
-
-                                                              if (availableQuantity >=
-                                                                  desiredQuantity) {
-                                                                addToCart(item);
-                                                              } else {
-                                                                showDialog(
-                                                                  context:
-                                                                      context,
-                                                                  builder:
-                                                                      (BuildContext
-                                                                          context) {
-                                                                    return AlertDialog(
-                                                                      title: Text(
-                                                                          'Quantidade Máxima'),
-                                                                      content: Text(
-                                                                          'Quantidade máxima disponível atingida (Disponível: $availableQuantity)'),
-                                                                      actions: [
-                                                                        TextButton(
-                                                                          onPressed: () =>
-                                                                              Navigator.of(context).pop(),
-                                                                          style:
-                                                                              TextButton.styleFrom(
-                                                                            backgroundColor:
-                                                                                Colors.orange,
-                                                                            foregroundColor:
-                                                                                Colors.white,
-                                                                            padding:
-                                                                                EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                                                          ),
-                                                                          child:
-                                                                              Text('OK'),
-                                                                        ),
-                                                                      ],
-                                                                    );
-                                                                  },
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        productName,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.grey[800],
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        "${double.parse(product['Preco'].toString()).toStringAsFixed(2).replaceAll('.', ',')}€",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.orange,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                cartItems.any((cartItem) => cartItem['Nome'] == productName)
+                                    ? Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            cartItems
+                                                .where((element) => element['Nome'] == productName)
+                                                .length
+                                                .toString(),
+                                            style: TextStyle(fontSize: 15.0),
+                                          ),
+                                          IconButton(
+                                            onPressed: () {
+                                              addToCart(product);
+                                            },
+                                            icon: Icon(Icons.add),
+                                          ),
+                                        ],
+                                      )
+                                    : StatefulBuilder(
+                                        builder: (context, setState) {
+                                          return FutureBuilder<int>(
+                                            future: checkQuantidade(productName),
+                                            builder: (context, snapshot) {
+                                              bool isAvailable = snapshot.hasData && snapshot.data! > 0;
+                                              return LoadingButton(
+                                                onPressed: _itemLoadingStatus[productName] == true || !isAvailable
+                                                    ? null
+                                                    : () async {
+                                                        setState(() {
+                                                          _itemLoadingStatus[productName] = true;
+                                                        });
+                                                        try {
+                                                          await Future.delayed(Duration(milliseconds: 300));
+                                                          int availableQuantity = await checkQuantidade(productName);
+                                                          if (availableQuantity > 0) {
+                                                            addToCart(product);
+                                                          } else {
+                                                            showDialog(
+                                                              context: context,
+                                                              builder: (BuildContext context) {
+                                                                return AlertDialog(
+                                                                  title: Text('Produto Indisponível'),
+                                                                  content: Text('Desculpe, este produto está indisponível no momento.'),
+                                                                  actions: [
+                                                                    TextButton(
+                                                                      onPressed: () {
+                                                                        Navigator.of(context).pop();
+                                                                      },
+                                                                      style: TextButton.styleFrom(
+                                                                        backgroundColor: Colors.orange,
+                                                                        foregroundColor: Colors.white,
+                                                                      ),
+                                                                      child: Text('OK'),
+                                                                    ),
+                                                                  ],
                                                                 );
-                                                              }
-                                                            } finally {
-                                                              setState(() {
-                                                                _itemLoadingStatus[
-                                                                        item[
-                                                                            'Nome']] =
-                                                                    false;
-                                                              });
-                                                            }
-                                                          },
-                                                isLoading: _itemLoadingStatus[
-                                                        item['Nome']] ==
-                                                    true,
-                                                child: _itemLoadingStatus[
-                                                            item['Nome']] ==
-                                                        true
+                                                              },
+                                                            );
+                                                          }
+                                                        } finally {
+                                                          setState(() {
+                                                            _itemLoadingStatus[productName] = false;
+                                                          });
+                                                        }
+                                                      },
+                                                isLoading: _itemLoadingStatus[productName] == true,
+                                                child: _itemLoadingStatus[productName] == true
                                                     ? SizedBox(
                                                         width: 20,
                                                         height: 20,
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                          valueColor:
-                                                              AlwaysStoppedAnimation<
-                                                                      Color>(
-                                                                  Colors.white),
+                                                        child: CircularProgressIndicator(
+                                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                                           strokeWidth: 2,
                                                         ),
                                                       )
                                                     : Text('Comprar'),
-                                                backgroundColor:
-                                                    (_itemLoadingStatus[
-                                                                item['Nome']] ==
-                                                            true)
-                                                        ? Colors.grey
-                                                        : Colors.orange,
-                                              ),
-                                            ),
-                                ),
+                                                backgroundColor: isAvailable ? Colors.orange : Colors.grey,
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
                               ],
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       );
-                    } else if (snapshot.hasError) {
-                      return Center(
-                        child: Text('Error: ${snapshot.error}'),
-                      );
-                    }
-                    return Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-//Monte
-
-class CategoryPageMonte extends StatefulWidget {
-  final String title;
-
-  const CategoryPageMonte({Key? key, required this.title}) : super(key: key);
-
-  @override
-  _CategoryPageMonteState createState() => _CategoryPageMonteState();
-}
-
-class _CategoryPageMonteState extends State<CategoryPageMonte> {
-  List<dynamic> items = [];
-  List<dynamic> filteredItems = [];
-  late StreamController<List<dynamic>> _streamController;
-  final TextEditingController _searchController = TextEditingController();
-
-  // Reservation fields
-  final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _timeController = TextEditingController();
-  String? _selectedTime;
-
-  dynamic users;
-
-  @override
-  void initState() {
-    super.initState();
-    _streamController = StreamController<List<dynamic>>();
-    fetchData(widget.title);
-    _searchController.addListener(_filterItems);
-    UserInfo();
-  }
-
-  @override
-  void dispose() {
-    _streamController.close();
-    _searchController.dispose();
-    _dateController.dispose();
-    _timeController.dispose();
-    super.dispose();
-  }
-
-  void UserInfo() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    var user = prefs.getString("username");
-
-    final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-      body: {
-        'query_param': '1',
-        'user': user,
-      },
-    );
-    if (response.statusCode == 200) {
-      setState(() {
-        users = json.decode(response.body);
-      });
-    }
-  }
-
-  Future<void> fetchData(String categoria) async {
-    try {
-      final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
-        body: {
-          'query_param': '2',
-        },
-      );
-      if (response.statusCode == 200) {
-        final dynamic responseData = json.decode(response.body);
-        if (responseData is List<dynamic>) {
-          items = responseData.cast<Map<String, dynamic>>();
-          filteredItems = items; // Initialize filteredItems
-          _streamController.add(filteredItems);
-        } else {
-          throw Exception(
-              'Error 03 - NOT IS DYNAMIC LIST. Contacte o Administrador');
-        }
-      } else {
-        throw Exception('Erro ao carregar dados');
-      }
-    } catch (e) {
-      print('Error fetching data: $e');
-    }
-  }
-
-  void _filterItems() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      filteredItems = items.where((item) {
-        return item['nome'].toLowerCase().contains(query);
-      }).toList();
-      _streamController.add(filteredItems);
-    });
-  }
-
-  Future<void> _makeReservation(
-      Map<String, dynamic> item, DateTime date, TimeOfDay time) async {
-    // Get the selected time
-    var selectedTime =
-        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-
-    // Validate inputs
-    if (selectedTime.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Por favor, selecione as horas.')),
-      );
-      return;
-    }
-
-    // Get the current time
-    TimeOfDay currentTime = TimeOfDay.now();
-    TimeOfDay cutoffTime = TimeOfDay(hour: 11, minute: 0); // 11:00 AM
-
-    // Determine if the current time is after 11:00 AM
-    bool isAfterCutoffTime = (currentTime.hour > cutoffTime.hour) ||
-        (currentTime.hour == cutoffTime.hour &&
-            currentTime.minute > cutoffTime.minute);
-
-    // Set the reservation date based on the current time
-    DateTime reservationDate = date;
-
-    // Show loading indicator
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('A Reservar...')),
-    );
-
-    try {
-      final response = await http.post(
-        Uri.parse(
-            'https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'), // Replace with your API endpoint
-        body: {
-          'query_param': '1', // Ensure this is a string
-          'name': users[0]['Nome'].toString(),
-          'hora': selectedTime, // Use the selected time directly
-          'people': '1', // Convert to string
-          'aluno': users[0]['Email'].toString(),
-          'food':
-              item['nome'].toString(), // Include item name in the reservation
-          'date': reservationDate
-              .toIso8601String()
-              .split('T')[0], // Add the reservation date
-        },
-      );
-
-      print(response.body);
-
-      if (response.statusCode == 200) {
-        // Handle successful reservation
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Reservado com sucesso!')),
-        );
-      } else {
-        // Handle server error
-        final errorMessage = response.body.isNotEmpty
-            ? response.body
-            : 'Erro ao fazer a reserva';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
-      }
-    } catch (e) {
-      print('Erro ao fazer a reserva: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao fazer a reserva: $e')),
-      );
-    }
-  }
-
-  void _showReservationDialog(Map<String, dynamic> item) {
-    DateTime? selectedDate; // Variable to hold the selected date
-
-    // Get the current time
-    TimeOfDay currentTime = TimeOfDay.now();
-    TimeOfDay cutoffTime = TimeOfDay(hour: 11, minute: 0); // 11:00 AM
-
-    // Check if the current time is after 11:00 AM
-    bool isAfterCutoffTime = (currentTime.hour > cutoffTime.hour) ||
-        (currentTime.hour == cutoffTime.hour &&
-            currentTime.minute > cutoffTime.minute);
-
-    // Set the reservation date based on the current time
-    DateTime reservationDate =
-        DateTime.now().add(Duration(days: isAfterCutoffTime ? 1 : 0));
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Reservar ${item['nome']}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Button to select the time
-              TextFormField(
-                controller: _timeController,
-                decoration: InputDecoration(
-                  labelText: 'Hora (HH:MM)',
-                ),
-                readOnly: true,
-                onTap: () {
-                  _showTimePicker();
-                },
-              ),
-              SizedBox(height: 20),
-              // Display the selected time
-              if (_selectedTime != null)
-                Text('Horas Selecionadas: $_selectedTime'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                if (_selectedTime != null) {
-                  // Convert selected time string to TimeOfDay
-                  List<String> timeParts =
-                      _selectedTime!.split(':'); // Use null check here
-                  TimeOfDay selectedTime = TimeOfDay(
-                    hour: int.parse(timeParts[0]),
-                    minute: int.parse(timeParts[1]),
+                    },
                   );
-
-                  // Show confirmation dialog
-                  _showConfirmationDialog(item, reservationDate, selectedTime);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Please select a time')),
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Error: ${snapshot.error}'),
                   );
                 }
-              },
-              child: Text('Reservar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showConfirmationDialog(
-      Map<String, dynamic> item, DateTime date, TimeOfDay time) {
-    // Check if the selected time is after 14:00
-    if (time.hour >= 14) {
-      date = date.add(Duration(days: 1)); // Move reservation to the next day
-    }
-
-    // Create the reservation summary with bold date
-    String formattedDate = DateFormat('yyyy-MM-dd').format(date);
-    String formattedTime = time.format(context);
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Confirmar Reserva'),
-          content: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: 'Reservas-te ${item['nome']} para o dia ',
-                  style: TextStyle(fontWeight: FontWeight.normal),
-                ),
-                TextSpan(
-                  text: DateFormat('dd/MM/yyyy').format(date), // Bold date
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                ),
-                TextSpan(
-                  text: ' às ',
-                  style: TextStyle(fontWeight: FontWeight.normal),
-                ),
-                TextSpan(
-                  text: '$formattedTime.',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                _makeReservation(item, date,
-                    time); // Call the reservation method with three arguments
-                Navigator.of(context).pop(); // Close the confirmation dialog
-                Navigator.of(context).pop();
-              },
-              child: Text('Confirmar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showTimePicker() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Selecione as Horas'),
-          content: DropdownButton<String>(
-            isExpanded: true,
-            hint: Text('Selecione as Horas'),
-            value: _selectedTime,
-            items: _getValidTimes().map((String time) {
-              return DropdownMenuItem<String>(
-                value: time,
-                child: Text(time),
-              );
-            }).toList(),
-            onChanged: (String? newValue) {
-              setState(() {
-                _selectedTime = newValue;
-                _timeController.text = newValue ?? '';
-              });
-              Navigator.of(context).pop(); // Close the dialog
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  List<String> _getValidTimes() {
-    List<String> validTimes = [];
-    // Generate valid times between 11:30 and 14:00
-    for (int hour = 11; hour <= 14; hour++) {
-      for (int minute = 0; minute < 60; minute += 10) {
-        if (hour == 11 && minute < 30) continue; // Skip times before 11:30
-        if (hour == 14 && minute > 0) continue; // Skip times after 14:00
-        validTimes.add(
-            '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
-      }
-    }
-    return validTimes;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => HomeAluno(),
-          ),
-        );
-        return false;
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(widget.title),
-          bottom: PreferredSize(
-            preferredSize: Size.fromHeight(50.0),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Procurar...',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ),
-          ),
-        ),
-        body: StreamBuilder<List<dynamic>>(
-          stream: _streamController.stream,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return Center(child: Text('Pratos não Encontrados'));
-            }
-
-            final items = snapshot.data!;
-            return ListView.builder(
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return Card(
-                  key: ValueKey(item[
-                      'Nome']), // Use a chave para ajudar o Flutter a otimizar a reconstrução
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ListTile(
-                            leading: Image.memory(
-                              base64.decode(item['Imagem']),
-                              fit: BoxFit.cover,
-                              height: 50,
-                              width: 50,
-                              gaplessPlayback: true,
-                              cacheWidth: 100,
-                              cacheHeight: 100,
-                            ),
-                            title: Text(item['nome']),
-                            trailing: Visibility(
-                              visible: item['estado'] == "1",
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  _showReservationDialog(item);
-                                },
-                                child: Text('Reservar'),
-                              ),
-                            ))
-                      ]),
+                return Center(
+                  child: CircularProgressIndicator(),
                 );
               },
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2456,7 +1955,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                         } else if (prencado == '3') {
                           return ListTile(
                             leading:
-                                Icon(Icons.local_cafe, color: Colors.brown),
+                                Icon(Icons.local_cafe, color: Colors.orange),
                             title: Text(product['Nome']),
                             subtitle: Text('Deseja Fresco?'),
                             trailing: Checkbox(
@@ -2643,38 +2142,31 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       if (!confirmPrencado) return;
     }
 
-    // Mostrar diálogo de seleção de método de pagamento
-    final paymentMethod = await _showPaymentMethodDialog();
-    if (paymentMethod == null) return;
+    try {
+      // Mostrar diálogo de seleção de método de pagamento
+      String? paymentMethod = await _showPaymentMethodDialog();
+      if (paymentMethod == null) return;
 
-    // Initialize payment-related variables
-    String nif = '';
-    bool requestInvoice = false;
-
-    // Check if user is a professor and handle invoice request
-    if (users != null &&
-        users.isNotEmpty &&
-        users[0]['Permissao'] == 'Professor') {
-      requestInvoice = await _showInvoiceRequestDialog();
-
-      if (requestInvoice) {
-        bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' ||
-            users[0]['FaturacaoAutomatica'] == 1;
-
-        if (autoBillNIF &&
-            users[0]['NIF'] != null &&
-            users[0]['NIF'].toString().isNotEmpty) {
-          nif = users[0]['NIF'].toString();
-        } else {
+      // Check if invoice is needed
+      bool requestInvoice = false;
+      String nif = '';
+      if (paymentMethod == 'mbway' || paymentMethod == 'dinheiro') {
+        requestInvoice = await _showInvoiceDialog();
+        if (requestInvoice) {
           nif = await _showNifInputDialog() ?? '';
           if (nif.isEmpty) {
             return;
           }
         }
       }
-    }
 
-    try {
+      // Extract user information
+      var turma = users[0]['Turma'] ?? '';
+      var nome = users[0]['Nome'] ?? '';
+      var apelido = users[0]['Apelido'] ?? '';
+      var permissao = users[0]['Permissao'] ?? '';
+      var imagem = users[0]['Imagem'] ?? '';
+
       // Create the description string with proper formatting
       List<String> formattedNames = cartItems.map((item) {
         String name = item['Nome'] as String;
@@ -2696,13 +2188,6 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       }).toList();
 
       String descricao = formattedNames.join(', ');
-
-      // Extract user information
-      var turma = users[0]['Turma'] ?? '';
-      var nome = users[0]['Nome'] ?? '';
-      var apelido = users[0]['Apelido'] ?? '';
-      var permissao = users[0]['Permissao'] ?? '';
-      var imagem = users[0]['Imagem'] ?? '';
       double total = calculateTotal();
 
       if (paymentMethod == 'mbway') {
@@ -2728,8 +2213,41 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               amount: total,
               orderData: orderData,
               sibsService: _sibsService!,
-              onResult: (success, newOrderNumber) {
+              onResult: (success, newOrderNumber) async {
                 if (success) {
+                  // Update product quantities after successful purchase
+                  // Create lists for IDs and quantities
+                  List<String> productIds = [];
+                  List<int> quantities = [];
+                  
+                  // Use the existing itemCountMap which already has the correct quantities
+                  for (var entry in itemCountMap.entries) {
+                    String productName = entry.key;
+                    int quantity = entry.value;
+                    
+                    // Find the corresponding product ID from cartItems
+                    var product = cartItems.firstWhere(
+                      (item) => item['Nome'] == productName,
+                      orElse: () => {'Id': '0'},
+                    );
+                    
+                    if (product['Id'] != '0') {
+                      productIds.add(product['Id'].toString());
+                      quantities.add(quantity);
+                    }
+                  }
+                  
+                  // Send all quantities in a single API call
+                  String idsParam = productIds.join(',');
+                  String quantitiesParam = quantities.join(',');
+                  
+                  print('Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
+                  var response = await http.get(
+                    Uri.parse(
+                        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
+                  );
+                  print('Resposta da API após atualizar quantidades: \\${response.body}');
+                  
                   setState(() {
                     orderNumber = newOrderNumber;
                     cartItems.clear();
@@ -2911,6 +2429,30 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           if (data['status'] == 'success') {
             orderNumber = int.parse(data['orderNumber'].toString());
 
+            // Atualizar quantidade dos produtos na base de dados após compra em dinheiro
+            List<String> productIds = [];
+            List<int> quantities = [];
+            for (var entry in itemCountMap.entries) {
+              String productName = entry.key;
+              int quantity = entry.value;
+              var product = cartItems.firstWhere(
+                (item) => item['Nome'] == productName,
+                orElse: () => {'Id': '0'},
+              );
+              if (product['Id'] != '0') {
+                productIds.add(product['Id'].toString());
+                quantities.add(quantity);
+              }
+            }
+            String idsParam = productIds.join(',');
+            String quantitiesParam = quantities.join(',');
+            print('Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
+            var response = await http.get(
+              Uri.parse(
+                  'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
+            );
+            print('Resposta da API após atualizar quantidades: \\${response.body}');
+            
             // Enviar para o WebSocket com o valor do total
             await sendOrderToWebSocket(cartItems, total.toString(),
                 paymentMethod: 'dinheiro',
@@ -3204,16 +2746,13 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   ),
                   const SizedBox(height: 16),
                   ListTile(
-                    leading:
-                        const Icon(Icons.check_circle, color: Colors.green),
-                    title: const Text('Sim',
-                        style: TextStyle(color: Colors.green)),
+                    leading: const Icon(Icons.check_circle, color: Colors.green),
+                    title: const Text('Sim', style: TextStyle(color: Colors.green)),
                     onTap: () => Navigator.pop(context, true),
                   ),
                   ListTile(
                     leading: const Icon(Icons.cancel, color: Colors.red),
-                    title:
-                        const Text('Não', style: TextStyle(color: Colors.red)),
+                    title: const Text('Não', style: TextStyle(color: Colors.red)),
                     onTap: () => Navigator.pop(context, false),
                   ),
                 ],
@@ -3246,8 +2785,13 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16.0),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 16.0,
+          right: 16.0,
+          top: 16.0,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -3266,8 +2810,20 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               decoration: InputDecoration(
                 hintText: 'Digite o NIF',
                 counterText: '',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Color.fromARGB(255, 246, 141, 45),
+                    width: 2.0,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Color.fromARGB(255, 246, 141, 45),
+                    width: 2.0,
+                  ),
+                ),
               ),
+              cursorColor: Color.fromARGB(255, 246, 141, 45),
             ),
             const SizedBox(height: 16),
             Row(
@@ -3517,6 +3073,30 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             if (response.statusCode == 200) {
               final responseData = json.decode(response.body);
               if (responseData['success'] == true) {
+                // Atualizar quantidade dos produtos na base de dados após compra com saldo
+                List<String> productIds = [];
+                List<int> quantities = [];
+                for (var entry in itemCountMap.entries) {
+                  String productName = entry.key;
+                  int quantity = entry.value;
+                  var product = cartItems.firstWhere(
+                    (item) => item['Nome'] == productName,
+                    orElse: () => {'Id': '0'},
+                  );
+                  if (product['Id'] != '0') {
+                    productIds.add(product['Id'].toString());
+                    quantities.add(quantity);
+                  }
+                }
+                String idsParam = productIds.join(',');
+                String quantitiesParam = quantities.join(',');
+                print('Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
+                var response = await http.get(
+                  Uri.parse(
+                      'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
+                );
+                print('Resposta da API após atualizar quantidades: \\${response.body}');
+                
                 // Enviar para o WebSocket
                 await sendOrderToWebSocket(
                   cartItems,
@@ -3630,6 +3210,41 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         ),
       );
     }
+  }
+
+  Future<bool> _showInvoiceDialog() async {
+    return await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                'Fatura com NIF',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.check_circle, color: Colors.green),
+                title: const Text('Sim', style: TextStyle(color: Colors.green)),
+                onTap: () => Navigator.pop(context, true),
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel, color: Colors.red),
+                title: const Text('Não', style: TextStyle(color: Colors.red)),
+                onTap: () => Navigator.pop(context, false),
+              ),
+            ],
+          ),
+        );
+      },
+    ) ?? false;
   }
 
   @override
@@ -4481,6 +4096,7 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
           '0', // Ensure prencado is string, default to '0'
       'PrepararPrencado': false, // Initialize to false
       'Fresh': false, // Initialize to false
+      'Id': item['Id'], // Adiciona o ID do produto
     };
 
     // Apply default preparation based on Prencado value
@@ -4630,17 +4246,17 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
                     DropdownMenuItem(
                         value: 'asc',
                         child: Row(children: [
-                          Icon(Icons.arrow_upward),
+                          Icon(Icons.arrow_upward, color: Colors.orange), // Set icon color to orange
                           SizedBox(width: 8),
-                          Text('Preço: Ascendente')
-                        ])), // Changed Text
+                          Text('Preço: Ascendente', style: TextStyle(color: Colors.orange)), // Set text color to orange
+                        ])),
                     DropdownMenuItem(
                         value: 'desc',
                         child: Row(children: [
-                          Icon(Icons.arrow_downward),
+                          Icon(Icons.arrow_downward, color: Colors.orange), // Set icon color to orange
                           SizedBox(width: 8),
-                          Text('Preço: Descendente')
-                        ])), // Changed Text
+                          Text('Preço: Descendente', style: TextStyle(color: Colors.orange)), // Set text color to orange
+                        ])),
                   ],
                   onChanged: (String? newValue) {
                     if (newValue != null) {
@@ -4656,22 +4272,41 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
                 TextField(
                   decoration: InputDecoration(
                     labelText: 'Preço Mínimo',
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.orange),
+                    ),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.orange), // Set default border to orange
+                    ),
                   ),
-                  keyboardType: TextInputType.number, // Ensure numeric keyboard
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*[,|\.]?\d*')),
+                  ],
                   onChanged: (value) {
-                    _minRecentBuysPrice =
-                        value.isNotEmpty ? double.tryParse(value) : null;
+                    String normalized = value.replaceAll(',', '.');
+                    _minRecentBuysPrice = normalized.isNotEmpty ? double.tryParse(normalized) : null;
                     _filterRecentBuysByPrice();
                   },
                 ),
+                SizedBox(height: 16), // Added SizedBox for consistent spacing
                 TextField(
                   decoration: InputDecoration(
                     labelText: 'Preço Máximo',
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.orange),
+                    ),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.orange), // Set default border to orange
+                    ),
                   ),
-                  keyboardType: TextInputType.number, // Ensure numeric keyboard
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*[,|\.]?\d*')),
+                  ],
                   onChanged: (value) {
-                    _maxRecentBuysPrice =
-                        value.isNotEmpty ? double.tryParse(value) : null;
+                    String normalized = value.replaceAll(',', '.');
+                    _maxRecentBuysPrice = normalized.isNotEmpty ? double.tryParse(normalized) : null;
                     _filterRecentBuysByPrice();
                   },
                 ),
@@ -4683,6 +4318,11 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
               child: Text('Fechar'),
             ),
           ],
@@ -4741,6 +4381,10 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
                 ),
             ],
           ),
+          IconButton(
+            icon: Icon(Icons.filter_list, color: Colors.orange),
+            onPressed: _showRecentBuysFilterDialog,
+          ),
         ],
       ),
       body: Column(
@@ -4763,7 +4407,7 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.filter_list),
+                icon: Icon(Icons.filter_list, color: Colors.orange),
                 onPressed: _showRecentBuysFilterDialog,
               ),
             ],
@@ -4887,67 +4531,69 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
                                           ),
                                         ],
                                       )
-                                    : LoadingButton(
-                                        onPressed: _itemLoadingStatus[
-                                                    productName] ==
-                                                true
-                                            ? null
-                                            : () async {
-                                                setState(() {
-                                                  _itemLoadingStatus[
-                                                      productName] = true;
-                                                });
-                                                try {
-                                                  await Future.delayed(Duration(
-                                                      milliseconds: 300));
-                                                  int availableQuantity =
-                                                      await checkQuantidade(
-                                                          productName);
-                                                  if (availableQuantity > 0) {
-                                                    addToCart(product);
-                                                  } else {
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                            'Produto indisponível no momento'),
-                                                        backgroundColor:
-                                                            Colors.red,
-                                                      ),
-                                                    );
-                                                  }
-                                                } finally {
-                                                  setState(() {
-                                                    _itemLoadingStatus[
-                                                        productName] = false;
-                                                  });
-                                                }
-                                              },
-                                        isLoading:
-                                            _itemLoadingStatus[productName] ==
-                                                true,
-                                        child:
-                                            _itemLoadingStatus[productName] ==
-                                                    true
-                                                ? SizedBox(
-                                                    width: 20,
-                                                    height: 20,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                      valueColor:
-                                                          AlwaysStoppedAnimation<
-                                                                  Color>(
-                                                              Colors.white),
-                                                      strokeWidth: 2,
-                                                    ),
-                                                  )
-                                                : Text('Comprar'),
-                                        backgroundColor:
-                                            (_itemLoadingStatus[productName] ==
-                                                    true)
-                                                ? Colors.grey
-                                                : Colors.orange,
+                                    : StatefulBuilder(
+                                        builder: (context, setState) {
+                                          return FutureBuilder<int>(
+                                            future: checkQuantidade(productName),
+                                            builder: (context, snapshot) {
+                                              bool isAvailable = snapshot.hasData && snapshot.data! > 0;
+                                              return LoadingButton(
+                                                onPressed: _itemLoadingStatus[productName] == true || !isAvailable
+                                                    ? null
+                                                    : () async {
+                                                        setState(() {
+                                                          _itemLoadingStatus[productName] = true;
+                                                        });
+                                                        try {
+                                                          await Future.delayed(Duration(milliseconds: 300));
+                                                          int availableQuantity = await checkQuantidade(productName);
+                                                          if (availableQuantity > 0) {
+                                                            addToCart(product);
+                                                          } else {
+                                                            showDialog(
+                                                              context: context,
+                                                              builder: (BuildContext context) {
+                                                                return AlertDialog(
+                                                                  title: Text('Produto Indisponível'),
+                                                                  content: Text('Desculpe, este produto está indisponível no momento.'),
+                                                                  actions: [
+                                                                    TextButton(
+                                                                      onPressed: () {
+                                                                        Navigator.of(context).pop();
+                                                                      },
+                                                                      style: TextButton.styleFrom(
+                                                                        backgroundColor: Colors.orange,
+                                                                        foregroundColor: Colors.white,
+                                                                      ),
+                                                                      child: Text('OK'),
+                                                                    ),
+                                                                  ],
+                                                                );
+                                                              },
+                                                            );
+                                                          }
+                                                        } finally {
+                                                          setState(() {
+                                                            _itemLoadingStatus[productName] = false;
+                                                          });
+                                                        }
+                                                      },
+                                                isLoading: _itemLoadingStatus[productName] == true,
+                                                child: _itemLoadingStatus[productName] == true
+                                                    ? SizedBox(
+                                                        width: 20,
+                                                        height: 20,
+                                                        child: CircularProgressIndicator(
+                                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                          strokeWidth: 2,
+                                                        ),
+                                                      )
+                                                    : Text('Comprar'),
+                                                backgroundColor: isAvailable ? Colors.orange : Colors.grey,
+                                              );
+                                            },
+                                          );
+                                        },
                                       ),
                               ],
                             ),

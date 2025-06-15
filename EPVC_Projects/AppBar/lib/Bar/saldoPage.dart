@@ -299,6 +299,9 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
               TextField(
                 controller: _saldoController,
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*[,|\.]?\d*')),
+                ],
                 decoration: InputDecoration(
                   labelText: 'Valor',
                   hintText: 'Ex: 10.00',

@@ -11,7 +11,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class DrawerHome extends StatefulWidget {
-  const DrawerHome({super.key});
+  final Future<void> Function(BuildContext, Widget)? onNavigation;
+  const DrawerHome({super.key, this.onNavigation});
   @override
   _DrawerHomeState createState() => _DrawerHomeState();
 }
@@ -54,6 +55,17 @@ class _DrawerHomeState extends State<DrawerHome> {
       }
     } catch (e) {
       print('DrawerHome: Error fetching user data: $e');
+    }
+  }
+
+  void _handleNavigation(BuildContext context, Widget destination) {
+    if (widget.onNavigation != null) {
+      widget.onNavigation!(context, destination);
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => destination),
+      );
     }
   }
 
@@ -102,6 +114,7 @@ class _DrawerHomeState extends State<DrawerHome> {
     return Drawer(
       child: Container(
         width: 250, // Defina a largura fixa aqui
+        color: Colors.white, // Add consistent background color
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
@@ -124,44 +137,25 @@ class _DrawerHomeState extends State<DrawerHome> {
             ),
             ListTile(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => HomeAlunoMain()),
-                );
+                _handleNavigation(context, HomeAlunoMain());
               },
               leading: Icon(Icons.home),
               title: Text('Início'),
             ),
             ListTile(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ShoppingCartPage()),
-                );
+                _handleNavigation(context, ShoppingCartPage());
               },
               leading: Icon(Icons.shopping_cart),
               title: Text('Carrinho'),
             ),
             ListTile(
               onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => PedidosPageAlunos()),
-                );
+                _handleNavigation(context, PedidosPageAlunos());
               },
               leading: Icon(Icons.archive),
               title: Text('Pedidos'),
             ),
-             /*ListTile(
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => Reservaspagealuno()),
-                );
-              },
-              leading: Icon(Icons.restaurant),
-              title: Text('Reservas'),
-            ),*/
             ListTile(
               onTap: () {
                 showDialog(
@@ -188,10 +182,7 @@ class _DrawerHomeState extends State<DrawerHome> {
             ),
             ListTile(
               onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => SettingsPage()),
-                );
+                _handleNavigation(context, SettingsPage());
               },
               leading: Icon(Icons.settings),
               title: Text('Definições'),
@@ -220,16 +211,6 @@ class _DrawerHomeState extends State<DrawerHome> {
               leading: Icon(Icons.logout),
               title: Text('Sair'),
             ),
-            /*ListTile(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ProdutoPage()),
-                );
-              },
-              leading: Icon(Icons.local_pizza),
-              title: Text('Produtos'),
-            ),*/
             Spacer(),
             DefaultTextStyle(
               style: TextStyle(

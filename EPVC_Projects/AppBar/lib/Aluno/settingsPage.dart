@@ -118,38 +118,95 @@ class _SettingsPageState extends State<SettingsPage> {
               'Tem alterações não guardadas. Deseja guardar antes de sair?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(context, false),
               child: Text('Cancelar', style: TextStyle(color: Colors.white)),
               style: TextButton.styleFrom(backgroundColor: Colors.orange),
             ),
-
             TextButton(
               onPressed: () {
                 Navigator.pop(context, false);
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => HomeAluno()),
+                  MaterialPageRoute(builder: (context) => HomeAlunoMain()),
                 );
               },
               child: Text('Não guardar', style: TextStyle(color: Colors.white)),
               style: TextButton.styleFrom(backgroundColor: Colors.orange),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () async {
+                Navigator.pop(context, true);
+                await _saveUserInfo();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => HomeAlunoMain()),
+                );
+              },
               child: Text('Guardar', style: TextStyle(color: Colors.white)),
               style: TextButton.styleFrom(backgroundColor: Colors.orange),
-            ) ,
-
+            ),
           ],
         ),
       );
 
-      if (shouldPop == true) {
-        await _saveUserInfo();
-      }
       return shouldPop ?? false;
     }
     return true;
+  }
+
+  Future<void> _handleNavigation(BuildContext context, Widget destination) async {
+    if (_checkForUnsavedChanges()) {
+      final shouldNavigate = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Alterações não guardadas'),
+          content: Text(
+              'Tem alterações não guardadas. Deseja guardar antes de sair?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancelar', style: TextStyle(color: Colors.white)),
+              style: TextButton.styleFrom(backgroundColor: Colors.orange),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => destination),
+                );
+              },
+              child: Text('Não guardar', style: TextStyle(color: Colors.white)),
+              style: TextButton.styleFrom(backgroundColor: Colors.orange),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context, true);
+                await _saveUserInfo();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => destination),
+                );
+              },
+              child: Text('Guardar', style: TextStyle(color: Colors.white)),
+              style: TextButton.styleFrom(backgroundColor: Colors.orange),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldNavigate == true) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => destination),
+        );
+      }
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => destination),
+      );
+    }
   }
 
   Future<void> _fetchUserInfo() async {
@@ -408,28 +465,16 @@ class _SettingsPageState extends State<SettingsPage> {
       onWillPop: _onWillPop,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Definições'),
-          automaticallyImplyLeading: false,
-          leading: Builder(
-            builder: (BuildContext innerContext) {
-              return IconButton(
-                icon: Icon(Icons.menu),
-                onPressed: () {
-                  Scaffold.of(innerContext).openDrawer();
-                },
-              );
-            },
-          ),
+          title: const Text('Definições'),
+          backgroundColor: Colors.orange,
         ),
-        drawer: DrawerHome(),
-        body: Builder(
-          builder: (BuildContext innerContext) {
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: _isLoading
-                  ? Center(child: CircularProgressIndicator())
-                  : SingleChildScrollView(
-                padding: EdgeInsets.all(16.0),
+        drawer: DrawerHome(
+          onNavigation: _handleNavigation,
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -445,9 +490,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   ],
                 ),
               ),
-            );
-          },
-        ),
       ),
     );
   }
@@ -871,11 +913,15 @@ class _SettingsPageState extends State<SettingsPage> {
                           EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: Colors.orange),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: Colors.orange),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.orange, width: 2),
                       ),
                       hintText: label == 'Telefone' ? '9xxxxxxxx' : null,
                     ),

@@ -222,10 +222,9 @@ class _ConnectionCheckScreenState extends State<ConnectionCheckScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-      child:
-        Center(
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
             child: Column(
@@ -263,10 +262,10 @@ class _ConnectionCheckScreenState extends State<ConnectionCheckScreen> {
                       Text('A verificar ligação...'),
                     ],
                   )
-                else
+                else if (_errorMessage.isNotEmpty)
                   Column(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.error,
                         color: Colors.red,
                         size: 50,

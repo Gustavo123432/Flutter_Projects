@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:appbar_epvc/Admin/produtoPage.dart';
+import 'package:flutter/services.dart';
 
 class AddProdutoPage extends StatefulWidget {
   @override
@@ -117,10 +118,17 @@ class _AddProdutoPageState extends State<AddProdutoPage> {
                     ),
                     prefixIcon: Icon(Icons.euro, color: Color.fromARGB(255, 130, 201, 189)),
                   ),
-                  keyboardType: TextInputType.number,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*[,|\.]?\d*')),
+                  ],
                   validator: (value) {
                     if (value!.isEmpty) {
                       return 'Insira o preço.';
+                    }
+                    String normalized = value.replaceAll(',', '.');
+                    if (double.tryParse(normalized) == null) {
+                      return 'Insira um preço válido.';
                     }
                     return null;
                   },

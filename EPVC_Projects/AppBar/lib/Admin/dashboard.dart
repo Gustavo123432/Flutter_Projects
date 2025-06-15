@@ -393,7 +393,7 @@ void fetchPopularProducts() {
           title: 'Receita Anual',
           value: '${totalRevenue.toStringAsFixed(2).replaceAll('.', ',')}€',
           icon: Icons.euro,
-          color: Colors.purple,
+          color: Colors.orange,
           isSmallScreen: isSmallScreen,
         ),
       ],

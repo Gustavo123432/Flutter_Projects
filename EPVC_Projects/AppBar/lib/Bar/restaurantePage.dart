@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/services.dart';
 
 import 'package:appbar_epvc/Bar/drawerBar.dart';
 
@@ -169,7 +170,10 @@ Future<void> fetchMenuItems() async {
               TextField(
                 controller: _menuPriceController,
                 decoration: InputDecoration(labelText: 'Preço do Prato'),
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*[,|\.]?\d*')),
+                ],
               ),
             ],
           ),

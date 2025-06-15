@@ -107,12 +107,22 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
           actions: [
             TextButton(
               child: Text('Cancelar'),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
               child: Text('Filtrar'),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
               onPressed: () {
                 setState(() {
                   filteredProducts.clear();
@@ -127,6 +137,11 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
             ),
             TextButton(
               child: Text('Mostrar Todos'),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
               onPressed: () {
                 setState(() {
                   filteredProducts = List.from(products);
@@ -144,7 +159,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
     var availableValue = newAvailability ? "1" : "0";
     var response = await http.get(
       Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&id=$id&qtd=$availableValue'),
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=1&id=$id&qtd=$availableValue'),
     );
     if (response.statusCode == 200) {
       setState(() {
@@ -269,7 +284,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.filter_list),
+                      icon: Icon(Icons.filter_list, color: Colors.orange),
                       onPressed: _showFilterDialog,
                     ),
                   ],
@@ -489,6 +504,61 @@ class _ProductCardState extends State<ProductCard> {
                         }
                       },
                     ),
+                  ),
+                  SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: isAvailable ? () {
+                      // Show purchase dialog
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Confirmar Compra'),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Produto: ${widget.product.name}'),
+                                SizedBox(height: 8),
+                                Text('Preço: ${widget.product.price.toStringAsFixed(2).replaceAll('.', ',')}€'),
+                                SizedBox(height: 8),
+                                Text('Quantidade: ${widget.product.quantity}'),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('Cancelar'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  // Here you would implement the purchase logic
+                                  Navigator.of(context).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Produto adicionado ao carrinho'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Color.fromARGB(255, 246, 141, 45),
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: Text('Confirmar'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    } : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isAvailable ? Color.fromARGB(255, 246, 141, 45) : Colors.grey,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text('Comprar'),
                   ),
                 ],
               ),
