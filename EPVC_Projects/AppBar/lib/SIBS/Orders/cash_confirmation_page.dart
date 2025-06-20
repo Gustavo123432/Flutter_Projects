@@ -52,7 +52,7 @@ class CashConfirmationPage extends StatelessWidget {
                         ),
                         SizedBox(height: 20),
                         Text(
-                          'O teu pedido nº $orderNumber\nfoi efetuado com sucesso!',
+                          'O seu pedido nº $orderNumber\nfoi efetuado com sucesso!',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 22,

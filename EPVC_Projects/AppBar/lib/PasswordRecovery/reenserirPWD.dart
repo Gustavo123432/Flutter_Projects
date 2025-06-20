@@ -192,6 +192,10 @@ class _ReenserirPasswordState extends State<ReenserirPassword> {
                           255, 130, 201, 189), // Change border color here
                     ),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                        color: Colors.orange, width: 2.0),
+                  ),
                   prefixIcon: Icon(Icons.lock), // User icon
                   suffixIcon: IconButton(
                     icon: _obscureText
@@ -212,6 +216,10 @@ class _ReenserirPasswordState extends State<ReenserirPassword> {
                       color: Color.fromARGB(
                           255, 130, 201, 189), // Change border color here
                     ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                        color: Colors.orange, width: 2.0),
                   ),
                   prefixIcon: Icon(Icons.lock), // User icon
                   suffixIcon: IconButton(

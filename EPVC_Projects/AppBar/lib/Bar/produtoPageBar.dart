@@ -481,31 +481,6 @@ class _ProductCardState extends State<ProductCard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(
-                    'Quantidade:',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                  SizedBox(width: 8),
-                  Container(
-                    width: 60,
-                    child: TextField(
-                      controller: _quantityController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      onChanged: (value) {
-                        int? quantity = int.tryParse(value);
-                        if (quantity != null && quantity >= 0) {
-                          widget.onQuantityChange(widget.product.id, quantity);
-                        }
-                      },
-                    ),
-                  ),
-                  SizedBox(width: 12),
                   ElevatedButton(
                     onPressed: isAvailable ? () {
                       // Show purchase dialog

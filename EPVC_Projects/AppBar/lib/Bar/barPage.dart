@@ -258,7 +258,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Você está preparando o pedido ${currentOrder.number}.'),
+                Text('Está a preparar o pedido ${currentOrder.number}.'),
                 SizedBox(height: 10),
                 
                 // Display aggregated product counts

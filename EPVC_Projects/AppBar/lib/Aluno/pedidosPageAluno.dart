@@ -529,9 +529,42 @@ class _PedidosPageAlunosState extends State<PedidosPageAlunos> {
                                         color: Colors.grey[100],
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: Text(
-                                        '${order["Descricao"].replaceAll('[', '').replaceAll(']', '')}',
-                                        style: TextStyle(fontSize: 13),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: _groupProducts(order['Descricao'])
+                                            .entries
+                                            .map((entry) => Padding(
+                                                  padding: EdgeInsets.symmetric(vertical: 2),
+                                                  child: Row(
+                                                    children: [
+                                                      Container(
+                                                        padding: EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 4,
+                                                        ),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.blue.withOpacity(0.1),
+                                                          borderRadius: BorderRadius.circular(12),
+                                                        ),
+                                                        child: Text(
+                                                          '${entry.value}x',
+                                                          style: TextStyle(
+                                                            fontWeight: FontWeight.bold,
+                                                            color: Colors.blue,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: Text(
+                                                          entry.key,
+                                                          style: TextStyle(fontSize: 13),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ))
+                                            .toList(),
                                       ),
                                     ),
                                     SizedBox(height: 12),

@@ -252,6 +252,10 @@ class _LoginFormState extends State<LoginForm> {
                                     color: Color.fromARGB(255, 130, 201,
                                         189)), // Change border color here
                               ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                    color: Colors.orange, width: 2.0),
+                              ),
                               prefixIcon: Icon(Icons.email), // User icon
                             ),
                             validator: (value) {
@@ -285,6 +289,10 @@ class _LoginFormState extends State<LoginForm> {
                                   color: Color.fromARGB(255, 130, 201,
                                       189), // Change border color here
                                 ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                    color: Colors.orange, width: 2.0),
                               ),
                               prefixIcon: Icon(Icons.lock), // User icon
                               suffixIcon: IconButton(
@@ -394,6 +402,10 @@ class _LoginFormState extends State<LoginForm> {
                           color: Color.fromARGB(
                               255, 130, 201, 189)), // Change border color here
                     ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                          color: Colors.orange, width: 2.0),
+                    ),
                     prefixIcon: Icon(Icons.email), // User icon
                   ),
                 ),
@@ -413,6 +425,10 @@ class _LoginFormState extends State<LoginForm> {
                         color: Color.fromARGB(
                             255, 130, 201, 189), // Change border color here
                       ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                          color: Colors.orange, width: 2.0),
                     ),
                     prefixIcon: Icon(Icons.lock), // User icon
                     suffixIcon: IconButton(

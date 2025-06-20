@@ -114,79 +114,123 @@ class _DrawerHomeState extends State<DrawerHome> {
     return Drawer(
       child: Container(
         width: 250, // Defina a largura fixa aqui
-        color: Colors.white, // Add consistent background color
+        color: Colors.orange, // Change to orange background
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
-            Container(
-              width: 150.0,
-              height: 150.0,
-              margin: const EdgeInsets.only(
-                top: 24.0,
-                bottom: 64.0,
-              ),
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: Color.fromARGB(66, 255, 255, 255),
-                shape: BoxShape.circle,
-              ),
-              child: Image.asset(
-                'lib/assets/barapp.png',
-                fit: BoxFit.contain,
+            
+
+            SizedBox(height: 64), // Space after the close icon
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // User Image
+                  if (users.isNotEmpty && users[0]['Imagem'] != null && users[0]['Imagem'].isNotEmpty)
+                    Container(
+                      width: 80.0,
+                      height: 80.0,
+                      margin: const EdgeInsets.only(bottom: 16.0),
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        image: DecorationImage(
+                          image: MemoryImage(base64Decode(users[0]['Imagem'])),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      width: 80.0,
+                      height: 80.0,
+                      margin: const EdgeInsets.only(bottom: 16.0),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.grey[200],
+                      ),
+                      child: Icon(Icons.person, size: 40, color: Colors.grey[600]),
+                    ),
+                  Text(
+                    // Display user's name or a default string
+                    users.isNotEmpty && users[0]['Nome'] != null && users[0]['Nome'].isNotEmpty
+                        ? (users[0]['Nome'].length > 15 ? '${users[0]['Nome'].substring(0, 15)}...' : users[0]['Nome'])
+                        : '',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  
+                ],
               ),
             ),
+            SizedBox(height: 32), // Space before menu items
+
             ListTile(
               onTap: () {
                 _handleNavigation(context, HomeAlunoMain());
               },
-              leading: Icon(Icons.home),
-              title: Text('Início'),
+              leading: Icon(Icons.home, color: Colors.white),
+              title: Text('Inicio', style: TextStyle(color: Colors.white)),
+              selected: true, // Mark as selected
+              selectedTileColor: Color.fromARGB(255, 255, 140, 0), // A slightly darker orange for selection
             ),
             ListTile(
               onTap: () {
-                _handleNavigation(context, ShoppingCartPage());
+                _handleNavigation(context, ShoppingCartPage()); // Mapped to My Wallet
               },
-              leading: Icon(Icons.shopping_cart),
-              title: Text('Carrinho'),
+              leading: Icon(Icons.shopping_cart, color: Colors.white),
+              title: Text('Carrinho', style: TextStyle(color: Colors.white)),
+            ),
+            /*ListTile(
+              onTap: () {
+                // TODO: Implement navigation for Notification
+              },
+              leading: Icon(Icons.notifications, color: Colors.white),
+              title: Text('Notification', style: TextStyle(color: Colors.white)),
             ),
             ListTile(
               onTap: () {
-                _handleNavigation(context, PedidosPageAlunos());
+                // TODO: Implement navigation for Favourite
               },
-              leading: Icon(Icons.archive),
-              title: Text('Pedidos'),
-            ),
+              leading: Icon(Icons.favorite, color: Colors.white),
+              title: Text('Favourite', style: TextStyle(color: Colors.white)),
+            ),*/
+            Divider(color: Colors.white70, indent: 16, endIndent: 16),
+
             ListTile(
               onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text('Em Desenvolvimento'),
-                    content: Text(
-                        'O Restaurante não está disponível no momento.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: Text('OK'),
-                      ),
-                    ],
-                  ),
-                );
+                _handleNavigation(context, PedidosPageAlunos()); // Mapped to Track Your Order
               },
-              leading: Icon(Icons.restaurant),
-              title: Text('Reservas'),
+              leading: Icon(Icons.archive, color: Colors.white),
+              title: Text('Pedidos', style: TextStyle(color: Colors.white)),
             ),
+            /*ListTile(
+              onTap: () {
+                // TODO: Implement navigation for Coupons
+              },
+              leading: Icon(Icons.local_activity, color: Colors.white),
+              title: Text('Coupons', style: TextStyle(color: Colors.white)),
+            ),*/
             ListTile(
               onTap: () {
                 _handleNavigation(context, SettingsPage());
               },
-              leading: Icon(Icons.settings),
-              title: Text('Definições'),
+              leading: Icon(Icons.settings, color: Colors.white),
+              title: Text('Definições', style: TextStyle(color: Colors.white)),
             ),
+            /*ListTile(
+              onTap: () {
+                // TODO: Implement navigation for Invite a Friend
+              },
+              leading: Icon(Icons.people, color: Colors.white),
+              title: Text('Invite a Friend', style: TextStyle(color: Colors.white)),
+            ),*/
             ListTile(
               onTap: () {
                 Navigator.pop(context);
@@ -201,28 +245,15 @@ class _DrawerHomeState extends State<DrawerHome> {
                   );
                 }
               },
-              leading: Icon(Icons.help_outline),
-              title: Text('Suporte'),
+              leading: Icon(Icons.help_center, color: Colors.white),
+              title: Text('Suporte', style: TextStyle(color: Colors.white)),
             ),
             ListTile(
               onTap: () {
                 logout(context);
               },
-              leading: Icon(Icons.logout),
-              title: Text('Sair'),
-            ),
-            Spacer(),
-            DefaultTextStyle(
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.white54,
-              ),
-              child: Container(
-                margin: const EdgeInsets.symmetric(
-                  vertical: 0.25,
-                ),
-                child: Text('Terms of Service | Privacy Policy'),
-              ),
+              leading: Icon(Icons.logout, color: Colors.white),
+              title: Text('Terminar Sessão', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),

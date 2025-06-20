@@ -73,7 +73,7 @@ class OrderDeclinedPage extends StatelessWidget {
                         ),
                         SizedBox(height: 20),
                         Text(
-                          'O teu pedido foi recusado',
+                          'O seu pedido foi recusado',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 22,
