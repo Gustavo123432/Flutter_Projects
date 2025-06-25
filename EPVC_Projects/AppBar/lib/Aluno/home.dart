@@ -36,6 +36,30 @@ List<Map<String, dynamic>> allProducts =
     []; // Lista para armazenar todos os produtos
 List<Map<String, dynamic>> filteredProducts = [];
 
+// Make this a top-level function so it can be used in any widget
+Future<bool> checkEstablishmentOpen() async {
+  try {
+    final response = await http.get(
+      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=37'),
+    );
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      int open = 0;
+      if (data is List &&
+          data.isNotEmpty &&
+          (data[0]['open'] != null || data[0]['Open'] != null)) {
+        open =
+            int.tryParse((data[0]['open'] ?? data[0]['Open']).toString()) ?? 0;
+      } else if (data is Map &&
+          (data['open'] != null || data['Open'] != null)) {
+        open = int.tryParse((data['open'] ?? data['Open']).toString()) ?? 0;
+      }
+      return open == 1;
+    }
+  } catch (e) {}
+  return false;
+}
+
 class HomeAlunoMain extends StatelessWidget {
   final String? message; // Mensagem opcional
 
@@ -126,11 +150,64 @@ class _HomeAlunoState extends State<HomeAluno> {
   dynamic users;
   final GlobalKey _cartIconKey = GlobalKey();
 
+  bool? isDayOpen; // null = loading, false = closed, true = open
+
   @override
   void initState() {
     super.initState();
+    _checkDayStatus();
     UserInfo();
     _getAllProducts();
+  }
+
+  Future<void> _checkDayStatus() async {
+    setState(() {
+      isDayOpen = null;
+      _isLoading = true;
+    });
+    try {
+      final response = await http.get(
+        Uri.parse(
+            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=37'),
+      );
+      print(response.body);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        int open = 0;
+        if (data is List && data.isNotEmpty && data[0]['open'] != null) {
+          open = int.tryParse(data[0]['open'].toString()) ?? 0;
+        } else if (data is Map && data['open'] != null) {
+          open = int.tryParse(data['open'].toString()) ?? 0;
+        }
+        setState(() {
+          isDayOpen = open == 1;
+          _isLoading = false;
+        });
+        if (open != 1) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'O dia ainda está fechado. Tente novamente mais tarde.')),
+          );
+        }
+      } else {
+        setState(() {
+          isDayOpen = false;
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao verificar o estado do dia.')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        isDayOpen = false;
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro de conexão. Tente novamente.')),
+      );
+    }
   }
 
   @override
@@ -299,497 +376,576 @@ class _HomeAlunoState extends State<HomeAluno> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(''), // Assuming you want the title back
-
-        leading: Builder(
-          builder: (BuildContext context) {
-            return IconButton(
-              icon: const Icon(
-                  Icons.menu), // Assuming the leading icon is a menu icon
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
-              tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-            );
-          },
-        ),
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                key: _cartIconKey,
+    return LoadingOverlay(
+      isLoading: _isLoading,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(''),
+          leading: Builder(
+            builder: (BuildContext context) {
+              return IconButton(
+                icon: const Icon(Icons.menu),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ShoppingCartPage(),
-                    ),
-                  ).then((_) {
-                    // Removed setState(() {}); to prevent unnecessary rebuilds and flickering
-                    // The cart count will be updated through other means if needed, e.g., on cart item changes.
-                  });
+                  Scaffold.of(context).openDrawer();
                 },
-                icon: Icon(Icons.shopping_cart),
-              ),
-              if (cartItems.isNotEmpty)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    constraints: BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '${cartItems.length}',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
+                tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+              );
+            },
           ),
-        ],
-      ),
-      drawer: DrawerHome(),
-      body: WillPopScope(
-        onWillPop: () async {
-          // Check if user data is available before processing permission
-          if (users == null || users.isEmpty) {
-            // If user data is not available yet, allow default back behavior (minimize)
-            return true;
-          }
-
-          // User data is available, proceed with permission check and navigation
-          String permission = users[0]['Permissao'] ?? '';
-
-          if (permission == 'Aluno' || permission == 'Professor') {
-            // Navigate to HomeAluno and remove all previous routes
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => HomeAluno()),
-              (Route<dynamic> route) => false,
-            );
-            return false; // Prevent default back behavior
-          } else if (permission == 'Bar') {
-            // TODO: Navigate to Bar home page and remove all previous routes
-            // Replace BarHomePage() with the actual widget for the Bar home page
-            /*
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => BarHomePage()),
-              (Route<dynamic> route) => false,
-            );
-            */
-            return false; // Prevent default back behavior
-          } else {
-            // If permission is unknown, allow default back behavior (optional)
-            return true;
-          }
-        },
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: SizedBox(height: 20),
-            ),
-            if (recentBuysMapped.isNotEmpty) ...[
-              SliverToBoxAdapter(
-                child: Container(
-                  margin: EdgeInsets.only(
-                      left: 16.0, right: 16.0, bottom: 8.0, top: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.history,
-                            color: Colors.orange,
-                            size: 24,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            "Comprados Recentemente",
-                            style: TextStyle(
-                              fontSize: 18.0,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF333333),
-                              fontFamily: 'Roboto',
-                            ),
-                          ),
-                        ],
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  RecentBuysPage(recentBuys: recentBuysMapped),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'Ver Todos',
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Container(
-                  margin: EdgeInsets.symmetric(vertical: 8.0),
-                  height: 140,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(horizontal: 12.0),
-                    itemCount: recentBuysMapped.length,
-                    itemBuilder: (context, index) {
-                      var product = recentBuysMapped[index];
-                      final RenderBox? cartIconBox = _cartIconKey.currentContext
-                          ?.findRenderObject() as RenderBox?;
-                      final Offset cartPosition =
-                          cartIconBox?.localToGlobal(Offset.zero) ??
-                              Offset.zero;
-
-                      return AddToCartAnimation(
-                        key: ValueKey(product['Descricao']),
-                        cartPosition: cartPosition,
-                        onTap: () async {
-                          if (_isLoading) return;
-
-                          setState(() {
-                            _isLoading = true;
-                          });
-
-                          try {
-                            final String productName =
-                                product['Descricao'].replaceAll('"', '');
-                            int availableQuantity =
-                                await checkQuantidade(productName);
-                            int currentQuantity = cartItems
-                                .where((item) => item['Nome'] == productName)
-                                .length;
-
-                            if (availableQuantity <= 0) {
-                              if (mounted) {
-                                showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: Text('Produto Indisponível'),
-                                      content: Text(
-                                          'Desculpe, este produto está indisponível no momento.'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(),
-                                          style: TextButton.styleFrom(
-                                            backgroundColor: Colors.orange,
-                                            foregroundColor: Colors.white,
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 16, vertical: 8),
-                                          ),
-                                          child: Text('OK'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              }
-                            } else if (currentQuantity >= availableQuantity) {
-                              if (mounted) {
-                                showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: Text('Quantidade Máxima'),
-                                      content: Text(
-                                          'Quantidade máxima disponível atingida (Disponível: $availableQuantity)'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(),
-                                          style: TextButton.styleFrom(
-                                            backgroundColor: Colors.orange,
-                                            foregroundColor: Colors.white,
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 16, vertical: 8),
-                                          ),
-                                          child: Text('OK'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              }
-                            } else {
-                              // Only add to cart and show animation if quantity is available
-                              addToCart(
-                                  product['Imagem'],
-                                  product['Descricao'],
-                                  product['Preco'].toString(),
-                                  product['Prencado']?.toString() ?? '',
-                                  product['Id'].toString());
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Item adicionado'),
-                                    duration: Duration(milliseconds: 500),
-                                  ),
-                                );
-                              }
-                            }
-                          } catch (e) {
-                            print(
-                                'Erro ao verificar quantidade disponível ou adicionar ao carrinho: $e');
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      'Ocorreu um erro ao adicionar o item ao carrinho.'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          } finally {
-                            if (mounted) {
-                              setState(() {
-                                _isLoading = false;
-                              });
-                            }
-                          }
-                        },
-                        child: Container(
-                          width: 120,
-                          margin: EdgeInsets.symmetric(horizontal: 4.0),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 8,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(12)),
-                                  image: DecorationImage(
-                                    image: MemoryImage(
-                                        base64.decode(product['Imagem'])),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      product['Descricao'].replaceAll('"', ''),
-                                      style: TextStyle(
-                                        fontSize: 12.0,
-                                        fontWeight: FontWeight.w500,
-                                        color: Color(0xFF333333),
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      "${double.parse(product['Preco'].toString()).toStringAsFixed(2).replaceAll('.', ',')}€",
-                                      style: TextStyle(
-                                        fontSize: 14.0,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.orange,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+          actions: [
+            if (isDayOpen == true)
+              Stack(
+                children: [
+                  IconButton(
+                    key: _cartIconKey,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ShoppingCartPage(),
                         ),
                       );
                     },
+                    icon: Icon(Icons.shopping_cart),
                   ),
-                ),
+                  if (cartItems.isNotEmpty)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '${cartItems.length}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ],
-            SliverToBoxAdapter(
-              child: Container(
-                margin: EdgeInsets.only(
-                  left: 16.0,
-                  right: 16.0,
-                  top: 16.0,
-                ),
-                child: Text(
-                  "Categorias",
-                  style: TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueGrey[900],
-                  ),
-                ),
+            if (isDayOpen == false)
+              IconButton(
+                icon: Icon(Icons.refresh),
+                onPressed: _checkDayStatus,
+                tooltip: 'Recarregar',
               ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(height: 15),
-            ),
-            SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 1,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  switch (index) {
-                    case 0:
-                      return buildCategoryCard(
-                        title: 'Bebidas',
-                        backgroundImagePath: 'lib/assets/bebida.png',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CategoryPage(
-                                title: 'Bebidas',
-                              ),
-                            ),
-                          ).then((_) {
-                            setState(() {});
-                          });
-                        },
-                      );
-                    case 1:
-                      return buildCategoryCard(
-                        title: 'Cafetaria',
-                        backgroundImagePath: 'lib/assets/cafe.JPG',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CategoryPage(
-                                title: 'Cafetaria',
-                              ),
-                            ),
-                          ).then((_) {
-                            setState(() {});
-                          });
-                        },
-                      );
-                    case 2:
-                      return buildCategoryCard(
-                        title: 'Comidas',
-                        backgroundImagePath: 'lib/assets/comida.jpg',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CategoryPage(
-                                title: 'Comidas',
-                              ),
-                            ),
-                          ).then((_) {
-                            setState(() {});
-                          });
-                        },
-                      );
-                    case 3:
-                      return buildCategoryCard(
-                        title: 'Snacks',
-                        backgroundImagePath: 'lib/assets/snacks.jpg',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CategoryPage(
-                                title: 'Snacks',
-                              ),
-                            ),
-                          ).then((_) {
-                            setState(() {});
-                          });
-                        },
-                      );
-                    case 4:
-                      return buildCategoryCard(
-                        title: 'Doces',
-                        backgroundImagePath: 'lib/assets/doces.jpg',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CategoryPage(
-                                title: 'Doces',
-                              ),
-                            ),
-                          ).then((_) {
-                            setState(() {});
-                          });
-                        },
-                      );
-                    /*case 5:
-                      return buildCategoryCard(
-                        title: 'Restaurante',
-                        backgroundImagePath: 'lib/assets/monteRestaurante.jpg',
-                        isAvailable: false,
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: Text('Em Desenvolvimento'),
-                              content: Text(
-                                  'O Restaurante não está disponível no momento.'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  style: TextButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  child: Text('OK'),
-                                ),
-                              ],
-                            ),
-                          ); 
-                        },
-                      );*/
-                    default:
-                      return Container();
-                  }
-                },
-                childCount: 6,
-              ),
-            ),
           ],
         ),
+        drawer: DrawerHome(),
+        body: isDayOpen == null
+            ? Center(child: CircularProgressIndicator())
+            : isDayOpen == false
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.lock, size: 60, color: Colors.orange),
+                        SizedBox(height: 24),
+                        Text(
+                          'As compras estão temporariamente indisponíveis. Por favor, tente mais tarde.',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          icon: _isLoading
+                              ? SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                              : Icon(Icons.refresh),
+                          label: Text('Recarregar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 32, vertical: 16),
+                          ),
+                          onPressed: _isLoading ? null : _checkDayStatus,
+                        ),
+                      ],
+                    ),
+                  )
+                : WillPopScope(
+                    onWillPop: () async {
+                      // Check if user data is available before processing permission
+                      if (users == null || users.isEmpty) {
+                        // If user data is not available yet, allow default back behavior (minimize)
+                        return true;
+                      }
+
+                      // User data is available, proceed with permission check and navigation
+                      String permission = users[0]['Permissao'] ?? '';
+
+                      if (permission == 'Aluno' || permission == 'Professor') {
+                        // Navigate to HomeAluno and remove all previous routes
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (context) => HomeAluno()),
+                          (Route<dynamic> route) => false,
+                        );
+                        return false; // Prevent default back behavior
+                      } else if (permission == 'Bar') {
+                        // TODO: Navigate to Bar home page and remove all previous routes
+                        // Replace BarHomePage() with the actual widget for the Bar home page
+                        /*
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (context) => BarHomePage()),
+                          (Route<dynamic> route) => false,
+                        );
+                        */
+                        return false; // Prevent default back behavior
+                      } else {
+                        // If permission is unknown, allow default back behavior (optional)
+                        return true;
+                      }
+                    },
+                    child: CustomScrollView(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: SizedBox(height: 20),
+                        ),
+                        if (recentBuysMapped.isNotEmpty) ...[
+                          SliverToBoxAdapter(
+                            child: Container(
+                              margin: EdgeInsets.only(
+                                  left: 16.0,
+                                  right: 16.0,
+                                  bottom: 8.0,
+                                  top: 16.0),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.history,
+                                        color: Colors.orange,
+                                        size: 24,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        "Comprados Recentemente",
+                                        style: TextStyle(
+                                          fontSize: 18.0,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF333333),
+                                          fontFamily: 'Roboto',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => RecentBuysPage(
+                                              recentBuys: recentBuysMapped),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      'Ver Todos',
+                                      style: TextStyle(
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: Container(
+                              margin: EdgeInsets.symmetric(vertical: 8.0),
+                              height: 140,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: EdgeInsets.symmetric(horizontal: 12.0),
+                                itemCount: recentBuysMapped.length,
+                                itemBuilder: (context, index) {
+                                  var product = recentBuysMapped[index];
+                                  final RenderBox? cartIconBox = _cartIconKey
+                                      .currentContext
+                                      ?.findRenderObject() as RenderBox?;
+                                  final Offset cartPosition =
+                                      cartIconBox?.localToGlobal(Offset.zero) ??
+                                          Offset.zero;
+
+                                  return AddToCartAnimation(
+                                    key: ValueKey(product['Descricao']),
+                                    cartPosition: cartPosition,
+                                    onTap: () async {
+                                      if (_isLoading) return;
+
+                                      setState(() {
+                                        _isLoading = true;
+                                      });
+
+                                      try {
+                                        final String productName =
+                                            product['Descricao']
+                                                .replaceAll('"', '');
+                                        int availableQuantity =
+                                            await checkQuantidade(productName);
+                                        int currentQuantity = cartItems
+                                            .where((item) =>
+                                                item['Nome'] == productName)
+                                            .length;
+
+                                        if (availableQuantity <= 0) {
+                                          if (mounted) {
+                                            showDialog(
+                                              context: context,
+                                              builder: (BuildContext context) {
+                                                return AlertDialog(
+                                                  title: Text(
+                                                      'Produto Indisponível'),
+                                                  content: Text(
+                                                      'Desculpe, este produto está indisponível no momento.'),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () {
+                                                        Navigator.of(context)
+                                                            .pop();
+                                                      },
+                                                      style:
+                                                          TextButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors.orange,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                        padding: EdgeInsets
+                                                            .symmetric(
+                                                                horizontal: 16,
+                                                                vertical: 8),
+                                                      ),
+                                                      child: Text('OK'),
+                                                    ),
+                                                  ],
+                                                );
+                                              },
+                                            );
+                                          }
+                                        } else if (currentQuantity >=
+                                            availableQuantity) {
+                                          if (mounted) {
+                                            showDialog(
+                                              context: context,
+                                              builder: (BuildContext context) {
+                                                return AlertDialog(
+                                                  title:
+                                                      Text('Quantidade Máxima'),
+                                                  content: Text(
+                                                      'Quantidade máxima disponível atingida (Disponível: $availableQuantity)'),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () {
+                                                        Navigator.of(context)
+                                                            .pop();
+                                                      },
+                                                      style:
+                                                          TextButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors.orange,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                      ),
+                                                      child: Text('OK'),
+                                                    ),
+                                                  ],
+                                                );
+                                              },
+                                            );
+                                          }
+                                        } else {
+                                          // Only add to cart and show animation if quantity is available
+                                          addToCart(
+                                              product['Imagem'],
+                                              product['Descricao'],
+                                              product['Preco'].toString(),
+                                              product['Prencado']?.toString() ??
+                                                  '',
+                                              product['idApp'].toString(),
+                                              product['idApp']?.toString() ?? '',
+                                              ''); // Adiciona o idApp e XDReference
+                                          if (mounted) {
+                                           /* ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content:
+                                                    Text('Item adicionado'),
+                                                duration:
+                                                    Duration(milliseconds: 500),
+                                              ),
+                                            );*/
+                                          }
+                                        }
+                                      } catch (e) {
+                                        print(
+                                            'Erro ao verificar quantidade disponível ou adicionar ao carrinho: $e');
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  'Ocorreu um erro ao adicionar o item ao carrinho.'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() {
+                                            _isLoading = false;
+                                          });
+                                        }
+                                      }
+                                    },
+                                    child: Container(
+                                      width: 120,
+                                      margin:
+                                          EdgeInsets.symmetric(horizontal: 4.0),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.05),
+                                            blurRadius: 8,
+                                            offset: Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Container(
+                                            height: 80,
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.vertical(
+                                                      top: Radius.circular(12)),
+                                              image: DecorationImage(
+                                                image: MemoryImage(base64
+                                                    .decode(product['Imagem'])),
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  product['Descricao']
+                                                      .replaceAll('"', ''),
+                                                  style: TextStyle(
+                                                    fontSize: 12.0,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Color(0xFF333333),
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                                SizedBox(height: 4),
+                                                Text(
+                                                  "${double.parse(product['Preco'].toString()).toStringAsFixed(2).replaceAll('.', ',')}€",
+                                                  style: TextStyle(
+                                                    fontSize: 14.0,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.orange,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                        SliverToBoxAdapter(
+                          child: Container(
+                            margin: EdgeInsets.only(
+                              left: 16.0,
+                              right: 16.0,
+                              top: 16.0,
+                            ),
+                            child: Text(
+                              "Categorias",
+                              style: TextStyle(
+                                fontSize: 18.0,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueGrey[900],
+                              ),
+                            ),
+                          ),
+                        ),
+                        SliverToBoxAdapter(
+                          child: SizedBox(height: 15),
+                        ),
+                        SliverGrid(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 1,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              switch (index) {
+                                case 0:
+                                  return buildCategoryCard(
+                                    title: 'Bebidas',
+                                    backgroundImagePath:
+                                        'lib/assets/bebida.png',
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => CategoryPage(
+                                            title: 'Bebidas',
+                                          ),
+                                        ),
+                                      ).then((_) {
+                                        setState(() {});
+                                      });
+                                    },
+                                  );
+                                case 1:
+                                  return buildCategoryCard(
+                                    title: 'Cafetaria',
+                                    backgroundImagePath: 'lib/assets/cafe.JPG',
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => CategoryPage(
+                                            title: 'Cafetaria',
+                                          ),
+                                        ),
+                                      ).then((_) {
+                                        setState(() {});
+                                      });
+                                    },
+                                  );
+                                case 2:
+                                  return buildCategoryCard(
+                                    title: 'Comidas',
+                                    backgroundImagePath:
+                                        'lib/assets/comida.jpg',
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => CategoryPage(
+                                            title: 'Comidas',
+                                          ),
+                                        ),
+                                      ).then((_) {
+                                        setState(() {});
+                                      });
+                                    },
+                                  );
+                                case 3:
+                                  return buildCategoryCard(
+                                    title: 'Snacks',
+                                    backgroundImagePath:
+                                        'lib/assets/snacks.jpg',
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => CategoryPage(
+                                            title: 'Snacks',
+                                          ),
+                                        ),
+                                      ).then((_) {
+                                        setState(() {});
+                                      });
+                                    },
+                                  );
+                                case 4:
+                                  return buildCategoryCard(
+                                    title: 'Doces',
+                                    backgroundImagePath: 'lib/assets/doces.jpg',
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => CategoryPage(
+                                            title: 'Doces',
+                                          ),
+                                        ),
+                                      ).then((_) {
+                                        setState(() {});
+                                      });
+                                    },
+                                  );
+                                /*case 5:
+                                  return buildCategoryCard(
+                                    title: 'Restaurante',
+                                    backgroundImagePath: 'lib/assets/monteRestaurante.jpg',
+                                    isAvailable: false,
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: Text('Em Desenvolvimento'),
+                                          content: Text(
+                                              'O Restaurante não está disponível no momento.'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context),
+                                              style: TextButton.styleFrom(
+                                                backgroundColor: Colors.orange,
+                                                foregroundColor: Colors.white,
+                                              ),
+                                              child: Text('OK'),
+                                            ),
+                                          ],
+                                        ),
+                                      ); 
+                                    },
+                                  );*/
+                                default:
+                                  return Container();
+                              }
+                            },
+                            childCount: 6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
       ),
     );
   }
@@ -811,7 +967,7 @@ class _HomeAlunoState extends State<HomeAluno> {
         var quantidadeDisponivel = data[0]['Qtd'];
 
         if (quantidadeDisponivel == 1) {
-          addToCart(imagePath, title, price, prencado, '0');
+          addToCart(imagePath, title, price, prencado, '0', '', ''); // Adiciona idApp e XDReference vazios
         } else {
           showDialog(
             context: context,
@@ -826,6 +982,7 @@ class _HomeAlunoState extends State<HomeAluno> {
                   style: TextButton.styleFrom(
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                   child: Text('OK'),
                 ),
@@ -870,7 +1027,8 @@ class _HomeAlunoState extends State<HomeAluno> {
               padding: EdgeInsets.all(8.0),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+                borderRadius:
+                    BorderRadius.vertical(bottom: Radius.circular(12)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -902,8 +1060,8 @@ class _HomeAlunoState extends State<HomeAluno> {
     );
   }
 
-  void addToCart(
-      String imagePath, String title, String price, String prencado, String id) async {
+  void addToCart(String imagePath, String title, String price, String prencado,
+      String id, String idApp, String xdReference) async {
     try {
       // Check available quantity first
       int availableQuantity = await checkQuantidade(title.replaceAll('"', ''));
@@ -920,7 +1078,9 @@ class _HomeAlunoState extends State<HomeAluno> {
             'Prencado': prencado,
             'PrepararPrencado': false,
             'Fresh': false,
-            'Id': id, // Adiciona o ID do produto
+            'Id': idApp, // Adiciona o ID do produto
+            'idApp': (idApp != null && idApp.toString().trim().isNotEmpty) ? idApp : id, // Garante prioridade ao idApp, senão usa Id
+            'XDReference': xdReference, // Adiciona o XDReference
           });
         });
       } else {
@@ -987,7 +1147,8 @@ class _HomeAlunoState extends State<HomeAluno> {
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+                  borderRadius:
+                      BorderRadius.vertical(bottom: Radius.circular(20)),
                 ),
                 alignment: Alignment.center,
                 padding: EdgeInsets.symmetric(horizontal: 8.0),
@@ -1100,6 +1261,31 @@ class _HomeAlunoState extends State<HomeAluno> {
       return 0; // Return 0 on error
     }
   }
+
+  Future<bool> _checkEstablishmentOpen() async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=37'),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        int open = 0;
+        if (data is List &&
+            data.isNotEmpty &&
+            (data[0]['open'] != null || data[0]['Open'] != null)) {
+          open =
+              int.tryParse((data[0]['open'] ?? data[0]['Open']).toString()) ??
+                  0;
+        } else if (data is Map &&
+            (data['open'] != null || data['Open'] != null)) {
+          open = int.tryParse((data['open'] ?? data['Open']).toString()) ?? 0;
+        }
+        return open == 1;
+      }
+    } catch (e) {}
+    return false;
+  }
 }
 
 class CategoryPage extends StatefulWidget {
@@ -1116,11 +1302,13 @@ class _CategoryPageState extends State<CategoryPage> {
   final GlobalKey _cartIconKey = GlobalKey();
   List<dynamic> filteredCategoryItems = [];
   late StreamController<List<dynamic>> _categoryStreamController;
-  final TextEditingController _categorySearchController = TextEditingController();
+  final TextEditingController _categorySearchController =
+      TextEditingController();
   String? _selectedCategorySortOption;
   double? _minCategoryPrice;
   double? _maxCategoryPrice;
   Map<String, bool> _itemLoadingStatus = {};
+  Map<String, int> _availableQuantities = {};
 
   Future<int> checkQuantidade(String productName) async {
     try {
@@ -1147,15 +1335,30 @@ class _CategoryPageState extends State<CategoryPage> {
     }
   }
 
+  Future<int> getAvailableQuantity(String productName) async {
+    if (_availableQuantities.containsKey(productName)) {
+      return _availableQuantities[productName]!;
+    }
+    int qtd = await checkQuantidade(productName);
+    _availableQuantities[productName] = qtd;
+    return qtd;
+  }
+
   void addToCart(Map<String, dynamic> item) async {
+    print("dwqdwqdqwd" + item['idApp'].toString());
+    // Create a new map with the expected keys and format
     Map<String, dynamic> newItem = {
-      'Imagem': item['Imagem'] ?? '',
-      'Nome': item['Nome']?.replaceAll('"', '') ?? '',
+      'Imagem': item['Imagem'] ?? '', // Use empty string if null
+      'Nome': (item['Nome'] ?? item['Descricao'] ?? '').replaceAll('"', ''), // Corrigido para evitar null
       'Preco': item['Preco']?.toString() ?? '0.0',
       'Prencado': item['Prencado']?.toString() ?? '0',
-      'PrepararPrencado': false,
-      'Fresh': false,
+      'PrepararPrencado': false, // Initialize to false
+      'Fresh': false, // Initialize to false
       'Id': item['Id'], // Adiciona o ID do produto
+      'idApp': (item['idApp'] ?? item['IdApp'] ?? item['idapp']) != null && (item['idApp'] ?? item['IdApp'] ?? item['idapp']).toString().trim().isNotEmpty
+        ? (item['idApp'] ?? item['IdApp'] ?? item['idapp'])
+        : item['Id'], // Garante prioridade ao idApp, senão usa Id
+      'XDReference': item['XDReference'] ?? '', // Adiciona o XDReference
     };
     if (newItem['Prencado'] == '1' || newItem['Prencado'] == '2') {
       newItem['PrepararPrencado'] = true;
@@ -1163,25 +1366,29 @@ class _CategoryPageState extends State<CategoryPage> {
       newItem['Fresh'] = true;
     }
     final String productName = newItem['Nome'];
-    int availableQuantity = await checkQuantidade(productName);
-    int currentQuantity = cartItems.where((cartItem) => cartItem['Nome'] == productName).length;
+    int availableQuantity = await getAvailableQuantity(productName);
+    int currentQuantity =
+        cartItems.where((cartItem) => cartItem['Nome'] == productName).length;
     if (availableQuantity >= currentQuantity + 1) {
       setState(() {
         cartItems.add(newItem);
+        // Remover a linha abaixo para NÃO subtrair do stock apresentado
+        // _availableQuantities[productName] = availableQuantity - 1;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
+      /*ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Item adicionado'),
           duration: Duration(milliseconds: 500),
         ),
-      );
+      );*/
     } else if (availableQuantity <= 0) {
       showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
             title: Text('Produto Indisponível'),
-            content: Text('Desculpe, este produto está indisponível no momento.'),
+            content:
+                Text('Desculpe, este produto está indisponível no momento.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -1202,14 +1409,14 @@ class _CategoryPageState extends State<CategoryPage> {
         builder: (BuildContext context) {
           return AlertDialog(
             title: Text('Quantidade Máxima'),
-            content: Text('Quantidade máxima disponível atingida (Disponível: $availableQuantity)'),
+            content: Text(
+                'Quantidade máxima disponível atingida (Disponível: $availableQuantity)'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
                 child: Text('OK'),
               ),
@@ -1224,7 +1431,8 @@ class _CategoryPageState extends State<CategoryPage> {
   void initState() {
     super.initState();
     _categoryStreamController = StreamController<List<dynamic>>();
-    filteredCategoryItems = allProducts.where((item) => item['Categoria'] == widget.title ).toList();
+    filteredCategoryItems =
+        allProducts.where((item) => item['Categoria'] == widget.title).toList();
     _categoryStreamController.add(filteredCategoryItems);
     _categorySearchController.addListener(_filterCategoryItems);
   }
@@ -1237,10 +1445,13 @@ class _CategoryPageState extends State<CategoryPage> {
   }
 
   void _filterCategoryItems() {
-    final query = removeDiacritics(_categorySearchController.text.toLowerCase());
+    final query =
+        removeDiacritics(_categorySearchController.text.toLowerCase());
     setState(() {
       filteredCategoryItems = allProducts.where((item) {
-        if (item['Categoria'] == widget.title && item['Nome'] != null && item['Nome'] is String) {
+        if (item['Categoria'] == widget.title &&
+            item['Nome'] != null &&
+            item['Nome'] is String) {
           final normalizedNome = removeDiacritics(item['Nome'].toLowerCase());
           return normalizedNome.contains(query);
         }
@@ -1253,9 +1464,11 @@ class _CategoryPageState extends State<CategoryPage> {
   void _sortCategoryItems() {
     setState(() {
       if (_selectedCategorySortOption == 'asc') {
-        filteredCategoryItems.sort((a, b) => double.parse(a['Preco']).compareTo(double.parse(b['Preco'])));
+        filteredCategoryItems.sort((a, b) =>
+            double.parse(a['Preco']).compareTo(double.parse(b['Preco'])));
       } else if (_selectedCategorySortOption == 'desc') {
-        filteredCategoryItems.sort((a, b) => double.parse(b['Preco']).compareTo(double.parse(a['Preco'])));
+        filteredCategoryItems.sort((a, b) =>
+            double.parse(b['Preco']).compareTo(double.parse(a['Preco'])));
       }
       _categoryStreamController.add(filteredCategoryItems);
     });
@@ -1294,14 +1507,16 @@ class _CategoryPageState extends State<CategoryPage> {
                         child: Row(children: [
                           Icon(Icons.arrow_upward, color: Colors.orange),
                           SizedBox(width: 8),
-                          Text('Preço: Ascendente', style: TextStyle(color: Colors.orange))
+                          Text('Preço: Ascendente',
+                              style: TextStyle(color: Colors.orange))
                         ])),
                     DropdownMenuItem(
                         value: 'desc',
                         child: Row(children: [
                           Icon(Icons.arrow_downward, color: Colors.orange),
                           SizedBox(width: 8),
-                          Text('Preço: Descendente', style: TextStyle(color: Colors.orange))
+                          Text('Preço: Descendente',
+                              style: TextStyle(color: Colors.orange))
                         ])),
                   ],
                   onChanged: (String? newValue) {
@@ -1321,16 +1536,20 @@ class _CategoryPageState extends State<CategoryPage> {
                       borderSide: BorderSide(color: Colors.orange),
                     ),
                     border: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.orange), // Set default border to orange
+                      borderSide: BorderSide(
+                          color: Colors.orange), // Set default border to orange
                     ),
                   ),
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*[,|\.]?\d*')),
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*[,|\.]?\d*')),
                   ],
                   onChanged: (value) {
                     String normalized = value.replaceAll(',', '.');
-                    _minCategoryPrice = normalized.isNotEmpty ? double.tryParse(normalized) : null;
+                    _minCategoryPrice = normalized.isNotEmpty
+                        ? double.tryParse(normalized)
+                        : null;
                     _filterCategoryByPrice();
                   },
                 ),
@@ -1342,16 +1561,20 @@ class _CategoryPageState extends State<CategoryPage> {
                       borderSide: BorderSide(color: Colors.orange),
                     ),
                     border: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.orange), // Set default border to orange
+                      borderSide: BorderSide(
+                          color: Colors.orange), // Set default border to orange
                     ),
                   ),
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*[,|\.]?\d*')),
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*[,|\.]?\d*')),
                   ],
                   onChanged: (value) {
                     String normalized = value.replaceAll(',', '.');
-                    _maxCategoryPrice = normalized.isNotEmpty ? double.tryParse(normalized) : null;
+                    _maxCategoryPrice = normalized.isNotEmpty
+                        ? double.tryParse(normalized)
+                        : null;
                     _filterCategoryByPrice();
                   },
                 ),
@@ -1465,10 +1688,12 @@ class _CategoryPageState extends State<CategoryPage> {
                     itemCount: items.length,
                     itemBuilder: (context, index) {
                       var product = items[index];
-                      final String productName = product['Nome'].replaceAll('"', '');
+                      final String productName =
+                          product['Nome'].replaceAll('"', '');
                       final int itemCount = cartItems
                           .where((item) => item['Nome'] == productName)
                           .length;
+
                       return Card(
                         margin: EdgeInsets.only(bottom: 16),
                         elevation: 2,
@@ -1520,7 +1745,8 @@ class _CategoryPageState extends State<CategoryPage> {
                                 SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         productName,
@@ -1541,17 +1767,35 @@ class _CategoryPageState extends State<CategoryPage> {
                                           color: Colors.orange,
                                         ),
                                       ),
+                                      FutureBuilder<int>(
+                                        future: getAvailableQuantity(productName),
+                                        builder: (context, snapshot) {
+                                          if (snapshot.connectionState == ConnectionState.waiting) {
+                                            if (_availableQuantities.containsKey(productName)) {
+                                              // Show cached value while loading
+                                              final qtd = _availableQuantities[productName]!;
+                                              return Text('Disponível: $qtd', style: TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.bold));
+                                            }
+                                            return Text('A verificar...', style: TextStyle(fontSize: 12, color: Colors.grey));
+                                          }
+                                          final qtd = snapshot.data ?? 0;
+                                          return Text('Disponível: $qtd', style: TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.bold));
+                                        },
+                                      ),
                                     ],
                                   ),
                                 ),
                                 SizedBox(width: 8),
-                                cartItems.any((cartItem) => cartItem['Nome'] == productName)
+                                cartItems.any((cartItem) =>
+                                        cartItem['Nome'] == productName)
                                     ? Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
                                             cartItems
-                                                .where((element) => element['Nome'] == productName)
+                                                .where((element) =>
+                                                    element['Nome'] ==
+                                                    productName)
                                                 .length
                                                 .toString(),
                                             style: TextStyle(fontSize: 15.0),
@@ -1560,45 +1804,76 @@ class _CategoryPageState extends State<CategoryPage> {
                                             onPressed: () {
                                               addToCart(product);
                                             },
-                                            icon: Icon(Icons.add),
+                                            icon: Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              padding: EdgeInsets.all(4),
+                                              child: Icon(Icons.add, color: Colors.white),
+                                            ),
                                           ),
                                         ],
                                       )
                                     : StatefulBuilder(
                                         builder: (context, setState) {
                                           return FutureBuilder<int>(
-                                            future: checkQuantidade(productName),
+                                            future:
+                                                checkQuantidade(productName),
                                             builder: (context, snapshot) {
-                                              bool isAvailable = snapshot.hasData && snapshot.data! > 0;
+                                              bool isAvailable =
+                                                  snapshot.hasData &&
+                                                      snapshot.data! > 0;
                                               return LoadingButton(
-                                                onPressed: _itemLoadingStatus[productName] == true || !isAvailable
+                                                onPressed: _itemLoadingStatus[
+                                                                productName] ==
+                                                            true ||
+                                                        !isAvailable
                                                     ? null
                                                     : () async {
                                                         setState(() {
-                                                          _itemLoadingStatus[productName] = true;
+                                                          _itemLoadingStatus[
+                                                                  productName] =
+                                                              true;
                                                         });
                                                         try {
-                                                          await Future.delayed(Duration(milliseconds: 300));
-                                                          int availableQuantity = await checkQuantidade(productName);
-                                                          if (availableQuantity > 0) {
+                                                          await Future.delayed(
+                                                              Duration(
+                                                                  milliseconds:
+                                                                      300));
+                                                          int availableQuantity =
+                                                              await checkQuantidade(
+                                                                  productName);
+                                                          if (availableQuantity >
+                                                              0) {
                                                             addToCart(product);
                                                           } else {
                                                             showDialog(
                                                               context: context,
-                                                              builder: (BuildContext context) {
+                                                              builder:
+                                                                  (BuildContext
+                                                                      context) {
                                                                 return AlertDialog(
-                                                                  title: Text('Produto Indisponível'),
-                                                                  content: Text('Desculpe, este produto está indisponível no momento.'),
+                                                                  title: Text(
+                                                                      'Produto Indisponível'),
+                                                                  content: Text(
+                                                                      'Desculpe, este produto está indisponível no momento.'),
                                                                   actions: [
                                                                     TextButton(
-                                                                      onPressed: () {
-                                                                        Navigator.of(context).pop();
+                                                                      onPressed:
+                                                                          () {
+                                                                        Navigator.of(context)
+                                                                            .pop();
                                                                       },
-                                                                      style: TextButton.styleFrom(
-                                                                        backgroundColor: Colors.orange,
-                                                                        foregroundColor: Colors.white,
+                                                                      style: TextButton
+                                                                          .styleFrom(
+                                                                        backgroundColor:
+                                                                            Colors.orange,
+                                                                        foregroundColor:
+                                                                            Colors.white,
                                                                       ),
-                                                                      child: Text('OK'),
+                                                                      child: Text(
+                                                                          'OK'),
                                                                     ),
                                                                   ],
                                                                 );
@@ -1607,22 +1882,34 @@ class _CategoryPageState extends State<CategoryPage> {
                                                           }
                                                         } finally {
                                                           setState(() {
-                                                            _itemLoadingStatus[productName] = false;
+                                                            _itemLoadingStatus[
+                                                                    productName] =
+                                                                false;
                                                           });
                                                         }
                                                       },
-                                                isLoading: _itemLoadingStatus[productName] == true,
-                                                child: _itemLoadingStatus[productName] == true
+                                                isLoading: _itemLoadingStatus[
+                                                        productName] ==
+                                                    true,
+                                                child: _itemLoadingStatus[
+                                                            productName] ==
+                                                        true
                                                     ? SizedBox(
                                                         width: 20,
                                                         height: 20,
-                                                        child: CircularProgressIndicator(
-                                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                          valueColor:
+                                                              AlwaysStoppedAnimation<
+                                                                      Color>(
+                                                                  Colors.white),
                                                           strokeWidth: 2,
                                                         ),
                                                       )
                                                     : Text('Comprar'),
-                                                backgroundColor: isAvailable ? Colors.orange : Colors.grey,
+                                                backgroundColor: isAvailable
+                                                    ? Colors.orange
+                                                    : Colors.grey,
                                               );
                                             },
                                           );
@@ -1814,6 +2101,27 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         false;
   }
 
+  Future<String?> _showUnavaiable() async{
+return showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Método de Pagamento Indisponivel'),
+          content: Text(
+              'O método de pagamento encontra-se indisponível de momento, iremos tentar ser os mais breves possiveis.'),
+          actions: [
+            TextButton(
+              onPressed: () { Navigator.of(context).pop(); /*Navigator.of(context).pop();*/},
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+  }
+
   Future<String?> _showPaymentMethodDialog() async {
     return showModalBottomSheet<String>(
       context: context,
@@ -1834,12 +2142,13 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             // MBWay Option
             ListTile(
               leading: Icon(Icons.phone_android,
-                  color: Color.fromARGB(255, 177, 2, 2)),
+                  color: /*Color.fromARGB(255, 177, 2, 2)*/Colors.grey),
               title: Text('MBWay',
-                  style: TextStyle(color: Color.fromARGB(255, 177, 2, 2))),
+                  style: TextStyle(color: /*Color.fromARGB(255, 177, 2, 2)*/Colors.grey)),
               onTap: () {
                 _setLoading(true, message: 'Processando MBWay...');
-                Navigator.pop(context, 'mbway');
+                //Navigator.pop(context, 'mbway');
+                _showUnavaiable();
               },
             ),
             // Dinheiro Option
@@ -1860,13 +2169,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                 users[0]['AutorizadoSaldo'] == '1')
               ListTile(
                 leading: Icon(Icons.account_balance_wallet,
-                    color: Colors.orange[700]),
+                    color: /*Colors.orange[700]*/Colors.grey),
                 title:
-                    Text('Saldo', style: TextStyle(color: Colors.orange[700])),
+                    Text('Saldo', style: TextStyle(color: /*Colors.orange[700]*/Colors.grey)),
                 onTap: () {
                   _setLoading(true,
                       message: 'Processando pagamento com saldo...');
-                  Navigator.pop(context, 'saldo');
+                  //Navigator.pop(context, 'saldo');
+                  _showUnavaiable();
                 },
               ),
             SizedBox(height: 8),
@@ -2118,6 +2428,29 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Future<void> sendOrderToApi() async {
+    // Check if establishment is open before proceeding
+    bool open = await checkEstablishmentOpen();
+    if (!open) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Estabelecimento Fechado'),
+          content: Text(
+              'O estabelecimento está fechado. Não é possível realizar compras neste momento.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     if (itemCountMap.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('O carrinho está vazio')),
@@ -2219,35 +2552,37 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   // Create lists for IDs and quantities
                   List<String> productIds = [];
                   List<int> quantities = [];
-                  
+
                   // Use the existing itemCountMap which already has the correct quantities
                   for (var entry in itemCountMap.entries) {
                     String productName = entry.key;
                     int quantity = entry.value;
-                    
+
                     // Find the corresponding product ID from cartItems
                     var product = cartItems.firstWhere(
                       (item) => item['Nome'] == productName,
                       orElse: () => {'Id': '0'},
                     );
-                    
+
                     if (product['Id'] != '0') {
                       productIds.add(product['Id'].toString());
                       quantities.add(quantity);
                     }
                   }
-                  
+
                   // Send all quantities in a single API call
                   String idsParam = productIds.join(',');
                   String quantitiesParam = quantities.join(',');
-                  
-                  print('Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
+
+                  print(
+                      'Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
                   var response = await http.get(
                     Uri.parse(
                         'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
                   );
-                  print('Resposta da API após atualizar quantidades: \\${response.body}');
-                  
+                  print(
+                      'Resposta da API após atualizar quantidades: \\${response.body}');
+
                   setState(() {
                     orderNumber = newOrderNumber;
                     cartItems.clear();
@@ -2311,7 +2646,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       var imagem = users[0]['Imagem'];
 
       // Calcular o troco usando o dinheiroAtual passado como parâmetro
-      double troco = (dinheiroAtual ?? double.parse(total)) - double.parse(total);
+      double troco =
+          (dinheiroAtual ?? double.parse(total)) - double.parse(total);
       String trocos = troco.toStringAsFixed(2);
 
       final channel = WebSocketChannel.connect(
@@ -2355,7 +2691,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
+            content: Text(
+                'Erro ao enviar o pedido. Contacte o Administrador! Error 01'),
           ),
         );
       }
@@ -2446,13 +2783,15 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             }
             String idsParam = productIds.join(',');
             String quantitiesParam = quantities.join(',');
-            print('Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
+            print(
+                'Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
             var response = await http.get(
               Uri.parse(
                   'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
             );
-            print('Resposta da API após atualizar quantidades: \\${response.body}');
-            
+            print(
+                'Resposta da API após atualizar quantidades: \\${response.body}');
+
             // Enviar para o WebSocket com o valor do total
             await sendOrderToWebSocket(cartItems, total.toString(),
                 paymentMethod: 'dinheiro',
@@ -2483,6 +2822,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   change: 0.0, // No change needed
                   orderNumber: orderNumber,
                   amount: total,
+                  paymentMethod: 'dinheiro',
                 ),
               ),
             );
@@ -2562,6 +2902,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         var preco = order['Preco'] ?? '';
         var prencado = order['Prencado'] ?? '0';
         var prepararPrencado = order['PrepararPrencado'] ?? false;
+        var idApp = order['Id'] ?? ''; // Extrair o idApp
+        var xdReference = order['XDReference'] ?? ''; // Extrair o XDReference
 
         // Convert boolean to string representation for API
         String prepararPrencadoValue = prepararPrencado ? '1' : '0';
@@ -2578,6 +2920,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             'preco': preco,
             'prencado': prencado.toString(),
             'prepararPrencado': prepararPrencadoValue,
+            'idApp': idApp, // Adicionar o idApp à requisição
+            'idXDApp': xdReference, // Adicionar o XDReference à requisição
           },
         );
 
@@ -2626,6 +2970,29 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Future<void> checkAvailabilityBeforeOrder(double total) async {
+    // Check if establishment is open before proceeding
+    bool open = await checkEstablishmentOpen();
+    if (!open) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Estabelecimento Fechado'),
+          content: Text(
+              'O estabelecimento está fechado. Não é possível realizar compras neste momento.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     bool allAvailable = true;
     List<String> unavailableItems = <String>[]; // Explicitly specify the type
 
@@ -2706,6 +3073,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
                   child: Text('OK'),
                 ),
               ],
@@ -2746,13 +3117,16 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   ),
                   const SizedBox(height: 16),
                   ListTile(
-                    leading: const Icon(Icons.check_circle, color: Colors.green),
-                    title: const Text('Sim', style: TextStyle(color: Colors.green)),
+                    leading:
+                        const Icon(Icons.check_circle, color: Colors.green),
+                    title: const Text('Sim',
+                        style: TextStyle(color: Colors.green)),
                     onTap: () => Navigator.pop(context, true),
                   ),
                   ListTile(
                     leading: const Icon(Icons.cancel, color: Colors.red),
-                    title: const Text('Não', style: TextStyle(color: Colors.red)),
+                    title:
+                        const Text('Não', style: TextStyle(color: Colors.red)),
                     onTap: () => Navigator.pop(context, false),
                   ),
                 ],
@@ -3090,13 +3464,15 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                 }
                 String idsParam = productIds.join(',');
                 String quantitiesParam = quantities.join(',');
-                print('Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
+                print(
+                    'Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
                 var response = await http.get(
                   Uri.parse(
                       'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
                 );
-                print('Resposta da API após atualizar quantidades: \\${response.body}');
-                
+                print(
+                    'Resposta da API após atualizar quantidades: \\${response.body}');
+
                 // Enviar para o WebSocket
                 await sendOrderToWebSocket(
                   cartItems,
@@ -3130,6 +3506,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                       change: 0.0, // Não há troco no pagamento com saldo
                       orderNumber: orderNumber,
                       amount: total,
+                      paymentMethod: 'saldo',
                     ),
                   ),
                 );
@@ -3214,37 +3591,41 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
   Future<bool> _showInvoiceDialog() async {
     return await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const Text(
-                'Fatura com NIF',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+          context: context,
+          isScrollControlled: true,
+          builder: (BuildContext context) {
+            return Container(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Text(
+                    'Fatura com NIF',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.check_circle, color: Colors.green),
+                    title: const Text('Sim',
+                        style: TextStyle(color: Colors.green)),
+                    onTap: () => Navigator.pop(context, true),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.cancel, color: Colors.red),
+                    title:
+                        const Text('Não', style: TextStyle(color: Colors.red)),
+                    onTap: () => Navigator.pop(context, false),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.check_circle, color: Colors.green),
-                title: const Text('Sim', style: TextStyle(color: Colors.green)),
-                onTap: () => Navigator.pop(context, true),
-              ),
-              ListTile(
-                leading: const Icon(Icons.cancel, color: Colors.red),
-                title: const Text('Não', style: TextStyle(color: Colors.red)),
-                onTap: () => Navigator.pop(context, false),
-              ),
-            ],
-          ),
-        );
-      },
-    ) ?? false;
+            );
+          },
+        ) ??
+        false;
   }
 
   @override
@@ -3504,7 +3885,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        icon: Icon(Icons.remove, size: 16),
+                                        icon: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          padding: EdgeInsets.all(4),
+                                          child: Icon(Icons.remove, size: 16, color: Colors.white),
+                                        ),
                                         onPressed: _isLoading
                                             ? null
                                             : () async {
@@ -3583,7 +3971,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                                         cartItems
                                                             .removeAt(index);
                                                         updateItemCountMap();
-                                                        ScaffoldMessenger.of(
+                                                       /* ScaffoldMessenger.of(
                                                                 context)
                                                             .showSnackBar(
                                                           SnackBar(
@@ -3593,7 +3981,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                                                 milliseconds:
                                                                     500),
                                                           ),
-                                                        );
+                                                        );*/
                                                       }
                                                     } finally {
                                                       if (mounted) {
@@ -3617,7 +4005,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                                     if (index != -1) {
                                                       cartItems.removeAt(index);
                                                       updateItemCountMap();
-                                                      ScaffoldMessenger.of(
+                                                      /*ScaffoldMessenger.of(
                                                               context)
                                                           .showSnackBar(
                                                         SnackBar(
@@ -3627,7 +4015,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                                               milliseconds:
                                                                   500),
                                                         ),
-                                                      );
+                                                      );*/
                                                     }
                                                   } finally {
                                                     if (mounted) {
@@ -3660,7 +4048,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                         ),
                                       ),
                                       IconButton(
-                                        icon: Icon(Icons.add, size: 16),
+                                        icon: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          padding: EdgeInsets.all(4),
+                                          child: Icon(Icons.add, size: 16, color: Colors.white),
+                                        ),
                                         onPressed: _isLoading
                                             ? null
                                             : () {
@@ -3706,74 +4101,93 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                                 (item['Prencado']?.toString() ?? '0') == '2')
                               Center(
                                 child: Container(
-  width: double.infinity,
-  decoration: BoxDecoration(
-    color: Colors.orange.withOpacity(0.1),
-    borderRadius: BorderRadius.circular(8),
-  ),
-  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2), // Menos espaço vertical
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Icon(
-        (item['Prencado']?.toString() ?? '0') == '1'
-            ? Icons.coffee
-            : Icons.local_cafe,
-        size: 14, // Ícone menor
-        color: Colors.orange[700],
-      ),
-      SizedBox(width: 4),
-      Text(
-        'Tipo:',
-        style: TextStyle(
-          fontSize: 11,
-          color: Colors.grey[700],
-        ),
-      ),
-      SizedBox(width: 8),
-      ToggleButtons(
-        constraints: BoxConstraints(minHeight: 28), // Controla altura dos botões
-        isSelected: [currentPrepararPrencado, !currentPrepararPrencado],
-        onPressed: (index) {
-          setState(() {
-            int itemIndex = cartItems.indexWhere((e) => e['Nome'] == itemName);
-            if (itemIndex != -1) {
-              final updatedItem = Map<String, dynamic>.from(cartItems[itemIndex]);
-              updatedItem['PrepararPrencado'] = index == 0;
-              cartItems[itemIndex] = updatedItem;
-            }
-          });
-        },
-        borderRadius: BorderRadius.circular(6),
-        selectedColor: Colors.white,
-        fillColor: Colors.orange[700],
-        borderColor: Colors.orange[700],
-        color: Colors.orange[700],
-        borderWidth: 1.0,
-        selectedBorderColor: Colors.orange[700],
-        children: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 6),
-            child: Text(
-              (item['Prencado']?.toString() ?? '0') == '1'
-                  ? 'Prensado'
-                  : 'Aquecido',
-              style: TextStyle(fontSize: 11), // Letra mais pequena
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 6),
-            child: Text(
-              'Normal',
-              style: TextStyle(fontSize: 11),
-            ),
-          ),
-        ],
-      ),
-    ],
-  ),
-),
-
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2), // Menos espaço vertical
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        (item['Prencado']?.toString() ?? '0') ==
+                                                '1'
+                                            ? Icons.coffee
+                                            : Icons.local_cafe,
+                                        size: 14, // Ícone menor
+                                        color: Colors.orange[700],
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Tipo:',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                      SizedBox(width: 8),
+                                      ToggleButtons(
+                                        constraints: BoxConstraints(
+                                            minHeight:
+                                                28), // Controla altura dos botões
+                                        isSelected: [
+                                          currentPrepararPrencado,
+                                          !currentPrepararPrencado
+                                        ],
+                                        onPressed: (index) {
+                                          setState(() {
+                                            int itemIndex =
+                                                cartItems.indexWhere((e) =>
+                                                    e['Nome'] == itemName);
+                                            if (itemIndex != -1) {
+                                              final updatedItem =
+                                                  Map<String, dynamic>.from(
+                                                      cartItems[itemIndex]);
+                                              updatedItem['PrepararPrencado'] =
+                                                  index == 0;
+                                              cartItems[itemIndex] =
+                                                  updatedItem;
+                                            }
+                                          });
+                                        },
+                                        borderRadius: BorderRadius.circular(6),
+                                        selectedColor: Colors.white,
+                                        fillColor: Colors.orange[700],
+                                        borderColor: Colors.orange[700],
+                                        color: Colors.orange[700],
+                                        borderWidth: 1.0,
+                                        selectedBorderColor: Colors.orange[700],
+                                        children: [
+                                          Padding(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 6),
+                                            child: Text(
+                                              (item['Prencado']?.toString() ??
+                                                          '0') ==
+                                                      '1'
+                                                  ? 'Prensado'
+                                                  : 'Aquecido',
+                                              style: TextStyle(
+                                                  fontSize:
+                                                      11), // Letra mais pequena
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 6),
+                                            child: Text(
+                                              'Normal',
+                                              style: TextStyle(fontSize: 11),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             // Add robust checks before accessing item['Prencado'] for this condition
                             if ((item['Prencado']?.toString() ?? '0') == '3')
@@ -4088,15 +4502,16 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
     // Create a new map with the expected keys and format
     Map<String, dynamic> newItem = {
       'Imagem': item['Imagem'] ?? '', // Use empty string if null
-      'Nome': item['Descricao'].replaceAll('"', '') ??
-          '', // Use Descricao and remove quotes
-      'Preco': item['Preco']?.toString() ??
-          '0.0', // Ensure price is string, default to '0.0'
-      'Prencado': item['Prencado']?.toString() ??
-          '0', // Ensure prencado is string, default to '0'
+      'Nome': (item['Nome'] ?? item['Descricao'] ?? '').replaceAll('"', ''), // Corrigido para evitar null
+      'Preco': item['Preco']?.toString() ?? '0.0',
+      'Prencado': item['Prencado']?.toString() ?? '0',
       'PrepararPrencado': false, // Initialize to false
       'Fresh': false, // Initialize to false
-      'Id': item['Id'], // Adiciona o ID do produto
+      'Id': item['idApp'], // Adiciona o ID do produto
+      'idApp': (item['idApp'] ?? item['IdApp'] ?? item['idapp']) != null && (item['idApp'] ?? item['IdApp'] ?? item['idapp']).toString().trim().isNotEmpty
+        ? (item['idApp'] ?? item['IdApp'] ?? item['idapp'])
+        : item['Id'], // Garante prioridade ao idApp, senão usa Id
+      'XDReference': item['XDReference'] ?? '', // Adiciona o XDReference
     };
 
     // Apply default preparation based on Prencado value
@@ -4118,12 +4533,12 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
       setState(() {
         cartItems.add(newItem);
       });
-      ScaffoldMessenger.of(context).showSnackBar(
+      /*ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Item adicionado'),
           duration: Duration(milliseconds: 500),
         ),
-      );
+      );*/
     } else if (availableQuantity <= 0) {
       showDialog(
         context: context,
@@ -4161,7 +4576,6 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
                 child: Text('OK'),
               ),
@@ -4246,16 +4660,24 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
                     DropdownMenuItem(
                         value: 'asc',
                         child: Row(children: [
-                          Icon(Icons.arrow_upward, color: Colors.orange), // Set icon color to orange
+                          Icon(Icons.arrow_upward,
+                              color: Colors.orange), // Set icon color to orange
                           SizedBox(width: 8),
-                          Text('Preço: Ascendente', style: TextStyle(color: Colors.orange)), // Set text color to orange
+                          Text('Preço: Ascendente',
+                              style: TextStyle(
+                                  color: Colors
+                                      .orange)), // Set text color to orange
                         ])),
                     DropdownMenuItem(
                         value: 'desc',
                         child: Row(children: [
-                          Icon(Icons.arrow_downward, color: Colors.orange), // Set icon color to orange
+                          Icon(Icons.arrow_downward,
+                              color: Colors.orange), // Set icon color to orange
                           SizedBox(width: 8),
-                          Text('Preço: Descendente', style: TextStyle(color: Colors.orange)), // Set text color to orange
+                          Text('Preço: Descendente',
+                              style: TextStyle(
+                                  color: Colors
+                                      .orange)), // Set text color to orange
                         ])),
                   ],
                   onChanged: (String? newValue) {
@@ -4276,16 +4698,20 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
                       borderSide: BorderSide(color: Colors.orange),
                     ),
                     border: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.orange), // Set default border to orange
+                      borderSide: BorderSide(
+                          color: Colors.orange), // Set default border to orange
                     ),
                   ),
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*[,|\.]?\d*')),
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*[,|\.]?\d*')),
                   ],
                   onChanged: (value) {
                     String normalized = value.replaceAll(',', '.');
-                    _minRecentBuysPrice = normalized.isNotEmpty ? double.tryParse(normalized) : null;
+                    _minRecentBuysPrice = normalized.isNotEmpty
+                        ? double.tryParse(normalized)
+                        : null;
                     _filterRecentBuysByPrice();
                   },
                 ),
@@ -4297,16 +4723,20 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
                       borderSide: BorderSide(color: Colors.orange),
                     ),
                     border: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.orange), // Set default border to orange
+                      borderSide: BorderSide(
+                          color: Colors.orange), // Set default border to orange
                     ),
                   ),
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*[,|\.]?\d*')),
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*[,|\.]?\d*')),
                   ],
                   onChanged: (value) {
                     String normalized = value.replaceAll(',', '.');
-                    _maxRecentBuysPrice = normalized.isNotEmpty ? double.tryParse(normalized) : null;
+                    _maxRecentBuysPrice = normalized.isNotEmpty
+                        ? double.tryParse(normalized)
+                        : null;
                     _filterRecentBuysByPrice();
                   },
                 ),
@@ -4527,45 +4957,76 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
                                             onPressed: () {
                                               addToCart(product);
                                             },
-                                            icon: Icon(Icons.add),
+                                            icon: Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              padding: EdgeInsets.all(4),
+                                              child: Icon(Icons.add, size: 16, color: Colors.white),
+                                            ),
                                           ),
                                         ],
                                       )
                                     : StatefulBuilder(
                                         builder: (context, setState) {
                                           return FutureBuilder<int>(
-                                            future: checkQuantidade(productName),
+                                            future:
+                                                checkQuantidade(productName),
                                             builder: (context, snapshot) {
-                                              bool isAvailable = snapshot.hasData && snapshot.data! > 0;
+                                              bool isAvailable =
+                                                  snapshot.hasData &&
+                                                      snapshot.data! > 0;
                                               return LoadingButton(
-                                                onPressed: _itemLoadingStatus[productName] == true || !isAvailable
+                                                onPressed: _itemLoadingStatus[
+                                                                productName] ==
+                                                            true ||
+                                                        !isAvailable
                                                     ? null
                                                     : () async {
                                                         setState(() {
-                                                          _itemLoadingStatus[productName] = true;
+                                                          _itemLoadingStatus[
+                                                                  productName] =
+                                                              true;
                                                         });
                                                         try {
-                                                          await Future.delayed(Duration(milliseconds: 300));
-                                                          int availableQuantity = await checkQuantidade(productName);
-                                                          if (availableQuantity > 0) {
+                                                          await Future.delayed(
+                                                              Duration(
+                                                                  milliseconds:
+                                                                      300));
+                                                          int availableQuantity =
+                                                              await checkQuantidade(
+                                                                  productName);
+                                                          if (availableQuantity >
+                                                              0) {
                                                             addToCart(product);
                                                           } else {
                                                             showDialog(
                                                               context: context,
-                                                              builder: (BuildContext context) {
+                                                              builder:
+                                                                  (BuildContext
+                                                                      context) {
                                                                 return AlertDialog(
-                                                                  title: Text('Produto Indisponível'),
-                                                                  content: Text('Desculpe, este produto está indisponível no momento.'),
+                                                                  title: Text(
+                                                                      'Produto Indisponível'),
+                                                                  content: Text(
+                                                                      'Desculpe, este produto está indisponível no momento.'),
                                                                   actions: [
                                                                     TextButton(
-                                                                      onPressed: () {
-                                                                        Navigator.of(context).pop();
+                                                                      onPressed:
+                                                                          () {
+                                                                        Navigator.of(context)
+                                                                            .pop();
                                                                       },
-                                                                      style: TextButton.styleFrom(
-                                                                        backgroundColor: Colors.orange,
-                                                                        foregroundColor: Colors.white,
+                                                                      style: TextButton
+                                                                          .styleFrom(
+                                                                        backgroundColor:
+                                                                            Colors.orange,
+                                                                        foregroundColor:
+                                                                            Colors.white,
                                                                       ),
-                                                                      child: Text('OK'),
+                                                                      child: Text(
+                                                                          'OK'),
                                                                     ),
                                                                   ],
                                                                 );
@@ -4574,22 +5035,34 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
                                                           }
                                                         } finally {
                                                           setState(() {
-                                                            _itemLoadingStatus[productName] = false;
+                                                            _itemLoadingStatus[
+                                                                    productName] =
+                                                                false;
                                                           });
                                                         }
                                                       },
-                                                isLoading: _itemLoadingStatus[productName] == true,
-                                                child: _itemLoadingStatus[productName] == true
+                                                isLoading: _itemLoadingStatus[
+                                                        productName] ==
+                                                    true,
+                                                child: _itemLoadingStatus[
+                                                            productName] ==
+                                                        true
                                                     ? SizedBox(
                                                         width: 20,
                                                         height: 20,
-                                                        child: CircularProgressIndicator(
-                                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                          valueColor:
+                                                              AlwaysStoppedAnimation<
+                                                                      Color>(
+                                                                  Colors.white),
                                                           strokeWidth: 2,
                                                         ),
                                                       )
                                                     : Text('Comprar'),
-                                                backgroundColor: isAvailable ? Colors.orange : Colors.grey,
+                                                backgroundColor: isAvailable
+                                                    ? Colors.orange
+                                                    : Colors.grey,
                                               );
                                             },
                                           );

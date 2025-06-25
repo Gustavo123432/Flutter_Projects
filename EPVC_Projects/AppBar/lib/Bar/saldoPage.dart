@@ -6,6 +6,7 @@ import 'package:appbar_epvc/Bar/drawerBar.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
+import 'package:appbar_epvc/widgets/loading_overlay.dart';
 
 class SaldoPage extends StatefulWidget {
   @override
@@ -401,30 +402,32 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
   
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Gestão de Saldo'),
-        backgroundColor: Color.fromARGB(255, 246, 141, 45),
-        bottom: TabBar(
+    return LoadingOverlay(
+      isLoading: _isLoading,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Gestão de Saldo'),
+          backgroundColor: Color.fromARGB(255, 246, 141, 45),
+          bottom: TabBar(
+            controller: _tabController,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: [
+              Tab(text: 'Utilizadores Autorizados'),
+              Tab(text: 'Adicionar Autorização'),
+            ],
+          ),
+        ),
+        drawer: DrawerBar(),
+        body: TabBarView(
           controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: [
-            Tab(text: 'Utilizadores Autorizados'),
-            Tab(text: 'Adicionar Autorização'),
+          children: [
+            _buildAuthorizedUsersTab(),
+            _buildAddAuthorizationTab(),
           ],
         ),
       ),
-      drawer: DrawerBar(),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildAuthorizedUsersTab(),
-          _buildAddAuthorizationTab(),
-        ],
-      ),
-      
     );
   }
   

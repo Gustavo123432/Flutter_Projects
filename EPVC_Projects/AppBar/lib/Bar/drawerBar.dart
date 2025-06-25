@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:appbar_epvc/Bar/barPage.dart';
 import 'package:appbar_epvc/Bar/pedidosRegistados.dart';
+import 'package:appbar_epvc/Bar/pedidosRegistados.dart';
 import 'package:appbar_epvc/Bar/produtoPageBar.dart';
 import 'package:appbar_epvc/Bar/restaurantePage.dart';
 import 'package:appbar_epvc/Bar/saldoPage.dart';
@@ -13,6 +14,29 @@ class DrawerBar extends StatefulWidget {
 
 class _DrawerBarState extends State<DrawerBar> {
   //final _advancedDrawerController = AdvancedDrawerController();
+
+
+    Future<String?> _showUnavaiable() async{
+return showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Restaurante em Desenvolvimento'),
+          content: Text(
+              'A parte do Restaurante encontra-se em desenvolvimento'),
+          actions: [
+            TextButton(
+              onPressed: () { Navigator.of(context).pop(); /*Navigator.of(context).pop();*/},
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+  }
+
 
   @override 
   Widget build(BuildContext context) {
@@ -54,18 +78,19 @@ class _DrawerBarState extends State<DrawerBar> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => PedidosRegistados()),
+                  MaterialPageRoute(builder: (context) => PedidosRegistadosPage()),
                 );
               },
-              leading: Icon(Icons.archive_outlined),
-              title: Text('Pedidos Registados'),
+              leading: Icon(Icons.history),
+              title: Text('Histórico de Pedidos'),
             ),
             ListTile(
               onTap: () {
-                Navigator.push(
+                _showUnavaiable();
+                /*Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => RestaurantePage()),
-                );
+                );*/
               },
               leading: Icon(Icons.restaurant),
               title: Text('Restaurante'),

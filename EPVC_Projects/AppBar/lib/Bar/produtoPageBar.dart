@@ -8,6 +8,7 @@ import 'package:appbar_epvc/Bar/drawerBar.dart';
 import 'package:appbar_epvc/login.dart';
 import 'package:appbar_epvc/models/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:appbar_epvc/widgets/loading_overlay.dart';
 
 List<Product> filteredProducts =
     []; // Assuming this is where filtered products will be stored
@@ -220,17 +221,16 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
     });
   }
 
-  void updateProductQuantity(String id, int quantity) async {
+  void updateProductQuantity(String id, int quantityToAdd) async {
     var response = await http.get(
-      Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&id=$id&qtd=$quantity'),
+      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=1&ids=$id&quantities=$quantityToAdd'),
     );
     if (response.statusCode == 200) {
       setState(() {
         var index = products.indexWhere((product) => product.id == id);
         if (index != -1) {
-          products[index].quantity = quantity;
-          products[index].available = quantity >= 1;
+          products[index].quantity += quantityToAdd; // Atualiza localmente apenas com o incremento
+          products[index].available = products[index].quantity >= 1;
         }
       });
     } else {
@@ -240,89 +240,94 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 246, 141, 45),
-        title: Text(
-          'Produtos',
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              logout(context);
-            },
-            icon: Icon(
-              Icons.logout,
-              color: Colors.white,
-            ),
+    return LoadingOverlay(
+      isLoading: isLoading,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Color.fromARGB(255, 246, 141, 45),
+          title: Text(
+            'Produtos',
+            style: TextStyle(color: Colors.white),
           ),
-        ],
-      ),
-      drawer: DrawerBar(),
-      body: isLoading
-          ? Center(
-              child: CircularProgressIndicator(),
-            )
-          : Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: InputDecoration(
-                            labelText: 'Procurar...',
-                            border: OutlineInputBorder(),
+          actions: [
+            IconButton(
+              onPressed: () {
+                logout(context);
+              },
+              icon: Icon(
+                Icons.logout,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        drawer: DrawerBar(),
+        body: isLoading
+            ? Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                ),
+              )
+            : Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              labelText: 'Procurar...',
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (value) {
+                              _filterItemsSearch(); // Call filter on text change
+                            },
                           ),
-                          onChanged: (value) {
-                            _filterItemsSearch(); // Call filter on text change
-                          },
                         ),
                       ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.filter_list, color: Colors.orange),
-                      onPressed: _showFilterDialog,
-                    ),
-                  ],
-                ),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _onRefresh,
-                    child: ListView.builder(
-                      itemCount: filteredProducts.length,
-                      itemBuilder: (context, index) {
-                        return ProductCard(
-                          product: filteredProducts[index],
-                          onUpdate: (newAvailability) {
-                            updateProduct(
-                                filteredProducts[index].id, newAvailability);
-                          },
-                          onQuantityChange: (id, quantity) {
-                            updateProductQuantity(id, quantity);
-                          },
-                        );
-                      },
+                      IconButton(
+                        icon: Icon(Icons.filter_list, color: Colors.orange),
+                        onPressed: _showFilterDialog,
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: _onRefresh,
+                      child: ListView.builder(
+                        itemCount: filteredProducts.length,
+                        itemBuilder: (context, index) {
+                          return ProductCard(
+                            product: filteredProducts[index],
+                            onUpdate: (newAvailability) {
+                              updateProduct(
+                                  filteredProducts[index].id, newAvailability);
+                            },
+                            onQuantityChange: (id, quantity) {
+                              updateProductQuantity(id, quantity);
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
+        floatingActionButton: SpeedDial(
+          icon: Icons.more_horiz,
+          iconTheme: IconThemeData(color: Colors.white),
+          backgroundColor: Color.fromARGB(255, 130, 201, 189),
+          children: [
+            SpeedDialChild(
+              child: Icon(Icons.filter_list),
+              onTap: () async {
+                _showFilterDialog();
+              },
             ),
-      floatingActionButton: SpeedDial(
-        icon: Icons.more_horiz,
-        iconTheme: IconThemeData(color: Colors.white),
-        backgroundColor: Color.fromARGB(255, 130, 201, 189),
-        children: [
-          SpeedDialChild(
-            child: Icon(Icons.filter_list),
-            onTap: () async {
-              _showFilterDialog();
-            },
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -379,53 +384,105 @@ class _ProductCardState extends State<ProductCard> {
         ),
       ),
       confirmDismiss: (direction) async {
+        int currentQuantity = widget.product.quantity;
+        int quantityToAdd = 0;
         return await showDialog(
           context: context,
           builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text("Atualizar Quantidade"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _slideQuantityController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Nova Quantidade',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            return StatefulBuilder(
+              builder: (context, setState) {
+                return AlertDialog(
+                  title: Text("Atualizar Quantidade", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange[800])),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextButton(
-                        child: Text("Cancelar"),
-                        onPressed: () {
-                          Navigator.of(context).pop(false);
-                        },
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Atual:', style: TextStyle(fontSize: 15)),
+                          Text(currentQuantity.toString(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        ],
                       ),
-                      ElevatedButton(
-                        child: Text("Guardar"),
-                        onPressed: () {
-                          int? newQuantity = int.tryParse(_slideQuantityController.text);
-                          if (newQuantity != null && newQuantity >= 0) {
-                            widget.onQuantityChange(widget.product.id, newQuantity);
-                            Navigator.of(context).pop(false);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Por favor, insira uma quantidade válida'),
-                                backgroundColor: Colors.red,
+                      SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Acrescentar:', style: TextStyle(fontSize: 15)),
+                          Container(
+                            width: 60,
+                            height: 36,
+                            alignment: Alignment.center,
+                            child: TextField(
+                              controller: _slideQuantityController,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 15),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.orange, width: 1),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.orange, width: 2),
+                                ),
                               ),
-                            );
-                          }
-                        },
+                              onChanged: (value) {
+                                int val = int.tryParse(value) ?? 0;
+                                setState(() {
+                                  quantityToAdd = val;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Total:', style: TextStyle(fontSize: 15)),
+                          Text((currentQuantity + quantityToAdd).toString(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.orange[800])),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                  actions: [
+                    TextButton(
+                      child: Text("Cancelar", style: TextStyle(color: Colors.grey[700])),
+                      onPressed: () {
+                        Navigator.of(context).pop(false);
+                      },
+                    ),
+                    ElevatedButton(
+                      child: Text("Guardar", style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      ),
+                      onPressed: () {
+                        int? newQuantity = int.tryParse(_slideQuantityController.text);
+                        if (newQuantity != null) {
+                          widget.onQuantityChange(widget.product.id, newQuantity);
+                          Navigator.of(context).pop(false);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Por favor, insira uma quantidade válida'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                );
+              },
             );
           },
         );
@@ -481,7 +538,7 @@ class _ProductCardState extends State<ProductCard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  ElevatedButton(
+                 /* ElevatedButton(
                     onPressed: isAvailable ? () {
                       // Show purchase dialog
                       showDialog(
@@ -533,8 +590,8 @@ class _ProductCardState extends State<ProductCard> {
                       backgroundColor: isAvailable ? Color.fromARGB(255, 246, 141, 45) : Colors.grey,
                       foregroundColor: Colors.white,
                     ),
-                    child: Text('Comprar'),
-                  ),
+                    //child: Text('Comprar'),
+                  ),*/
                 ],
               ),
             ],

@@ -82,7 +82,8 @@ class _HomeAlunoState extends State<HomeAluno> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    setState(() {}); // This will refresh the cart count when returning to this page
+    setState(
+        () {}); // This will refresh the cart count when returning to this page
   }
 
   void UserInfo() async {
@@ -122,10 +123,10 @@ class _HomeAlunoState extends State<HomeAluno> {
               onPressed: () async {
                 // Show loading state
                 setState(() => _isLoading = true);
-                
+
                 SharedPreferences prefs = await SharedPreferences.getInstance();
                 await prefs.clear();
-                
+
                 setState(() => _isLoading = false);
 
                 // ignore: use_build_context_synchronously
@@ -301,7 +302,8 @@ class _HomeAlunoState extends State<HomeAluno> {
                 SizedBox(height: 20),
                 if (recentBuysMapped.isNotEmpty) ...[
                   Container(
-                    margin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+                    margin:
+                        EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
                     child: Text(
                       "Comprados Recentemente",
                       style: TextStyle(
@@ -325,11 +327,10 @@ class _HomeAlunoState extends State<HomeAluno> {
                         var prencado = product['Prencado'].toString();
 
                         return buildProductSection(
-                          imagePath: imageBase64,
-                          title: title,
-                          price: price,
-                          prencado: prencado
-                        );
+                            imagePath: imageBase64,
+                            title: title,
+                            price: price,
+                            prencado: prencado);
                       },
                     ),
                   ),
@@ -450,14 +451,16 @@ class _HomeAlunoState extends State<HomeAluno> {
                           case 5:
                             return buildCategoryCard(
                               title: 'Restaurante',
-                              backgroundImagePath: 'lib/assets/monteRestaurante.jpg',
+                              backgroundImagePath:
+                                  'lib/assets/monteRestaurante.jpg',
                               isAvailable: false,
                               onTap: () {
                                 showDialog(
                                   context: context,
                                   builder: (context) => AlertDialog(
                                     title: Text('Em Desenvolvimento'),
-                                    content: Text('O Restaurante não está disponível no momento.'),
+                                    content: Text(
+                                        'O Restaurante não está disponível no momento.'),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Navigator.pop(context),
@@ -574,9 +577,13 @@ class _HomeAlunoState extends State<HomeAluno> {
     );
   }
 
-  void addToCart(String imagePath, String title, String price, String prencado) {
+  void addToCart(
+      String imagePath, String title, String price, String prencado) {
     // Verifica se os parâmetros necessários não são nulos
-    if (imagePath != null && title != null && price != null && prencado !=null) {
+    if (imagePath != null &&
+        title != null &&
+        price != null &&
+        prencado != null) {
       // Cria um mapa representando o item a ser adicionado ao carrinho
       Map<String, dynamic> item = {
         'Imagem': imagePath,
@@ -586,7 +593,8 @@ class _HomeAlunoState extends State<HomeAluno> {
         'PrepararPrencado': false, // Initialize PrepararPrencado property
       };
 
-      print('Adding item to cart: ${item['Nome']}, Prencado: ${item['Prencado']}, PrepararPrencado: ${item['PrepararPrencado']}');
+      print(
+          'Adding item to cart: ${item['Nome']}, Prencado: ${item['Prencado']}, PrepararPrencado: ${item['PrepararPrencado']}');
 
       // Atualiza a interface do usuário e adiciona o item ao carrinho
       setState(() {
@@ -796,7 +804,7 @@ class _CategoryPageState extends State<CategoryPage> {
   void addToCart(Map<String, dynamic> item) {
     // Ensure the item has all required properties
     if (!item.containsKey('Prencado')) {
-      item['Prencado'] = "0";  // Default to "0" if not present
+      item['Prencado'] = "0"; // Default to "0" if not present
     }
     if (!item.containsKey('PrepararPrencado')) {
       item['PrepararPrencado'] = false;
@@ -804,14 +812,14 @@ class _CategoryPageState extends State<CategoryPage> {
     if (!item.containsKey('Fresh')) {
       item['Fresh'] = false;
     }
-    
+
     // Set default preparation based on Prencado value
     if (item['Prencado'] == '1' || item['Prencado'] == '2') {
-      item['PrepararPrencado'] = true;  // Default to prensado/aquecido
+      item['PrepararPrencado'] = true; // Default to prensado/aquecido
     } else if (item['Prencado'] == '3') {
-      item['Fresh'] = true;  // Default to fresh
+      item['Fresh'] = true; // Default to fresh
     }
-    
+
     setState(() {
       cartItems.add(item);
     });
@@ -1100,7 +1108,8 @@ class _CategoryPageState extends State<CategoryPage> {
                           final item = items[index];
                           final double preco = double.parse(item['Preco']);
                           return Card(
-                            key: ValueKey(item['Nome']), // Use a chave para ajudar o Flutter a otimizar a reconstrução
+                            key: ValueKey(item[
+                                'Nome']), // Use a chave para ajudar o Flutter a otimizar a reconstrução
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -1148,26 +1157,39 @@ class _CategoryPageState extends State<CategoryPage> {
                                       : Visibility(
                                           visible: item['Qtd'] == "1",
                                           child: LoadingButton(
-                                            onPressed: _isLoading ? null : () async {
-                                              setState(() => _isLoading = true);
-                                              try {
-                                                await Future.delayed(Duration(milliseconds: 300));
-                                                addToCart(item);
-                                              } finally {
-                                                setState(() => _isLoading = false);
-                                              }
-                                            },
-                                            child: _isLoading 
-                                              ? SizedBox(
-                                                  width: 20,
-                                                  height: 20,
-                                                  child: CircularProgressIndicator(
-                                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                                    strokeWidth: 2,
-                                                  ),
-                                                )
-                                              : Text('Comprar'),
-                                            backgroundColor: _isLoading ? Colors.grey : Colors.orange,
+                                            onPressed: _isLoading
+                                                ? null
+                                                : () async {
+                                                    setState(() =>
+                                                        _isLoading = true);
+                                                    try {
+                                                      await Future.delayed(
+                                                          Duration(
+                                                              milliseconds:
+                                                                  300));
+                                                      addToCart(item);
+                                                    } finally {
+                                                      setState(() =>
+                                                          _isLoading = false);
+                                                    }
+                                                  },
+                                            child: _isLoading
+                                                ? SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      valueColor:
+                                                          AlwaysStoppedAnimation<
+                                                                  Color>(
+                                                              Colors.white),
+                                                      strokeWidth: 2,
+                                                    ),
+                                                  )
+                                                : Text('Comprar'),
+                                            backgroundColor: _isLoading
+                                                ? Colors.grey
+                                                : Colors.orange,
                                           ),
                                         ),
                                 ),
@@ -1587,7 +1609,8 @@ class _CategoryPageMonteState extends State<CategoryPageMonte> {
               itemBuilder: (context, index) {
                 final item = items[index];
                 return Card(
-                  key: ValueKey(item['Nome']), // Use a chave para ajudar o Flutter a otimizar a reconstrução
+                  key: ValueKey(item[
+                      'Nome']), // Use a chave para ajudar o Flutter a otimizar a reconstrução
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1686,37 +1709,41 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
   Future<bool> _showOrderConfirmationDialog() async {
     return await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const Text(
-                'Confirmar Pedido',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+          context: context,
+          isScrollControlled: true,
+          builder: (BuildContext context) {
+            return Container(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Text(
+                    'Confirmar Pedido',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.check_circle, color: Colors.green),
+                    title: const Text('Confirmar',
+                        style: TextStyle(color: Colors.green)),
+                    onTap: () => Navigator.pop(context, true),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.cancel, color: Colors.red),
+                    title: const Text('Cancelar',
+                        style: TextStyle(color: Colors.red)),
+                    onTap: () => Navigator.pop(context, false),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.check_circle, color: Colors.green),
-                title: const Text('Confirmar', style: TextStyle(color: Colors.green)),
-                onTap: () => Navigator.pop(context, true),
-              ),
-              ListTile(
-                leading: const Icon(Icons.cancel, color: Colors.red),
-                title: const Text('Cancelar', style: TextStyle(color: Colors.red)),
-                onTap: () => Navigator.pop(context, false),
-              ),
-            ],
-          ),
-        );
-      },
-    ) ?? false;
+            );
+          },
+        ) ??
+        false;
   }
 
   Future<String?> _showPaymentMethodDialog() async {
@@ -1738,8 +1765,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             const SizedBox(height: 16),
             // MBWay Option
             ListTile(
-              leading: Icon(Icons.phone_android, color: Color.fromARGB(255, 177, 2, 2)),
-              title: Text('MBWay', style: TextStyle(color: Color.fromARGB(255, 177, 2, 2))),
+              leading: Icon(Icons.phone_android,
+                  color: Color.fromARGB(255, 177, 2, 2)),
+              title: Text('MBWay',
+                  style: TextStyle(color: Color.fromARGB(255, 177, 2, 2))),
               onTap: () {
                 _setLoading(true, message: 'Processando MBWay...');
                 Navigator.pop(context, 'mbway');
@@ -1747,20 +1776,28 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             ),
             // Dinheiro Option
             ListTile(
-              leading: Icon(Icons.money, color: Color.fromARGB(255, 27, 94, 32)),
-              title: Text('Dinheiro', style: TextStyle(color: Color.fromARGB(255, 27, 94, 32))),
+              leading:
+                  Icon(Icons.money, color: Color.fromARGB(255, 27, 94, 32)),
+              title: Text('Dinheiro',
+                  style: TextStyle(color: Color.fromARGB(255, 27, 94, 32))),
               onTap: () {
-                _setLoading(true, message: 'Processando pagamento em dinheiro...');
+                _setLoading(true,
+                    message: 'Processando pagamento em dinheiro...');
                 Navigator.pop(context, 'dinheiro');
               },
             ),
             // Saldo Option (only shown if authorized)
-            if (users != null && users.isNotEmpty && users[0]['AutorizadoSaldo'] == '1')
+            if (users != null &&
+                users.isNotEmpty &&
+                users[0]['AutorizadoSaldo'] == '1')
               ListTile(
-                leading: Icon(Icons.account_balance_wallet, color: Colors.orange[700]),
-                title: Text('Saldo', style: TextStyle(color: Colors.orange[700])),
+                leading: Icon(Icons.account_balance_wallet,
+                    color: Colors.orange[700]),
+                title:
+                    Text('Saldo', style: TextStyle(color: Colors.orange[700])),
                 onTap: () {
-                  _setLoading(true, message: 'Processando pagamento com saldo...');
+                  _setLoading(true,
+                      message: 'Processando pagamento com saldo...');
                   Navigator.pop(context, 'saldo');
                 },
               ),
@@ -1782,149 +1819,166 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     );
   }
 
-  Future<bool> _showPrencadoConfirmationDialog(List<Map<String, dynamic>> prencadoProducts) async {
+  Future<bool> _showPrencadoConfirmationDialog(
+      List<Map<String, dynamic>> prencadoProducts) async {
     Map<String, bool> selectedProducts = {};
     Map<String, bool> freshOptionForAquecido = {};
-    
+
     return await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const Text(
-                'Preparação dos Produtos',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...prencadoProducts.map((product) {
-                String prencado = product['Prencado'] ?? '0';
-                selectedProducts[product['Nome']] = false;
-                freshOptionForAquecido[product['Nome']] = false;
-                
-                return StatefulBuilder(
-                  builder: (context, setState) {
-                    if (prencado == '1') {
-                      return ListTile(
-                        leading: Icon(Icons.restaurant, color: Colors.orange),
-                        title: Text(product['Nome']),
-                        subtitle: Text('Deseja Prensado?'),
-                        trailing: Checkbox(
-                          value: selectedProducts[product['Nome']],
-                          onChanged: (bool? value) {
-                            setState(() {
-                              selectedProducts[product['Nome']] = value ?? false;
-                              product['PrepararPrencado'] = value ?? false;
-                            });
-                          },
-                        ),
-                      );
-                    } else if (prencado == '2') {
-                      return ListTile(
-                        leading: Icon(Icons.severe_cold, color: Colors.green),
-                        title: Text(product['Nome']),
-                        subtitle: Text('Deseja Fresco?'),
-                        trailing: Checkbox(
-                          value: selectedProducts[product['Nome']],
-                          onChanged: (bool? value) {
-                            setState(() {
-                              selectedProducts[product['Nome']] = value ?? false;
-                              product['PrepararPrencado'] = value ?? false;
-                              freshOptionForAquecido[product['Nome']] = value ?? false;
-                            });
-                          },
-                        ),
-                      );
-                    } else if (prencado == '3') {
-                      return ListTile(
-                        leading: Icon(Icons.local_cafe, color: Colors.brown),
-                        title: Text(product['Nome']),
-                        subtitle: Text('Deseja Fresco?'),
-                        trailing: Checkbox(
-                          value: selectedProducts[product['Nome']],
-                          onChanged: (bool? value) {
-                            setState(() {
-                              selectedProducts[product['Nome']] = value ?? false;
-                              product['PrepararPrencado'] = value ?? false;
-                              freshOptionForAquecido[product['Nome']] = value ?? false;
-                            });
-                          },
-                        ),
-                      );
-                    }
-                    return Container();
-                  },
-                );
-              }).toList(),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+          context: context,
+          isScrollControlled: true,
+          builder: (BuildContext context) {
+            return Container(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Text(
+                    'Preparação dos Produtos',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  LoadingButton(
-                    onPressed: () async {
-                      _setLoading(true, message: 'Confirmando preparação...');
-                      for (var product in prencadoProducts) {
-                        int index = cartItems.indexWhere((item) => item['Nome'] == product['Nome']);
-                        if (index != -1) {
-                          cartItems[index]['PrepararPrencado'] = selectedProducts[product['Nome']];
-                          cartItems[index]['Fresh'] = freshOptionForAquecido[product['Nome']];
+                  const SizedBox(height: 16),
+                  ...prencadoProducts.map((product) {
+                    String prencado = product['Prencado'] ?? '0';
+                    selectedProducts[product['Nome']] = false;
+                    freshOptionForAquecido[product['Nome']] = false;
+
+                    return StatefulBuilder(
+                      builder: (context, setState) {
+                        if (prencado == '1') {
+                          return ListTile(
+                            leading:
+                                Icon(Icons.restaurant, color: Colors.orange),
+                            title: Text(product['Nome']),
+                            subtitle: Text('Deseja Prensado?'),
+                            trailing: Checkbox(
+                              value: selectedProducts[product['Nome']],
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  selectedProducts[product['Nome']] =
+                                      value ?? false;
+                                  product['PrepararPrencado'] = value ?? false;
+                                });
+                              },
+                            ),
+                          );
+                        } else if (prencado == '2') {
+                          return ListTile(
+                            leading:
+                                Icon(Icons.severe_cold, color: Colors.green),
+                            title: Text(product['Nome']),
+                            subtitle: Text('Deseja Fresco?'),
+                            trailing: Checkbox(
+                              value: selectedProducts[product['Nome']],
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  selectedProducts[product['Nome']] =
+                                      value ?? false;
+                                  product['PrepararPrencado'] = value ?? false;
+                                  freshOptionForAquecido[product['Nome']] =
+                                      value ?? false;
+                                });
+                              },
+                            ),
+                          );
+                        } else if (prencado == '3') {
+                          return ListTile(
+                            leading:
+                                Icon(Icons.local_cafe, color: Colors.brown),
+                            title: Text(product['Nome']),
+                            subtitle: Text('Deseja Fresco?'),
+                            trailing: Checkbox(
+                              value: selectedProducts[product['Nome']],
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  selectedProducts[product['Nome']] =
+                                      value ?? false;
+                                  product['PrepararPrencado'] = value ?? false;
+                                  freshOptionForAquecido[product['Nome']] =
+                                      value ?? false;
+                                });
+                              },
+                            ),
+                          );
                         }
-                      }
-                      Navigator.pop(context, true);
-                    },
-                    child: Text('Confirmar'),
-                    backgroundColor: Colors.green,
+                        return Container();
+                      },
+                    );
+                  }).toList(),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: Text('Cancelar',
+                            style: TextStyle(color: Colors.red)),
+                      ),
+                      LoadingButton(
+                        onPressed: () async {
+                          _setLoading(true,
+                              message: 'Confirmando preparação...');
+                          for (var product in prencadoProducts) {
+                            int index = cartItems.indexWhere(
+                                (item) => item['Nome'] == product['Nome']);
+                            if (index != -1) {
+                              cartItems[index]['PrepararPrencado'] =
+                                  selectedProducts[product['Nome']];
+                              cartItems[index]['Fresh'] =
+                                  freshOptionForAquecido[product['Nome']];
+                            }
+                          }
+                          Navigator.pop(context, true);
+                        },
+                        child: Text('Confirmar'),
+                        backgroundColor: Colors.green,
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-        );
-      },
-    ) ?? false;
+            );
+          },
+        ) ??
+        false;
   }
 
   Future<bool> _showNeedsChangeDialog() async {
     return await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Text(
-              'Troco',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+          context: context,
+          isScrollControlled: true,
+          builder: (context) => Container(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Text(
+                  'Troco',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.check_circle, color: Colors.green),
+                  title:
+                      const Text('Sim', style: TextStyle(color: Colors.green)),
+                  onTap: () => Navigator.pop(context, true),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.cancel, color: Colors.red),
+                  title: const Text('Não', style: TextStyle(color: Colors.red)),
+                  onTap: () => Navigator.pop(context, false),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.check_circle, color: Colors.green),
-              title: const Text('Sim', style: TextStyle(color: Colors.green)),
-              onTap: () => Navigator.pop(context, true),
-            ),
-            ListTile(
-              leading: const Icon(Icons.cancel, color: Colors.red),
-              title: const Text('Não', style: TextStyle(color: Colors.red)),
-              onTap: () => Navigator.pop(context, false),
-            ),
-          ],
-        ),
-      ),
-    ) ?? false;
+          ),
+        ) ??
+        false;
   }
 
   Future<double?> _showMoneyAmountDialog(double total) async {
@@ -1972,16 +2026,20 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                 ),
                 TextButton(
                   onPressed: () {
-                    double? amount = double.tryParse(moneyController.text.replaceAll(',', '.'));
+                    double? amount = double.tryParse(
+                        moneyController.text.replaceAll(',', '.'));
                     if (amount != null && amount >= total) {
                       Navigator.pop(context, amount);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Valor inválido ou menor que o total')),
+                        SnackBar(
+                            content:
+                                Text('Valor inválido ou menor que o total')),
                       );
                     }
                   },
-                  child: Text('Confirmar', style: TextStyle(color: Colors.green)),
+                  child:
+                      Text('Confirmar', style: TextStyle(color: Colors.green)),
                 ),
               ],
             ),
@@ -2011,7 +2069,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
     // If there are products with Prencado != 0, show the confirmation dialog
     if (prencadoProducts.isNotEmpty) {
-      bool confirmPrencado = await _showPrencadoConfirmationDialog(prencadoProducts);
+      bool confirmPrencado =
+          await _showPrencadoConfirmationDialog(prencadoProducts);
       if (!confirmPrencado) return;
     }
 
@@ -2024,13 +2083,18 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     bool requestInvoice = false;
 
     // Check if user is a professor and handle invoice request
-    if (users != null && users.isNotEmpty && users[0]['Permissao'] == 'Professor') {
+    if (users != null &&
+        users.isNotEmpty &&
+        users[0]['Permissao'] == 'Professor') {
       requestInvoice = await _showInvoiceRequestDialog();
-      
+
       if (requestInvoice) {
-        bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1;
-        
-        if (autoBillNIF && users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
+        bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' ||
+            users[0]['FaturacaoAutomatica'] == 1;
+
+        if (autoBillNIF &&
+            users[0]['NIF'] != null &&
+            users[0]['NIF'].toString().isNotEmpty) {
           nif = users[0]['NIF'].toString();
         } else {
           nif = await _showNifInputDialog() ?? '';
@@ -2048,9 +2112,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         bool prepararPrencado = item['PrepararPrencado'] ?? false;
         String prencado = item['Prencado'] ?? '0';
         bool isFresh = item['Fresh'] ?? false;
-        
+
         String suffix = '';
-        
+
         if (prencado == '1' && prepararPrencado) {
           suffix = ' - Prensado';
         } else if (prencado == '2' && prepararPrencado) {
@@ -2058,7 +2122,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         } else if (prencado == '3' && isFresh) {
           suffix = ' - Fresco';
         }
-        
+
         return '$name$suffix';
       }).toList();
 
@@ -2087,7 +2151,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           'requestInvoice': requestInvoice ? '1' : '0',
           'nif': nif,
         };
-        
+
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -2111,9 +2175,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           ),
         );
       } else if (paymentMethod == 'dinheiro') {
-        await _handleCashPayment(total, requestInvoice: requestInvoice, nif: nif);
+        await _handleCashPayment(total,
+            requestInvoice: requestInvoice, nif: nif);
       } else if (paymentMethod == 'saldo') {
-        await _handleSaldoPayment(total, requestInvoice: requestInvoice, nif: nif);
+        await _handleSaldoPayment(total,
+            requestInvoice: requestInvoice, nif: nif);
       }
     } catch (e) {
       print('Erro ao enviar pedido: $e');
@@ -2124,22 +2190,23 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   Future<void> sendOrderToWebSocket(
-      List<Map<String, dynamic>> cartItems, 
-      String total, 
-      {String? paymentMethod, 
-      bool requestInvoice = false, 
+      List<Map<String, dynamic>> cartItems, String total,
+      {String? paymentMethod,
+      bool requestInvoice = false,
       String nif = '',
       double? dinheiroAtual}) async {
     try {
       // Format item names with preparation preferences
       List<String> formattedNames = cartItems.map((item) {
         String name = item['Nome'] as String;
-        bool prepararPrencado = item['PrepararPrencado'] ?? false; // Indica se alguma opção de preparação foi marcada no diálogo (usado para tipos 1 e 2)
+        bool prepararPrencado = item['PrepararPrencado'] ??
+            false; // Indica se alguma opção de preparação foi marcada no diálogo (usado para tipos 1 e 2)
         String prencado = item['Prencado'] ?? '0';
-        bool isFresh = item['Fresh'] ?? false; // Usado para a opção "Fresco" (tipo 3)
-        
+        bool isFresh =
+            item['Fresh'] ?? false; // Usado para a opção "Fresco" (tipo 3)
+
         String suffix = '';
-        
+
         if (prencado == '1' && prepararPrencado) {
           suffix = ' - Prensado';
         } else if (prencado == '2' && prepararPrencado) {
@@ -2147,20 +2214,20 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         } else if (prencado == '3' && isFresh) {
           suffix = ' - Fresco';
         }
-        
-        return '$name$suffix';
 
+        return '$name$suffix';
       }).toList();
-      
+
       String descricao = formattedNames.join(', ');
 
       var turma = users[0]['Turma'];
       var nome = users[0]['Nome'];
       var permissao = users[0]['Permissao'];
       var imagem = users[0]['Imagem'];
-      
+
       // Calcular o troco usando o dinheiroAtual passado como parâmetro
-      double troco = (dinheiroAtual ?? double.parse(total)) - double.parse(total);
+      double troco =
+          (dinheiroAtual ?? double.parse(total)) - double.parse(total);
       String trocos = troco.toStringAsFixed(2);
 
       final channel = WebSocketChannel.connect(
@@ -2179,7 +2246,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         'Total': total,
         'Imagem': imagem,
         'MetodoDePagamento': paymentMethod,
-        'DinheiroAtual': dinheiroAtual?.toString() ?? total, // Incluir o valor do dinheiro atual
+        'DinheiroAtual': dinheiroAtual?.toString() ??
+            total, // Incluir o valor do dinheiro atual
       };
 
       // Add invoice information if requested
@@ -2193,11 +2261,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       channel.stream.listen(
         (message) {
           // Add a basic check to see if the message looks like JSON
-          if (message != null && message.startsWith('{') && message.endsWith('}')) {
+          if (message != null &&
+              message.startsWith('{') &&
+              message.endsWith('}')) {
             try {
               var serverResponse = json.decode(message);
               if (serverResponse['status'] == 'success') {
-                if (mounted) { // Check if the widget is still mounted
+                if (mounted) {
+                  // Check if the widget is still mounted
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -2206,18 +2277,20 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   );
                 }
               } else {
-                 if (mounted) { // Check if the widget is still mounted
+                if (mounted) {
+                  // Check if the widget is still mounted
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
                           'Erro ao enviar o pedido. Contacte o Administrador! Error 02'),
                     ),
                   );
-                 }
+                }
               }
             } catch (e) {
               print('Erro ao processar a mensagem WebSocket: $e');
-              if (mounted) { // Check if the widget is still mounted
+              if (mounted) {
+                // Check if the widget is still mounted
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
@@ -2227,14 +2300,15 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               }
             }
           } else {
-             print('Received non-JSON message from WebSocket: $message');
-             // Optionally, you can show a different message to the user for non-JSON responses
+            print('Received non-JSON message from WebSocket: $message');
+            // Optionally, you can show a different message to the user for non-JSON responses
           }
           channel.sink.close();
         },
         onError: (error) {
           print('Erro ao fazer a requisição WebSocket: $error');
-          if (mounted) { // Check if the widget is still mounted
+          if (mounted) {
+            // Check if the widget is still mounted
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
@@ -2246,7 +2320,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       );
     } catch (e) {
       print('Erro ao estabelecer conexão WebSocket: $e');
-      if (mounted) { // Check if the widget is still mounted
+      if (mounted) {
+        // Check if the widget is still mounted
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -2257,7 +2332,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
   }
 
-  Future<void> _handleCashPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
+  Future<void> _handleCashPayment(double total,
+      {bool requestInvoice = false, String nif = ''}) async {
     try {
       // Create the description string with proper formatting
       List<String> formattedNames = cartItems.map((item) {
@@ -2266,7 +2342,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         String prencado = item['Prencado'] ?? '0';
         bool isFresh = item['Fresh'] ?? false;
         String suffix = '';
-        
+
         if (prencado == '1' && prepararPrencado) {
           suffix = ' - Prensado';
         } else if (prencado == '2' && prepararPrencado) {
@@ -2274,7 +2350,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         } else if (prencado == '3' && isFresh) {
           suffix = ' - Fresco';
         }
-        
+
         return '$name$suffix';
       }).toList();
 
@@ -2289,12 +2365,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
       // Se for dinheiro, perguntar sobre o troco
       bool needsChange = await _showNeedsChangeDialog();
-      if (needsChange == null) return; // Se o usuário cancelar o diálogo de troco, retorna
+      if (needsChange == null)
+        return; // Se o usuário cancelar o diálogo de troco, retorna
 
       double? dinheiroAtualNullable;
       if (needsChange) {
         dinheiroAtualNullable = await _showMoneyAmountDialog(total);
-        if (dinheiroAtualNullable == null) return; // Se o usuário cancelar o diálogo de valor, retorna
+        if (dinheiroAtualNullable == null)
+          return; // Se o usuário cancelar o diálogo de valor, retorna
       } else {
         dinheiroAtualNullable = total;
       }
@@ -2337,23 +2415,23 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
           if (data['status'] == 'success') {
             orderNumber = int.parse(data['orderNumber'].toString());
-            
+
             // Calcular o troco antes de enviar para o WebSocket
             double troco = dinheiroAtual - total;
             String trocos = troco.toStringAsFixed(2);
 
             // Enviar para o WebSocket com o valor correto do dinheiro
-            await sendOrderToWebSocket(
-              cartItems,
-              total.toString(),
-              paymentMethod: 'dinheiro',
-              requestInvoice: requestInvoice,
-              nif: nif,
-              dinheiroAtual: dinheiroAtual // Passar o valor do dinheiro para o WebSocket
-            );
-            
+            await sendOrderToWebSocket(cartItems, total.toString(),
+                paymentMethod: 'dinheiro',
+                requestInvoice: requestInvoice,
+                nif: nif,
+                dinheiroAtual:
+                    dinheiroAtual // Passar o valor do dinheiro para o WebSocket
+                );
+
             // --- MOVER ESTA CHAMADA PARA ANTES DE LIMPAR O CARRINHO ---
-            await sendRecentOrderToApi(cartItems); // Envia os itens do pedido para adicionar aos recentes
+            await sendRecentOrderToApi(
+                cartItems); // Envia os itens do pedido para adicionar aos recentes
 
             setState(() {
               cartItems.clear();
@@ -2366,8 +2444,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                    'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
+                  content: Text(
+                      'Pedido enviado com sucesso! Pedido Nº $orderNumber.$changeMsg')),
             );
 
             // Navegar para a página de confirmação de pedido
@@ -2384,8 +2462,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                    'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
+                  content: Text(
+                      'Erro ao criar pedido: ${data['message'] ?? "Erro desconhecido"}')),
             );
           }
         } catch (e) {
@@ -2410,10 +2488,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   void updateItemCountMap() {
     itemCountMap.clear();
     orderedItems.clear(); // Clear the ordered items list first
-    
+
     // Create a map to track unique items and their counts
     Map<String, Map<String, dynamic>> uniqueItems = {};
-    
+
     for (var item in cartItems) {
       final itemName = item['Nome'] as String;
       if (!uniqueItems.containsKey(itemName)) {
@@ -2421,10 +2499,11 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         orderedItems.add(itemName);
       }
     }
-    
+
     // Update the count map
     for (var itemName in orderedItems) {
-      itemCountMap[itemName] = cartItems.where((item) => item['Nome'] == itemName).length;
+      itemCountMap[itemName] =
+          cartItems.where((item) => item['Nome'] == itemName).length;
     }
   }
 
@@ -2461,7 +2540,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         var preco = order['Preco'] ?? '';
         var prencado = order['Prencado'] ?? '0';
         var prepararPrencado = order['PrepararPrencado'] ?? false;
-        
+
         // Convert boolean to string representation for API
         String prepararPrencadoValue = prepararPrencado ? '1' : '0';
 
@@ -2522,10 +2601,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
   Future<void> checkAvailabilityBeforeOrder(double total) async {
     bool allAvailable = true;
-    List<String> unavailableItems = <String>[];  // Explicitly specify the type
+    List<String> unavailableItems = <String>[]; // Explicitly specify the type
 
     for (var item in cartItems) {
-      var itemName = item['Nome'] as String;  // Cast to String
+      var itemName = item['Nome'] as String; // Cast to String
       var quantity = await checkQuantidade(itemName);
 
       if (quantity == 0) {
@@ -2537,19 +2616,24 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     if (cartItems.isNotEmpty) {
       if (allAvailable) {
         // Check if user is a professor before proceeding to payment
-        String userPermission = users != null && users.isNotEmpty ? users[0]['Permissao'] ?? '' : '';
+        String userPermission = users != null && users.isNotEmpty
+            ? users[0]['Permissao'] ?? ''
+            : '';
         String nif = '';
         bool requestInvoice = false;
-        
+
         // If the user is a professor, ask if they want an invoice with NIF
         if (userPermission == 'Professor') {
           requestInvoice = await _showInvoiceRequestDialog();
-          
+
           if (requestInvoice) {
             // Verifica se tem faturação automática ativa
-            bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1;
-            
-            if (autoBillNIF && users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
+            bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' ||
+                users[0]['FaturacaoAutomatica'] == 1;
+
+            if (autoBillNIF &&
+                users[0]['NIF'] != null &&
+                users[0]['NIF'].toString().isNotEmpty) {
               // Se tiver faturação automática e NIF, usa o NIF cadastrado
               nif = users[0]['NIF'].toString();
             } else {
@@ -2562,17 +2646,20 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             }
           }
         }
-        
+
         // Show payment method selection dialog
         final paymentMethod = await _showPaymentMethodDialog();
         if (paymentMethod == null) return;
-        
+
         if (paymentMethod == 'mbway') {
-          await _handleMBWayPayment(total, requestInvoice: requestInvoice, nif: nif);
+          await _handleMBWayPayment(total,
+              requestInvoice: requestInvoice, nif: nif);
         } else if (paymentMethod == 'dinheiro') {
-          await _handleCashPayment(total, requestInvoice: requestInvoice, nif: nif);
+          await _handleCashPayment(total,
+              requestInvoice: requestInvoice, nif: nif);
         } else if (paymentMethod == 'saldo') {
-          await _handleSaldoPayment(total, requestInvoice: requestInvoice, nif: nif);
+          await _handleSaldoPayment(total,
+              requestInvoice: requestInvoice, nif: nif);
         }
       } else {
         showDialog(
@@ -2587,6 +2674,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
                   child: Text('OK'),
                 ),
               ],
@@ -2599,8 +2690,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
 
   Future<bool> _showInvoiceRequestDialog() async {
     // Verifica se o usuário tem faturação automática ativa e NIF cadastrado
-    bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1;
-    bool hasNIF = users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty;
+    bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' ||
+        users[0]['FaturacaoAutomatica'] == 1;
+    bool hasNIF =
+        users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty;
 
     // Se tiver faturação automática e NIF, retorna true diretamente
     if (autoBillNIF && hasNIF) {
@@ -2608,47 +2701,54 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     }
 
     return await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const Text(
-                'Fatura com NIF',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+          context: context,
+          isScrollControlled: true,
+          builder: (BuildContext context) {
+            return Container(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Text(
+                    'Fatura com NIF',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.check_circle, color: Colors.green),
+                    title: const Text('Sim',
+                        style: TextStyle(color: Colors.green)),
+                    onTap: () => Navigator.pop(context, true),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.cancel, color: Colors.red),
+                    title:
+                        const Text('Não', style: TextStyle(color: Colors.red)),
+                    onTap: () => Navigator.pop(context, false),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.check_circle, color: Colors.green),
-                title: const Text('Sim', style: TextStyle(color: Colors.green)),
-                onTap: () => Navigator.pop(context, true),
-              ),
-              ListTile(
-                leading: const Icon(Icons.cancel, color: Colors.red),
-                title: const Text('Não', style: TextStyle(color: Colors.red)),
-                onTap: () => Navigator.pop(context, false),
-              ),
-            ],
-          ),
-        );
-      },
-    ) ?? false;
+            );
+          },
+        ) ??
+        false;
   }
 
   Future<String?> _showNifInputDialog() async {
     final nifController = TextEditingController();
-    
+
     // Verifica se o usuário tem faturação automática ativa
-    bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1;
-    
+    bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' ||
+        users[0]['FaturacaoAutomatica'] == 1;
+
     // Se tiver faturação automática, retorna o NIF diretamente
-    if (autoBillNIF && users[0]['NIF'] != null && users[0]['NIF'].toString().isNotEmpty) {
+    if (autoBillNIF &&
+        users[0]['NIF'] != null &&
+        users[0]['NIF'].toString().isNotEmpty) {
       return users[0]['NIF'].toString();
     }
 
@@ -2696,10 +2796,12 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                     String nif = nifController.text.trim();
                     if (nif.length == 9 && int.tryParse(nif) != null) {
                       // Se o NIF for diferente do cadastrado, atualiza na base de dados
-                      if (users[0]['NIF'] == null || users[0]['NIF'].toString() != nif) {
+                      if (users[0]['NIF'] == null ||
+                          users[0]['NIF'].toString() != nif) {
                         try {
                           final response = await http.post(
-                            Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+                            Uri.parse(
+                                'https://appbar.epvc.pt/API/appBarAPI_Post.php'),
                             body: {
                               'query_param': 'update_nif',
                               'user_id': users[0]['IdUser'].toString(),
@@ -2713,7 +2815,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                               users[0]['NIF'] = nif;
                             });
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('NIF atualizado com sucesso!')),
+                              SnackBar(
+                                  content: Text('NIF atualizado com sucesso!')),
                             );
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -2730,11 +2833,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                       Navigator.pop(context, nif);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('NIF inválido. O NIF deve ter 9 dígitos numéricos.')),
+                        SnackBar(
+                            content: Text(
+                                'NIF inválido. O NIF deve ter 9 dígitos numéricos.')),
                       );
                     }
                   },
-                  child: Text('Confirmar', style: TextStyle(color: Colors.green)),
+                  child:
+                      Text('Confirmar', style: TextStyle(color: Colors.green)),
                 ),
               ],
             ),
@@ -2745,7 +2851,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   }
 
   // Method for MBWay payment
-  Future<void> _handleMBWayPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
+  Future<void> _handleMBWayPayment(double total,
+      {bool requestInvoice = false, String nif = ''}) async {
     try {
       // Create the description string with proper formatting
       List<String> formattedNames = cartItems.map((item) {
@@ -2753,9 +2860,9 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         bool prepararPrencado = item['PrepararPrencado'] ?? false;
         String prencado = item['Prencado'] ?? '0';
         bool isFresh = item['Fresh'] ?? false;
-        
+
         String suffix = '';
-        
+
         if (prencado == '1' && prepararPrencado) {
           suffix = ' - Prensado';
         } else if (prencado == '2' && prepararPrencado) {
@@ -2763,7 +2870,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         } else if (prencado == '3' && isFresh) {
           suffix = ' - Fresco';
         }
-        
+
         return '$name$suffix';
       }).toList();
 
@@ -2790,7 +2897,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         'requestInvoice': requestInvoice ? '1' : '0',
         'nif': nif,
       };
-      
+
       // Ir para a página de telefone MBWay com a lógica de pagamento
       await Navigator.push(
         context,
@@ -2821,213 +2928,221 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       print('Erro ao processar pagamento MBWay: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao processar pagamento: ${e.toString()}')),
+          SnackBar(
+              content: Text('Erro ao processar pagamento: ${e.toString()}')),
         );
       }
     }
   }
 
   // Method for Saldo payment
-  Future<void> _handleSaldoPayment(double total, {bool requestInvoice = false, String nif = ''}) async {
+  Future<void> _handleSaldoPayment(double total,
+      {bool requestInvoice = false, String nif = ''}) async {
     // Implement balance check, deduction, and transaction recording here
     if (users == null || users.isEmpty || users[0]['Saldo'] == null) {
-       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text('Erro ao obter saldo do usuário.')),
-         );
-       }
-       return; // Cannot proceed without user data or balance
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao obter saldo do usuário.')),
+        );
+      }
+      return; // Cannot proceed without user data or balance
     }
 
-    double currentBalance = double.tryParse(users[0]['Saldo'].toString()) ?? 0.0;
+    double currentBalance =
+        double.tryParse(users[0]['Saldo'].toString()) ?? 0.0;
 
     if (currentBalance >= total) {
-        // Sufficient balance, proceed with payment
-         try {
-            // Create the description string with proper formatting
-            List<String> formattedNames = cartItems.map((item) {
-              String name = item['Nome'] as String;
-              bool prepararPrencado = item['PrepararPrencado'] ?? false;
-              String prencado = item['Prencado'] ?? '0';
-              bool isFresh = item['Fresh'] ?? false;
+      // Sufficient balance, proceed with payment
+      try {
+        // Create the description string with proper formatting
+        List<String> formattedNames = cartItems.map((item) {
+          String name = item['Nome'] as String;
+          bool prepararPrencado = item['PrepararPrencado'] ?? false;
+          String prencado = item['Prencado'] ?? '0';
+          bool isFresh = item['Fresh'] ?? false;
 
-              String suffix = '';
-              
-              if (prencado == '1' && prepararPrencado) {
-                suffix = ' - Prensado';
-              } else if (prencado == '2' && prepararPrencado) {
-                suffix = ' - Aquecido';
-              } else if (prencado == '3' && isFresh) {
-                suffix = ' - Fresco';
-              }
-              
-              return '$name$suffix';
-            }).toList();
+          String suffix = '';
 
-            String descricao = formattedNames.join(', ');
+          if (prencado == '1' && prepararPrencado) {
+            suffix = ' - Prensado';
+          } else if (prencado == '2' && prepararPrencado) {
+            suffix = ' - Aquecido';
+          } else if (prencado == '3' && isFresh) {
+            suffix = ' - Fresco';
+          }
 
-            // Extract user information
-            var turma = users[0]['Turma'] ?? '';
-            var nome = users[0]['Nome'] ?? '';
-            var apelido = users[0]['Apelido'] ?? '';
-            var permissao = users[0]['Permissao'] ?? '';
-            var imagem = users[0]['Imagem'] ?? '';
-            var userEmail = users[0]['Email'] ?? '';
+          return '$name$suffix';
+        }).toList();
 
-            // Primeiro, criar o pedido para obter o número do pedido
-            final orderResponse = await http.post(
-              Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        String descricao = formattedNames.join(', ');
+
+        // Extract user information
+        var turma = users[0]['Turma'] ?? '';
+        var nome = users[0]['Nome'] ?? '';
+        var apelido = users[0]['Apelido'] ?? '';
+        var permissao = users[0]['Permissao'] ?? '';
+        var imagem = users[0]['Imagem'] ?? '';
+        var userEmail = users[0]['Email'] ?? '';
+
+        // Primeiro, criar o pedido para obter o número do pedido
+        final orderResponse = await http.post(
+          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+          body: {
+            'query_param': '5',
+            'nome': nome,
+            'apelido': apelido,
+            'orderNumber': '0',
+            'turma': turma,
+            'descricao': descricao,
+            'permissao': permissao,
+            'total': total.toString(),
+            'valor': total.toString(),
+            'imagem': imagem,
+            'payment_method': 'saldo',
+            'phone_number': '--',
+            'requestInvoice': requestInvoice ? '1' : '0',
+            'nif': nif,
+          },
+        );
+
+        if (orderResponse.statusCode == 200 && orderResponse.body.isNotEmpty) {
+          final orderData = json.decode(orderResponse.body);
+          if (orderData['status'] == 'success') {
+            orderNumber = int.parse(orderData['orderNumber'].toString());
+
+            // Agora que temos o número do pedido, usar apenas ele na descrição
+            String descricaoComPedido = 'Pedido Nº$orderNumber';
+
+            // Call API to deduct balance and record transaction
+            final response = await http.post(
+              Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
               body: {
-                'query_param': '5',
-                'nome': nome,
-                'apelido': apelido,
-                'orderNumber': '0',
-                'turma': turma,
-                'descricao': descricao,
-                'permissao': permissao,
-                'total': total.toString(),
-                'valor': total.toString(),
-                'imagem': imagem,
-                'payment_method': 'saldo',
-                'phone_number': '--',
-                'requestInvoice': requestInvoice ? '1' : '0',
-                'nif': nif,
+                'query_param': '9.1',
+                'email': userEmail,
+                'amount': total.toString(),
+                'description': descricaoComPedido,
+                'type': '2', // 2 for used
               },
             );
 
-            if (orderResponse.statusCode == 200 && orderResponse.body.isNotEmpty) {
-              final orderData = json.decode(orderResponse.body);
-              if (orderData['status'] == 'success') {
-                orderNumber = int.parse(orderData['orderNumber'].toString());
-                
-                // Agora que temos o número do pedido, usar apenas ele na descrição
-                String descricaoComPedido = 'Pedido Nº$orderNumber';
+            print('Saldo payment API response status: ${response.statusCode}');
+            print('Saldo payment API response body: ${response.body}');
 
-                // Call API to deduct balance and record transaction
-                final response = await http.post(
-                  Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-                  body: {
-                    'query_param': '9.1',
-                    'email': userEmail,
-                    'amount': total.toString(),
-                    'description': descricaoComPedido,
-                    'type': '2', // 2 for used
-                  },
+            if (response.statusCode == 200) {
+              final responseData = json.decode(response.body);
+              if (responseData['success'] == true) {
+                // Enviar para o WebSocket
+                await sendOrderToWebSocket(
+                  cartItems,
+                  total.toString(),
+                  paymentMethod: 'saldo',
+                  requestInvoice: requestInvoice,
+                  nif: nif,
                 );
 
-                print('Saldo payment API response status: ${response.statusCode}');
-                print('Saldo payment API response body: ${response.body}');
+                // Envia os itens do pedido para adicionar aos recentes ANTES de limpar
+                await sendRecentOrderToApi(cartItems);
 
-                if (response.statusCode == 200) {
-                  final responseData = json.decode(response.body);
-                  if (responseData['success'] == true) {
-                    // Enviar para o WebSocket
-                    await sendOrderToWebSocket(
-                      cartItems,
-                      total.toString(),
-                      paymentMethod: 'saldo',
-                      requestInvoice: requestInvoice,
-                      nif: nif,
-                    );
+                // Limpar o carrinho e atualizar a UI
+                setState(() {
+                  cartItems.clear();
+                  updateItemCountMap();
+                });
 
-                    // Envia os itens do pedido para adicionar aos recentes ANTES de limpar
-                    await sendRecentOrderToApi(cartItems);
+                // Mostrar mensagem de sucesso
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text(
+                          'Pedido Nº $orderNumber realizado com sucesso!')),
+                );
 
-                    // Limpar o carrinho e atualizar a UI
-                    setState(() {
-                      cartItems.clear();
-                      updateItemCountMap();
-                    });
-
-                    // Mostrar mensagem de sucesso
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Pedido Nº $orderNumber realizado com sucesso!')),
-                    );
-
-                    // Navegar para a página de confirmação de sucesso
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CashConfirmationPage(
-                          change: 0.0, // Não há troco no pagamento com saldo
-                          orderNumber: orderNumber,
-                          amount: total,
-                        ),
-                      ),
-                    );
-                  } else {
-                    String errorMsg = responseData['error'] ?? 'Erro desconhecido ao processar pagamento com Saldo';
-                    // Navegar para a página de declínio com a mensagem de erro
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => OrderDeclinedPage(
-                          reason: errorMsg,
-                          amount: total,
-                        ),
-                      ),
-                    );
-                  }
-                } else {
-                  // Navegar para a página de declínio com erro de comunicação
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => OrderDeclinedPage(
-                        reason: 'Erro na comunicação com o servidor',
-                        amount: total,
-                      ),
+                // Navegar para a página de confirmação de sucesso
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CashConfirmationPage(
+                      change: 0.0, // Não há troco no pagamento com saldo
+                      orderNumber: orderNumber,
+                      amount: total,
                     ),
-                  );
-                }
+                  ),
+                );
               } else {
-                // Navegar para a página de declínio com erro ao criar pedido
+                String errorMsg = responseData['error'] ??
+                    'Erro desconhecido ao processar pagamento com Saldo';
+                // Navegar para a página de declínio com a mensagem de erro
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
                     builder: (context) => OrderDeclinedPage(
-                      reason: 'Erro ao criar pedido: ${orderData['message'] ?? "Erro desconhecido"}',
+                      reason: errorMsg,
                       amount: total,
                     ),
                   ),
                 );
               }
             } else {
-              // Navegar para a página de declínio com erro ao criar pedido
+              // Navegar para a página de declínio com erro de comunicação
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
                   builder: (context) => OrderDeclinedPage(
-                    reason: 'Erro ao criar pedido',
+                    reason: 'Erro na comunicação com o servidor',
                     amount: total,
                   ),
                 ),
               );
             }
-         } catch (e) {
-            print('Error processing Saldo payment: $e');
-            // Navegar para a página de declínio com erro de processamento
+          } else {
+            // Navegar para a página de declínio com erro ao criar pedido
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (context) => OrderDeclinedPage(
-                  reason: 'Erro ao processar pagamento: ${e.toString()}',
+                  reason:
+                      'Erro ao criar pedido: ${orderData['message'] ?? "Erro desconhecido"}',
                   amount: total,
                 ),
               ),
             );
-         }
-    } else {
-        // Saldo insuficiente - navegar para a página de declínio
+          }
+        } else {
+          // Navegar para a página de declínio com erro ao criar pedido
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OrderDeclinedPage(
+                reason: 'Erro ao criar pedido',
+                amount: total,
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        print('Error processing Saldo payment: $e');
+        // Navegar para a página de declínio com erro de processamento
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => OrderDeclinedPage(
-              reason: 'Saldo insuficiente. Saldo atual: ${currentBalance.toStringAsFixed(2)}€',
+              reason: 'Erro ao processar pagamento: ${e.toString()}',
               amount: total,
             ),
           ),
         );
+      }
+    } else {
+      // Saldo insuficiente - navegar para a página de declínio
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OrderDeclinedPage(
+            reason:
+                'Saldo insuficiente. Saldo atual: ${currentBalance.toStringAsFixed(2)}€',
+            amount: total,
+          ),
+        ),
+      );
     }
   }
 
@@ -3057,520 +3172,620 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         ],
       ),
       drawer: DrawerHome(),
-      body: cartItems.isEmpty 
-        ? _buildEmptyCart() 
-        : Column(
-          children: [
-            // Resumo do carrinho
-            Container(
-              padding: EdgeInsets.all(16),
-              color: Colors.orange.withOpacity(0.1),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      body: cartItems.isEmpty
+          ? _buildEmptyCart()
+          : Column(
+              children: [
+                // Resumo do carrinho
+                Container(
+                  padding: EdgeInsets.all(16),
+                  color: Colors.orange.withOpacity(0.1),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Meu Carrinho', 
-                        style: TextStyle(
-                          fontSize: 18, 
-                          fontWeight: FontWeight.bold
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '${itemCountMap.length} ${itemCountMap.length == 1 ? 'produto' : 'produtos'} diferentes',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Meu Carrinho',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '${itemCountMap.length} ${itemCountMap.length == 1 ? 'produto' : 'produtos'} diferentes',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            
-            // Lista de produtos
-            Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.only(top: 12),
-                itemCount: orderedItems.length,
-                itemBuilder: (context, index) {
-                  final itemName = orderedItems[index];
-                  final itemCount = itemCountMap[itemName] ?? 0;
-                  // Safely find the item or use a placeholder if not found
-                  final item = cartItems.firstWhere(
-                    (element) => element['Nome'] == itemName,
-                    orElse: () => { // Provide a default map if the item is not found
-                      'Nome': itemName, // Keep the original item name
-                      'Imagem': '', // Provide a default empty image string
-                      'Preco': '0.0', // Provide a default price
-                      'Prencado': '0', // Provide a default prencado status
-                      'PrepararPrencado': false, // Provide a default value
-                      'Fresh': false, // Provide a default value
-                    },
-                  );
+                ),
 
-                  // If item is null (not found), return an empty container or handle appropriately
-                  // This check is technically no longer strictly necessary with the orElse returning a map,
-                  // but it's good for robustness or if you prefer not to display placeholders.
-                  // If you want to hide items not found, keep this block.
-                  // If you want to display placeholders, remove this block.
-                  // Keeping it for now to match previous behavior of hiding missing items.
-                  if (item['Nome'] != itemName) { // Check if the found item's name matches (i.e., if orElse was triggered)
-                     return Container(); // Hide the item if the placeholder was returned
-                  }
+                // Lista de produtos
+                Expanded(
+                  child: ListView.builder(
+                    padding: EdgeInsets.only(top: 12),
+                    itemCount: orderedItems.length,
+                    itemBuilder: (context, index) {
+                      final itemName = orderedItems[index];
+                      final itemCount = itemCountMap[itemName] ?? 0;
+                      // Safely find the item or use a placeholder if not found
+                      final item = cartItems.firstWhere(
+                        (element) => element['Nome'] == itemName,
+                        orElse: () => {
+                          // Provide a default map if the item is not found
+                          'Nome': itemName, // Keep the original item name
+                          'Imagem': '', // Provide a default empty image string
+                          'Preco': '0.0', // Provide a default price
+                          'Prencado': '0', // Provide a default prencado status
+                          'PrepararPrencado': false, // Provide a default value
+                          'Fresh': false, // Provide a default value
+                        },
+                      );
 
-                  final image = item['Imagem'] != null && item['Imagem'].isNotEmpty ? base64.decode(item['Imagem']) : null;
-                  final itemPrice = double.tryParse(item['Preco']?.toString() ?? '0') ?? 0;
-                  final itemTotal = itemPrice * itemCount;
-                  
-                  return Card(
-                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white,
-                            Colors.grey[50]!,
-                          ],
+                      // If item is null (not found), return an empty container or handle appropriately
+                      // This check is technically no longer strictly necessary with the orElse returning a map,
+                      // but it's good for robustness or if you prefer not to display placeholders.
+                      // If you want to hide items not found, keep this block.
+                      // If you want to display placeholders, remove this block.
+                      // Keeping it for now to match previous behavior of hiding missing items.
+                      if (item['Nome'] != itemName) {
+                        // Check if the found item's name matches (i.e., if orElse was triggered)
+                        return Container(); // Hide the item if the placeholder was returned
+                      }
+
+                      final image =
+                          item['Imagem'] != null && item['Imagem'].isNotEmpty
+                              ? base64.decode(item['Imagem'])
+                              : null;
+                      final itemPrice =
+                          double.tryParse(item['Preco']?.toString() ?? '0') ??
+                              0;
+                      final itemTotal = itemPrice * itemCount;
+
+                      return Card(
+                        margin:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Top row with image, title and quantity
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Imagem do produto
-                                Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(10),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: image != null
-                                        ? Image.memory(
-                                            image,
-                                            fit: BoxFit.cover,
-                                            gaplessPlayback: true,
-                                            cacheWidth: 120,
-                                            cacheHeight: 120,
-                                            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                              if (wasSynchronouslyLoaded) return child;
-                                              return AnimatedSwitcher(
-                                                duration: Duration(milliseconds: 200),
-                                                child: frame != null ? child : Container(
-                                                  color: Colors.grey[200],
-                                                  child: Icon(
-                                                    Icons.fastfood,
-                                                    size: 40,
-                                                    color: Colors.grey[400],
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                          )
-                                        : Container(
-                                            color: Colors.grey[200],
-                                            child: Icon(
-                                              Icons.fastfood,
-                                              size: 40,
-                                              color: Colors.grey[400],
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                                SizedBox(width: 12),
-                                // Title and price
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        itemName,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.grey[800],
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      SizedBox(height: 4),
-                                     
-                                    ],
-                                  ),
-                                ),
-                                // Quantity controls
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[100],
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(Icons.remove, size: 16),
-                                        onPressed: _isLoading ? null : () {
-                                          setState(() {
-                                            _isLoading = true;
-                                            if (itemCount > 1) {
-                                              int index = cartItems.indexWhere((element) => element['Nome'] == itemName);
-                                              if (index != -1) {
-                                                cartItems.removeAt(index);
-                                                itemCountMap[itemName] = itemCount - 1;
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('Item removido'),
-                                                    duration: Duration(milliseconds: 500),
-                                                  ),
-                                                );
-                                              }
-                                            } else {
-                                              cartItems.removeWhere((element) => element['Nome'] == itemName);
-                                              itemCountMap.remove(itemName);
-                                              orderedItems.remove(itemName);
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('Item removido do carrinho'),
-                                                  duration: Duration(milliseconds: 500),
-                                                ),
-                                              );
-                                            }
-                                          });
-                                        },
-                                        color: _isLoading ? Colors.grey[400] : Colors.grey[700],
-                                        padding: EdgeInsets.all(4),
-                                        constraints: BoxConstraints(
-                                          minWidth: 32,
-                                          minHeight: 32,
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 4),
-                                        child: Text(
-                                          itemCount.toString(),
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.grey[800],
-                                          ),
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(Icons.add, size: 16),
-                                        onPressed: _isLoading ? null : () {
-                                          setState(() {
-                                            _isLoading = true;
-                                            cartItems.add(Map<String, dynamic>.from(item));
-                                            itemCountMap[itemName] = itemCount + 1;
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text('Item adicionado'),
-                                                duration: Duration(milliseconds: 500),
-                                              ),
-                                            );
-                                            _isLoading = false;
-                                          });
-                                        },
-                                        color: _isLoading ? Colors.grey[400] : Colors.grey[700],
-                                        padding: EdgeInsets.all(4),
-                                        constraints: BoxConstraints(
-                                          minWidth: 32,
-                                          minHeight: 32,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white,
+                                Colors.grey[50]!,
                               ],
                             ),
-                            SizedBox(height: 8),
-                            // Preparation options at the bottom
-                            if (item['Prencado'] == '1' || item['Prencado'] == '2')
-                              Center(
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        item['Prencado'] == '1' ? Icons.coffee : Icons.local_cafe,
-                                        size: 16,
-                                        color: Colors.orange[700],
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Top row with image, title and quantity
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Imagem do produto
+                                    Container(
+                                      width: 60,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(10),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.1),
+                                            blurRadius: 4,
+                                            offset: Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Selecione o Tipo: ',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                      Expanded( // Let ToggleButtons take available space
-                                        child: ToggleButtons(
-                                          isSelected: [
-                                            item['PrepararPrencado'] ?? false,
-                                            !(item['PrepararPrencado'] ?? false),
-                                          ],
-                                          onPressed: (index) {
-                                            setState(() {
-                                              item['PrepararPrencado'] = index == 0;
-                                            });
-                                          },
-                                          borderRadius: BorderRadius.circular(6),
-                                          selectedColor: Colors.white,
-                                          fillColor: Colors.orange[700],
-                                          borderColor: Colors.orange[700],
-                                          color: Colors.grey[700],
-                                          borderWidth: 1.0,
-                                          selectedBorderColor: Colors.orange[700],
-                                          children: [
-                                            Expanded(
-                                              child: Padding(
-                                                padding: EdgeInsets.symmetric(horizontal: 4),
-                                                child: Text(
-                                                  item['Prencado'] == '1' ? 'Prensado' : 'Aquecido',
-                                                  style: TextStyle(fontSize: 12),
-                                                  textAlign: TextAlign.center,
-                                                  overflow: TextOverflow.ellipsis,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: image != null
+                                            ? Image.memory(
+                                                image,
+                                                fit: BoxFit.cover,
+                                                gaplessPlayback: true,
+                                                cacheWidth: 120,
+                                                cacheHeight: 120,
+                                                frameBuilder: (context,
+                                                    child,
+                                                    frame,
+                                                    wasSynchronouslyLoaded) {
+                                                  if (wasSynchronouslyLoaded)
+                                                    return child;
+                                                  return AnimatedSwitcher(
+                                                    duration: Duration(
+                                                        milliseconds: 200),
+                                                    child: frame != null
+                                                        ? child
+                                                        : Container(
+                                                            color: Colors
+                                                                .grey[200],
+                                                            child: Icon(
+                                                              Icons.fastfood,
+                                                              size: 40,
+                                                              color: Colors
+                                                                  .grey[400],
+                                                            ),
+                                                          ),
+                                                  );
+                                                },
+                                              )
+                                            : Container(
+                                                color: Colors.grey[200],
+                                                child: Icon(
+                                                  Icons.fastfood,
+                                                  size: 40,
+                                                  color: Colors.grey[400],
                                                 ),
                                               ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    // Title and price
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            itemName,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey[800],
                                             ),
-                                            Expanded(
-                                              child: Padding(
-                                                padding: EdgeInsets.symmetric(horizontal: 4),
-                                                child: Text(
-                                                  'Normal',
-                                                  style: TextStyle(fontSize: 12),
-                                                  textAlign: TextAlign.center,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          SizedBox(height: 4),
+                                        ],
+                                      ),
+                                    ),
+                                    // Quantity controls
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(Icons.remove, size: 16),
+                                            onPressed: _isLoading
+                                                ? null
+                                                : () {
+                                                    setState(() {
+                                                      _isLoading = true;
+                                                      if (itemCount > 1) {
+                                                        int index = cartItems
+                                                            .indexWhere(
+                                                                (element) =>
+                                                                    element[
+                                                                        'Nome'] ==
+                                                                    itemName);
+                                                        if (index != -1) {
+                                                          cartItems
+                                                              .removeAt(index);
+                                                          itemCountMap[
+                                                                  itemName] =
+                                                              itemCount - 1;
+                                                         /* ScaffoldMessenger.of(
+                                                                  context)
+                                                              .showSnackBar(
+                                                            SnackBar(
+                                                              content: Text(
+                                                                  'Item removido'),
+                                                              duration: Duration(
+                                                                  milliseconds:
+                                                                      500),
+                                                            ),
+                                                          );*/
+                                                        }
+                                                      } else {
+                                                        cartItems.removeWhere(
+                                                            (element) =>
+                                                                element[
+                                                                    'Nome'] ==
+                                                                itemName);
+                                                        itemCountMap
+                                                            .remove(itemName);
+                                                        orderedItems
+                                                            .remove(itemName);
+                                                      /*  ScaffoldMessenger.of(
+                                                                context)
+                                                            .showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                                'Item removido do carrinho'),
+                                                            duration: Duration(
+                                                                milliseconds:
+                                                                    500),
+                                                          ),
+                                                        );*/
+                                                      }
+                                                    });
+                                                  },
+                                            color: _isLoading
+                                                ? Colors.grey[400]
+                                                : Colors.grey[700],
+                                            padding: EdgeInsets.all(4),
+                                            constraints: BoxConstraints(
+                                              minWidth: 32,
+                                              minHeight: 32,
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 4),
+                                            child: Text(
+                                              itemCount.toString(),
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.grey[800],
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                          IconButton(
+                                            icon: Icon(Icons.add, size: 16),
+                                            onPressed: _isLoading
+                                                ? null
+                                                : () {
+                                                    setState(() {
+                                                      _isLoading = true;
+                                                      cartItems.add(Map<String,
+                                                          dynamic>.from(item));
+                                                      itemCountMap[itemName] =
+                                                          itemCount + 1;
+                                                      ScaffoldMessenger.of(
+                                                              context)
+                                                          .showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                              'Item adicionado'),
+                                                          duration: Duration(
+                                                              milliseconds:
+                                                                  500),
+                                                        ),
+                                                      );
+                                                      _isLoading = false;
+                                                    });
+                                                  },
+                                            color: _isLoading
+                                                ? Colors.grey[400]
+                                                : Colors.grey[700],
+                                            padding: EdgeInsets.all(4),
+                                            constraints: BoxConstraints(
+                                              minWidth: 32,
+                                              minHeight: 32,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            if (item['Prencado'] == '3')
-                              Center(
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.local_drink,
-                                        size: 16,
-                                        color: Colors.orange[700],
+                                SizedBox(height: 8),
+                                // Preparation options at the bottom
+                                if (item['Prencado'] == '1' ||
+                                    item['Prencado'] == '2')
+                                  Center(
+                                    child: Container(
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Selecione o Tipo: ',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                      Expanded( // Let ToggleButtons take available space
-                                        child: ToggleButtons(
-                                          isSelected: [
-                                            item['Fresh'] ?? false,
-                                            !(item['Fresh'] ?? false),
-                                          ],
-                                          onPressed: (index) {
-                                            setState(() {
-                                              item['Fresh'] = index == 0;
-                                            });
-                                          },
-                                          borderRadius: BorderRadius.circular(6),
-                                          selectedColor: Colors.white,
-                                          fillColor: Colors.orange[700],
-                                          borderColor: Colors.orange[700],
-                                          color: Colors.grey[700],
-                                          borderWidth: 1.0,
-                                          selectedBorderColor: Colors.orange[700],
-                                          children: [
-                                            Expanded(
-                                              child: Padding(
-                                                padding: EdgeInsets.symmetric(horizontal: 4),
-                                                child: Text(
-                                                  'Fresco',
-                                                  style: TextStyle(fontSize: 12),
-                                                  textAlign: TextAlign.center,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            item['Prencado'] == '1'
+                                                ? Icons.coffee
+                                                : Icons.local_cafe,
+                                            size: 16,
+                                            color: Colors.orange[700],
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Selecione o Tipo: ',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[700],
                                             ),
-                                            Expanded(
-                                              child: Padding(
-                                                padding: EdgeInsets.symmetric(horizontal: 4),
-                                                child: Text(
-                                                  'Natural',
-                                                  style: TextStyle(fontSize: 12),
-                                                  textAlign: TextAlign.center,
-                                                  overflow: TextOverflow.ellipsis,
+                                          ),
+                                          Expanded(
+                                            // Let ToggleButtons take available space
+                                            child: ToggleButtons(
+                                              isSelected: [
+                                                item['PrepararPrencado'] ??
+                                                    false,
+                                                !(item['PrepararPrencado'] ??
+                                                    false),
+                                              ],
+                                              onPressed: (index) {
+                                                setState(() {
+                                                  item['PrepararPrencado'] =
+                                                      index == 0;
+                                                });
+                                              },
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              selectedColor: Colors.white,
+                                              fillColor: Colors.orange[700],
+                                              borderColor: Colors.orange[700],
+                                              color: Colors.grey[700],
+                                              borderWidth: 1.0,
+                                              selectedBorderColor:
+                                                  Colors.orange[700],
+                                              children: [
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                            horizontal: 4),
+                                                    child: Text(
+                                                      item['Prencado'] == '1'
+                                                          ? 'Prensado'
+                                                          : 'Aquecido',
+                                                      style: TextStyle(
+                                                          fontSize: 12),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                            horizontal: 4),
+                                                    child: Text(
+                                                      'Normal',
+                                                      style: TextStyle(
+                                                          fontSize: 12),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            
-            // Rodapé com total e botão
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    offset: Offset(0, -2),
-                    blurRadius: 6,
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Resumo de valores
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Total a pagar:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                                if (item['Prencado'] == '3')
+                                  Center(
+                                    child: Container(
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.local_drink,
+                                            size: 16,
+                                            color: Colors.orange[700],
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Selecione o Tipo: ',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[700],
+                                            ),
+                                          ),
+                                          Expanded(
+                                            // Let ToggleButtons take available space
+                                            child: ToggleButtons(
+                                              isSelected: [
+                                                item['Fresh'] ?? false,
+                                                !(item['Fresh'] ?? false),
+                                              ],
+                                              onPressed: (index) {
+                                                setState(() {
+                                                  item['Fresh'] = index == 0;
+                                                });
+                                              },
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              selectedColor: Colors.white,
+                                              fillColor: Colors.orange[700],
+                                              borderColor: Colors.orange[700],
+                                              color: Colors.grey[700],
+                                              borderWidth: 1.0,
+                                              selectedBorderColor:
+                                                  Colors.orange[700],
+                                              children: [
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                            horizontal: 4),
+                                                    child: Text(
+                                                      'Fresco',
+                                                      style: TextStyle(
+                                                          fontSize: 12),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                            horizontal: 4),
+                                                    child: Text(
+                                                      'Natural',
+                                                      style: TextStyle(
+                                                          fontSize: 12),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                        Text(
-                          '${total.toStringAsFixed(2).replaceAll('.', ',')}€',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange,
+                      );
+                    },
+                  ),
+                ),
+
+                // Rodapé com total e botão
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        offset: Offset(0, -2),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Resumo de valores
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Total a pagar:',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              '${total.toStringAsFixed(2).replaceAll('.', ',')}€',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+
+                        // Botão de confirmar pedido
+                        SizedBox(
+                          width: double.infinity,
+                          child: LoadingButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () async {
+                                    if (cartItems.isEmpty) {
+                                      showDialog(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return AlertDialog(
+                                            title: Text('Carrinho Vazio'),
+                                            content: Text(
+                                                'Carrinho Vazio.\nPara continuar adicione produtos.'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () {
+                                                  Navigator.of(context).pop();
+                                                },
+                                                child: Text('OK'),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    } else {
+                                      setState(() => _isLoading = true);
+                                      try {
+                                        await checkAvailabilityBeforeOrder(
+                                            total);
+                                      } finally {
+                                        setState(() => _isLoading = false);
+                                      }
+                                    }
+                                  },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Confirmar Pedido',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (_isLoading)
+                                  Padding(
+                                    padding: EdgeInsets.only(left: 10),
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            backgroundColor:
+                                _isLoading ? Colors.grey : Colors.orange,
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 16),
-                    
-                    // Botão de confirmar pedido
-                    SizedBox(
-                      width: double.infinity,
-                      child: LoadingButton(
-                        onPressed: _isLoading ? null : () async {
-                          if (cartItems.isEmpty) {
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  title: Text('Carrinho Vazio'),
-                                  content: Text(
-                                      'Carrinho Vazio.\nPara continuar adicione produtos.'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: Text('OK'),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          } else {
-                            setState(() => _isLoading = true);
-                            try {
-                              await checkAvailabilityBeforeOrder(total);
-                            } finally {
-                              setState(() => _isLoading = false);
-                            }
-                          }
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Confirmar Pedido',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (_isLoading)
-                              Padding(
-                                padding: EdgeInsets.only(left: 10),
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        backgroundColor: _isLoading ? Colors.grey : Colors.orange,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      );
+    );
   }
 
   // Widget para estado vazio do carrinho
@@ -3612,7 +3827,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               );
             },
             icon: Icon(Icons.add_shopping_cart, color: Colors.orange[500]),
-            label: Text('Escolher Produtos', style: TextStyle(color: Colors.orange[500]),),
+            label: Text(
+              'Escolher Produtos',
+              style: TextStyle(color: Colors.orange[500]),
+            ),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
@@ -3625,5 +3843,3 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     );
   }
 }
-
-

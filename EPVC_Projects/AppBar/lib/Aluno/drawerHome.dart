@@ -82,7 +82,11 @@ class _DrawerHomeState extends State<DrawerHome> {
               onPressed: () {
                 Navigator.of(context).pop(); // Fecha o AlertDialog
               },
-              style: TextButton.styleFrom(foregroundColor: Colors.white, backgroundColor: Colors.orange),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
             ),
             TextButton(
               child: const Text('Confirmar'),
@@ -97,7 +101,11 @@ class _DrawerHomeState extends State<DrawerHome> {
                         builder: (BuildContext ctx) => const LoginForm()));
                 ModalRoute.withName('/');
               },
-              style: TextButton.styleFrom(foregroundColor: Colors.white, backgroundColor: Colors.orange),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
             ),
           ],
         );
@@ -136,10 +144,19 @@ class _DrawerHomeState extends State<DrawerHome> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white,
-                        image: DecorationImage(
-                          image: MemoryImage(base64Decode(users[0]['Imagem'])),
-                          fit: BoxFit.cover,
-                        ),
+                      ),
+                      child: Image.memory(
+                        base64Decode(users[0]['Imagem']),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(40.0),
+                            child: Image.asset(
+                              'lib/assets/barapp.png',
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        },
                       ),
                     )
                   else
@@ -149,9 +166,15 @@ class _DrawerHomeState extends State<DrawerHome> {
                       margin: const EdgeInsets.only(bottom: 16.0),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.grey[200],
+                        color: Colors.white,
                       ),
-                      child: Icon(Icons.person, size: 40, color: Colors.grey[600]),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(40.0),
+                        child: Image.asset(
+                          'lib/assets/barapp.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
                   Text(
                     // Display user's name or a default string
