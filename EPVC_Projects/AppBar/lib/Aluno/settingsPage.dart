@@ -459,6 +459,27 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+    Future<String?> _showUnavaiable() async{
+return showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Método de Pagamento Indisponivel'),
+          content: Text(
+              'O método de pagamento encontra-se indisponível de momento, iremos tentar ser os mais breves possiveis.'),
+          actions: [
+            TextButton(
+              onPressed: () { Navigator.of(context).pop(); /*Navigator.of(context).pop();*/},
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -721,12 +742,14 @@ class _SettingsPageState extends State<SettingsPage> {
                                     ),
                                     Divider(),
                                     ListTile(
-                                      leading: Icon(Icons.phone_android, color: Colors.red[900]),
-                                      title: Text('MBWay'),
+                                      leading: Icon(Icons.phone_android, color:/* Colors.red[900]*/ Colors.grey),
+                                      title: Text('MBWay', style:TextStyle( color:  Colors.grey,)),
                                       onTap: () {
                                         Navigator.pop(context);
                                         if (_sibsService != null) {
-                                          Navigator.push(
+                                          _showUnavaiable();
+
+                                          /*Navigator.push(
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) => MBWayPhoneNumberSaldoPage(
@@ -739,7 +762,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                                 },
                                               ),
                                             ),
-                                          );
+                                          );*/
                                         } else {
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             SnackBar(content: Text('Serviço de pagamento indisponível. Tente mais tarde.')),
@@ -797,6 +820,8 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
+
+  
 
   Widget _buildEditableAddressCard() {
     return Card(

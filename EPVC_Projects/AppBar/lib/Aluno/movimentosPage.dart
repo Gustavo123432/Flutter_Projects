@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:appbar_epvc/Aluno/drawerHome.dart';
+import 'package:appbar_epvc/widgets/loading_overlay.dart';
 
 class MovimentosPage extends StatefulWidget {
   @override
@@ -268,10 +269,7 @@ class _MovimentosPageState extends State<MovimentosPage> {
               style: TextButton.styleFrom(
                 backgroundColor: Colors.orange,
                 foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               child: Text('Fechar'),
             ),
@@ -297,123 +295,126 @@ class _MovimentosPageState extends State<MovimentosPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Meus Movimentos'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: () {
-              setState(() {
-                isLoading = true;
-              });
-              fetchUserInfoAndMovements();
-            },
-          ),
-        ],
-      ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-            ))
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Pesquisar por descrição ou data...',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: filteredMovements.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Nenhum movimento encontrado',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: filteredMovements.length,
-                          itemBuilder: (context, index) {
-                            final movement = filteredMovements[index];
-                            final isCredit = movement['Tipo'] == '1';
-                            final amount = double.parse(movement['Valor'].toString());
-                            
-                            // Check if description contains order number
-                            String? orderNumber;
-                            if (movement['Descricao'].toString().contains('Pedido Nº')) {
-                              final match = RegExp(r'Pedido Nº(\d+)').firstMatch(movement['Descricao'].toString());
-                              if (match != null) {
-                                orderNumber = match.group(1);
-                              }
-                            }
-
-                            return Card(
-                              margin: EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              child: ListTile(
-                                onTap: orderNumber != null ? () => _showOrderDetails(orderNumber!) : null,
-                                leading: CircleAvatar(
-                                  backgroundColor: _getMovementTypeColor(movement['Tipo'].toString()).withOpacity(0.2),
-                                  child: Icon(
-                                    isCredit ? Icons.add : Icons.remove,
-                                    color: _getMovementTypeColor(movement['Tipo'].toString()),
-                                  ),
-                                ),
-                                title: Text(
-                                  _getMovementTypeText(movement['Tipo'].toString()),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: _getMovementTypeColor(movement['Tipo'].toString()),
-                                  ),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Data: ${movement['Data']}',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                    Text(
-                                      movement['Descricao'],
-                                      style: TextStyle(fontSize: 12),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                                trailing: Text(
-                                  '${isCredit ? '+' : '-'}${NumberFormat.currency(locale: 'pt_PT', symbol: '€', decimalDigits: 2).format(amount)}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: _getMovementTypeColor(movement['Tipo'].toString()),
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
+    return LoadingOverlay(
+      isLoading: isLoading,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Meus Movimentos'),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.refresh),
+              onPressed: () {
+                setState(() {
+                  isLoading = true;
+                });
+                fetchUserInfoAndMovements();
+              },
             ),
+          ],
+        ),
+        body: isLoading
+            ? Center(child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+              ))
+            : Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Pesquisar por descrição ou data...',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: filteredMovements.isEmpty
+                        ? Center(
+                            child: Text(
+                              'Nenhum movimento encontrado',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: filteredMovements.length,
+                            itemBuilder: (context, index) {
+                              final movement = filteredMovements[index];
+                              final isCredit = movement['Tipo'] == '1';
+                              final amount = double.parse(movement['Valor'].toString());
+                              
+                              // Check if description contains order number
+                              String? orderNumber;
+                              if (movement['Descricao'].toString().contains('Pedido Nº')) {
+                                final match = RegExp(r'Pedido Nº(\d+)').firstMatch(movement['Descricao'].toString());
+                                if (match != null) {
+                                  orderNumber = match.group(1);
+                                }
+                              }
+
+                              return Card(
+                                margin: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                child: ListTile(
+                                  onTap: orderNumber != null ? () => _showOrderDetails(orderNumber!) : null,
+                                  leading: CircleAvatar(
+                                    backgroundColor: _getMovementTypeColor(movement['Tipo'].toString()).withOpacity(0.2),
+                                    child: Icon(
+                                      isCredit ? Icons.add : Icons.remove,
+                                      color: _getMovementTypeColor(movement['Tipo'].toString()),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    _getMovementTypeText(movement['Tipo'].toString()),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: _getMovementTypeColor(movement['Tipo'].toString()),
+                                    ),
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Data: ${movement['Data']}',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                      Text(
+                                        movement['Descricao'],
+                                        style: TextStyle(fontSize: 12),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: Text(
+                                    '${isCredit ? '+' : '-'}${NumberFormat.currency(locale: 'pt_PT', symbol: '€', decimalDigits: 2).format(amount)}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: _getMovementTypeColor(movement['Tipo'].toString()),
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }

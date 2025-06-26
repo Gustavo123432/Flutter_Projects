@@ -5,12 +5,14 @@ class CashConfirmationPage extends StatelessWidget {
   final double change;
   final int orderNumber;
   final double amount;
+  final String paymentMethod;
 
   const CashConfirmationPage({
     Key? key,
     required this.change,
     required this.orderNumber,
     required this.amount,
+    this.paymentMethod = 'dinheiro',
   }) : super(key: key);
 
   @override
@@ -26,7 +28,7 @@ class CashConfirmationPage extends StatelessWidget {
         },
         child: Scaffold(
           appBar: AppBar(
-            title: Text('Pagamento Dinheiro'),
+            title: Text(paymentMethod == 'saldo' ? 'Pagamento Saldo' : 'Pagamento Dinheiro'),
             automaticallyImplyLeading: false,
           ),
           body: SingleChildScrollView(

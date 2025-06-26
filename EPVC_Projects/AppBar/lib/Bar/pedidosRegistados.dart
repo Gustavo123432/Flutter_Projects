@@ -13,269 +13,206 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:open_file/open_file.dart';
+import 'package:intl/intl.dart';
 //import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart'; // Import Print Bluetooth Thermal
 
-class PurchaseOrder {
+class Order {
   final String number;
   final String requester;
-  final String group;
   final String description;
   final String total;
   final String status;
-  final String data;
-  final String hora;
+  final String date;
 
-  PurchaseOrder({
+  Order({
     required this.number,
     required this.requester,
-    required this.group,
     required this.description,
     required this.total,
     required this.status,
-    required this.data,
-    required this.hora,
+    required this.date,
   });
 
-  factory PurchaseOrder.fromJson(Map<String, dynamic> json) {
-    return PurchaseOrder(
-      number: json['NPedido'],
-      requester: json['QPediu'],
-      group: json['Turma'],
-      description: json['Descricao'],
-      data: json['Data'],
-      hora: json['Hora'],
-      total: json['Total'],
-      status: json['Estado'],
+  factory Order.fromJson(Map<String, dynamic> json) {
+    return Order(
+      number: json['NPedido']?.toString() ?? 'N/A',
+      requester: json['QPediu'] ?? 'Desconhecido',
+      description: json['Descricao']?.toString() ?? 'Sem descrição',
+      total: json['Total']?.toString() ?? '0.00',
+      status: json['Estado']?.toString() ?? '0',
+      date: json['Data']?.toString() ?? '',
     );
   }
 }
 
-class PedidosRegistados extends StatefulWidget {
+class PedidosRegistadosPage extends StatefulWidget {
   @override
-  _PedidosRegistadosState createState() => _PedidosRegistadosState();
+  _PedidosRegistadosPageState createState() => _PedidosRegistadosPageState();
 }
 
-class _PedidosRegistadosState extends State<PedidosRegistados> {
-  late Stream<List<PurchaseOrder>> purchaseOrderStream;
-  late TextEditingController horaPretendidaController;
-  late List<PurchaseOrder> pedidos;
-  late DateTime selectedDate;
-  late String formattedDate;
-  late String formattedTime;
-  late TimeOfDay selectedTime;
+class _PedidosRegistadosPageState extends State<PedidosRegistadosPage> {
+  late Future<List<Order>> _ordersFuture;
 
   @override
   void initState() {
     super.initState();
-    purchaseOrderStream = Stream.empty();
-    horaPretendidaController = TextEditingController();
-    pedidos = [];
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showDateTimePicker();
-    });
+    _ordersFuture = _fetchOrders();
   }
 
-  Future<void> _showDateTimePicker() async {
-    final DateTime? date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Color.fromARGB(255, 130, 201, 189),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (date != null) {
-      final TimeOfDay? time = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
+  Future<List<Order>> _fetchOrders() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=10'),
       );
-
-      if (time != null) {
-        setState(() {
-          selectedDate = date;
-          selectedTime = time;
-          formattedDate =
-              '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-          formattedTime =
-              '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
+      if (response.statusCode == 200) {
+        List<dynamic> data = jsonDecode(response.body);
+        List<Order> orders = data.map((json) => Order.fromJson(json)).toList();
+        // Sort orders by date, most recent first
+        orders.sort((a, b) {
+            try {
+              DateTime aDate = DateFormat('dd/MM/yyyy').parse(a.date);
+              DateTime bDate = DateFormat('dd/MM/yyyy').parse(b.date);
+              return bDate.compareTo(aDate);
+            } catch(e) {
+              return 0;
+            }
         });
-        fetchPurchaseOrders();
-      }
-    }
-  }
-
-  Future<void> fetchPurchaseOrders() async {
-    final response = await http.get(
-      Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=19&horaPretendida=$formattedTime&dataPretendida=$formattedDate'),
-    );
-    if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
-      setState(() {
-        pedidos = data.map((json) => PurchaseOrder.fromJson(json)).toList();
-        purchaseOrderStream = Stream.value(pedidos);
-      });
-    } else {
-      throw Exception('Erro ao carregar os pedidos\nPor favor contacte o responsável!');
-    }
-  }
-
-  Future<void> generatePdf(String horaPretendida) async {
-      final pdfBytes = await _generatePdf(horaPretendida);
-      //await _printBluetooth(pdfBytes);
-  }
-
-  Future<Uint8List> _generatePdf(String horaPretendida) async {
-    final pdf = pw.Document();
-    double totalGeral = 0.0;
-
-    final fontData =
-        await rootBundle.load('lib/assets/fonts/Roboto-Regular.ttf');
-    final ttf = pw.Font.ttf(fontData);
-
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('Lista de Pedidos',
-                  style: pw.TextStyle(fontSize: 20, font: ttf)),
-              pw.SizedBox(height: 20),
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: pedidos.map((pedido) {
-                  totalGeral += double.parse(pedido.total.replaceAll(',', '.'));
-                  return pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('Nº Pedido: ${pedido.number}',
-                          style: pw.TextStyle(font: ttf)),
-                      pw.Text('Quem pediu: ${pedido.requester}',
-                          style: pw.TextStyle(font: ttf)),
-                      pw.Text('Turma: ${pedido.group}',
-                          style: pw.TextStyle(font: ttf)),
-                      pw.Text(
-                          'Descrição: ${pedido.description.replaceAll("[", "").replaceAll("]", "")}',
-                          style: pw.TextStyle(font: ttf)),
-                      pw.Text('Data: ${pedido.data}',
-                          style: pw.TextStyle(font: ttf)),
-                      pw.Text('Hora: ${pedido.hora}',
-                          style: pw.TextStyle(font: ttf)),
-                      pw.Text('Total: ${pedido.total.replaceAll(".", ",")}€',
-                          style: pw.TextStyle(font: ttf)),
-                      pw.Text(
-                          'Estado: ${pedido.status == '0' ? 'Por Fazer' : 'Concluído'}',
-                          style: pw.TextStyle(font: ttf)),
-                      pw.Divider(),
-                    ],
-                  );
-                }).toList(),
-              ),
-              pw.Text(
-                  'Total Geral: ${totalGeral.toString().replaceAll(".", ",")}€',
-                  style: pw.TextStyle(font: ttf)),
-            ],
-          );
-        },
-      ),
-    );
-
-    final bytes = await pdf.save();
-    final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/pedido_registado_$horaPretendida.pdf');
-    await file.writeAsBytes(bytes);
-
-    OpenFile.open(file.path);
-
-    return bytes;
-  }
-
-  /* Future<void> _printBluetooth(Uint8List pdfBytes) async {
-    bool isConnected = await PrintBluetoothThermal.connectionStatus;
-    if (!isConnected) {
-      await PrintBluetoothThermal.startScan(timeout: Duration(seconds: 5));
-      final List<BluetoothInfo> devices = await PrintBluetoothThermal.pairedBluetooths;
-
-      if (devices.isNotEmpty) {
-        await PrintBluetoothThermal.connect(macPrinterAddress: devices.first.macAddress);
+        return orders;
       } else {
-        print('No Bluetooth devices found.');
-        return;
+        throw Exception('Erro ao carregar pedidos.');
       }
+    } catch (e) {
+      throw Exception('Erro ao carregar pedidos: ${e.toString()}');
     }
+  }
 
-    final profile = await CapabilityProfile.load();
-    final generator = Generator(PaperSize.mm80, profile);
+  String _getStatusText(String status) {
+    switch (status) {
+      case '0':
+        return 'Pendente';
+      case '1':
+        return 'Em Preparação';
+      case '2':
+        return 'Concluído';
+      default:
+        return 'Desconhecido';
+    }
+  }
 
-    // Convert the PDF data into ESC/POS commands
-    List<int> escPosCommands = generator.text(
-      String.fromCharCodes(pdfBytes),
-      styles: PosStyles(align: PosAlign.left, bold: true),
-    );
-
-    // Send ESC/POS commands to the printer
-    await PrintBluetoothThermal.writeBytes(Uint8List.fromList(escPosCommands));
-    print('Printed successfully.');
-  }*/
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case '0':
+        return Colors.red;
+      case '1':
+        return Colors.orange;
+      case '2':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 246, 141, 45),
-        title: Text('Pedidos Registados'),
+        title: Text('Histórico de Pedidos'),
+        backgroundColor: Colors.orange,
       ),
-      floatingActionButton: SpeedDial(
-        animatedIcon: AnimatedIcons.menu_close,
-        iconTheme: IconThemeData(color: Colors.white),
-        backgroundColor: Color.fromARGB(255, 130, 201, 189),
-        children: [
-          SpeedDialChild(
-            child: Icon(Icons.picture_as_pdf),
-            label: 'Gerar PDF',
-            onTap: () => generatePdf(horaPretendidaController.text),
-          ),
-          SpeedDialChild(
-            child: Icon(Icons.calendar_month),
-            label: 'Data',
-            onTap: () =>       _showDateTimePicker()
-,
-          ),
-        ],
-      ),
-      drawer: DrawerBar(),
-      body: StreamBuilder<List<PurchaseOrder>>(
-        stream: purchaseOrderStream,
+      body: FutureBuilder<List<Order>>(
+        future: _ordersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator(color: Colors.orange));
           } else if (snapshot.hasError) {
-            return Center(child: Text('Erro ao ver os pedidos\nPor favor contacte o responsável!'));
+            return Center(child: Text('Erro: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('Sem Pedidos'));
-          } else {
-            final orders = snapshot.data!;
-            return ListView.builder(
-              itemCount: orders.length,
-              itemBuilder: (context, index) {
-                final order = orders[index];
-                return ListTile(
-                  title: Text('Nº Pedido: ${order.number}'),
-                  subtitle: Text('Total: ${order.total.replaceAll(".", ",")}€'),
-                );
-              },
-            );
+            return Center(child: Text('Nenhum pedido encontrado.'));
           }
+
+          final orders = snapshot.data!;
+          return ListView.builder(
+            padding: EdgeInsets.all(8.0),
+            itemCount: orders.length,
+            itemBuilder: (context, index) {
+              final order = orders[index];
+              return Card(
+                elevation: 4,
+                margin: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Pedido #${order.number}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.orange[800],
+                            ),
+                          ),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _getStatusColor(order.status).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _getStatusText(order.status),
+                              style: TextStyle(
+                                color: _getStatusColor(order.status),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Divider(height: 16, thickness: 1),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(text: 'Requisitante: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                            TextSpan(text: order.requester),
+                          ]
+                        )
+                      ),
+                      SizedBox(height: 4),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(text: 'Data: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                            TextSpan(text: order.date),
+                          ]
+                        )
+                      ),
+                       SizedBox(height: 8),
+                      Text('Descrição:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(order.description),
+                      SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'Total: ${order.total}€',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
         },
       ),
     );

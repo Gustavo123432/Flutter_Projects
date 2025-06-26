@@ -651,6 +651,9 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
           var localData = _getLocalDate();
           var prencado = item['Prencado'] ?? '0';
           var prepararPrencado = item['PrepararPrencado'] ?? false;
+                  var idApp = item['Id'] ?? ''; // Extrair o idApp
+        var xdReference = item['XDReference'] ?? ''; // Extrair o XDReference
+
           
           // Convert boolean to string representation for API
           String prepararPrencadoValue = prepararPrencado ? '1' : '0';
@@ -667,6 +670,8 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
               'preco': item['Preco'].toString(),
               'prencado': prencado.toString(),
               'prepararPrencado': prepararPrencadoValue,
+                'idApp': idApp, // Adicionar o idApp à requisição
+            'idXDApp': xdReference,
             },
           );
 
