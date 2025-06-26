@@ -1,3 +1,4 @@
+import 'package:appbar_epvc/BotDelivery/homeBotDelivery.dart';
 import 'package:flutter/material.dart';
 import 'package:appbar_epvc/Bar/barPage.dart';
 import 'package:appbar_epvc/Bar/pedidosRegistados.dart';
@@ -114,6 +115,20 @@ return showDialog(
               },
               leading: Icon(Icons.account_balance_wallet),
               title: Text('Saldo'),
+            ),
+            ListTile(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => HomePudu()),
+                );
+              },
+              leading: Image.asset(
+                'lib/assets/bellabot_icon.png',
+                width: 28,
+                height: 28,
+              ),
+              title: Text('Bot Delivery'),
             ),
         
             Spacer(),

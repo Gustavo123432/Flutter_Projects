@@ -70,7 +70,8 @@ dependencies:
   package_info_plus: ^8.3.0
   device_info_plus: ^10.1.2
   google_fonts: ^6.2.1
-
+  sqflite: ^2.3.2
+  path: ^1.8.3
 
 flutter_launcher_icons:
   ios: true
@@ -108,6 +109,11 @@ flutter:
     - lib/assets/fonts/Roboto-Regular.ttf
     - lib/assets/monteRestaurante.jpg
     - lib/assets/mbway_logo.png
+    - lib/assets/robo.png
+    - lib/assets/logo_bot_delivery.png
+    - lib/assets/bellabotwhiteandorange_icon.png
+    - lib/assets/bellabot_icon.png
+
     #- lib/assets/fonts/Helvetica.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
