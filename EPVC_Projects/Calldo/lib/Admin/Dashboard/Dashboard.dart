@@ -21,10 +21,10 @@ class Dashboard extends StatelessWidget {
           iconTheme: IconThemeData(
               color: Colors.white), // ícones da AppBar serão brancos
         ),
-        textTheme: TextTheme(
+        /*textTheme: TextTheme(
            
               TextStyle(color: Colors.white), // texto da AppBar será branco
-        ),
+        ),*/
       ),
       home: DashboardScreen(),
     );

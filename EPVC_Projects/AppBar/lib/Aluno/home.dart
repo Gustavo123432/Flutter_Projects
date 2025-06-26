@@ -310,12 +310,19 @@ class _HomeAlunoState extends State<HomeAluno> {
               'user': user,
             },
           );
-
           if (response.statusCode == 200) {
             setState(() {
               recentBuys = json.decode(response.body);
-              recentBuysMapped = recentBuys.map((productString) {
-                return productString as Map<String, dynamic>;
+              recentBuysMapped = recentBuys.map((product) {
+                // Garante que idApp está sempre presente, mesmo que venha como Id ou idapp
+                if (product['idApp'] == null || product['idApp'].toString().isEmpty) {
+                  if (product['Id'] != null && product['Id'].toString().isNotEmpty) {
+                    product['idApp'] = product['Id'].toString();
+                  } else if (product['idapp'] != null && product['idapp'].toString().isNotEmpty) {
+                    product['idApp'] = product['idapp'].toString();
+                  }
+                }
+                return product as Map<String, dynamic>;
               }).toList();
             });
           } else {
@@ -677,15 +684,16 @@ class _HomeAlunoState extends State<HomeAluno> {
                                           }
                                         } else {
                                           // Only add to cart and show animation if quantity is available
+                                        
                                           addToCart(
-                                              product['Imagem'],
-                                              product['Descricao'],
-                                              product['Preco'].toString(),
-                                              product['Prencado']?.toString() ??
-                                                  '',
-                                              product['idApp'].toString(),
-                                              product['idApp']?.toString() ?? '',
-                                              ''); // Adiciona o idApp e XDReference
+                                            product['Imagem'],
+                                            product['Descricao'],
+                                            product['Preco'].toString(),
+                                            product['Prencado']?.toString() ?? '',
+                                            product['idApp']?.toString() ?? product['Id']?.toString() ?? '',
+                                            product['idApp']?.toString() ?? product['Id']?.toString() ?? '',
+                                            ''
+                                          ); // Adiciona o idApp e XDReference
                                           if (mounted) {
                                            /* ScaffoldMessenger.of(context)
                                                 .showSnackBar(
@@ -1345,7 +1353,7 @@ class _CategoryPageState extends State<CategoryPage> {
   }
 
   void addToCart(Map<String, dynamic> item) async {
-    print("dwqdwqdqwd" + item['idApp'].toString());
+    print("[DEBUG] Adicionando ao carrinho: Nome: '${item['Nome']}', idApp: '${item['idApp']}', Id: '${item['Id']}'");
     // Create a new map with the expected keys and format
     Map<String, dynamic> newItem = {
       'Imagem': item['Imagem'] ?? '', // Use empty string if null
@@ -2157,10 +2165,32 @@ return showDialog(
                   Icon(Icons.money, color: Color.fromARGB(255, 27, 94, 32)),
               title: Text('Dinheiro',
                   style: TextStyle(color: Color.fromARGB(255, 27, 94, 32))),
-              onTap: () {
-                _setLoading(true,
-                    message: 'Processando pagamento em dinheiro...');
-                Navigator.pop(context, 'dinheiro');
+              onTap: () async {
+                bool? confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('Confirmar Pagamento'),
+                    content: Text('Tem a certeza que deseja comprar com dinheiro?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: Text('Cancelar', style: TextStyle(color: Colors.black),),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Confirmar'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  _setLoading(true, message: 'Processando pagamento em dinheiro...');
+                  Navigator.pop(context, 'dinheiro');
+                }
               },
             ),
             // Saldo Option (only shown if authorized)
@@ -2564,8 +2594,13 @@ return showDialog(
                       orElse: () => {'Id': '0'},
                     );
 
-                    if (product['Id'] != '0') {
-                      productIds.add(product['Id'].toString());
+                    String id = (product['idApp'] != null && product['idApp'].toString().trim().isNotEmpty && product['idApp'].toString() != '0')
+                        ? product['idApp'].toString()
+                        : (product['Id'] != null && product['Id'].toString().trim().isNotEmpty && product['Id'].toString() != '0')
+                            ? product['Id'].toString()
+                            : '0';
+                    if (id != '0') {
+                      productIds.add(id);
                       quantities.add(quantity);
                     }
                   }
@@ -2776,8 +2811,13 @@ return showDialog(
                 (item) => item['Nome'] == productName,
                 orElse: () => {'Id': '0'},
               );
-              if (product['Id'] != '0') {
-                productIds.add(product['Id'].toString());
+              String id = (product['idApp'] != null && product['idApp'].toString().trim().isNotEmpty && product['idApp'].toString() != '0')
+                  ? product['idApp'].toString()
+                  : (product['Id'] != null && product['Id'].toString().trim().isNotEmpty && product['Id'].toString() != '0')
+                      ? product['Id'].toString()
+                      : '0';
+              if (id != '0') {
+                productIds.add(id);
                 quantities.add(quantity);
               }
             }
@@ -3457,8 +3497,13 @@ return showDialog(
                     (item) => item['Nome'] == productName,
                     orElse: () => {'Id': '0'},
                   );
-                  if (product['Id'] != '0') {
-                    productIds.add(product['Id'].toString());
+                  String id = (product['idApp'] != null && product['idApp'].toString().trim().isNotEmpty && product['idApp'].toString() != '0')
+                      ? product['idApp'].toString()
+                      : (product['Id'] != null && product['Id'].toString().trim().isNotEmpty && product['Id'].toString() != '0')
+                          ? product['Id'].toString()
+                          : '0';
+                  if (id != '0') {
+                    productIds.add(id);
                     quantities.add(quantity);
                   }
                 }

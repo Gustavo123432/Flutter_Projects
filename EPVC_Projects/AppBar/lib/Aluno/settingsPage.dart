@@ -577,12 +577,7 @@ return showDialog(
                       ),
                       Switch(
                         value: _autoBillNIF,
-                        onChanged: (bool value) {
-                          setState(() {
-                            _autoBillNIF = value;
-                          });
-                          _saveUserInfo();
-                        },
+                        onChanged: _handleAutoBillNIFChange,
                         activeColor: Color.fromARGB(255, 246, 141, 45),
                       ),
                       IconButton(
@@ -986,5 +981,84 @@ return showDialog(
         ],
       ),
     );
+  }
+
+  Future<void> _handleAutoBillNIFChange(bool value) async {
+    if (value) {
+      // Verificar se o NIF está preenchido
+      final nif = _nifController.text.trim();
+      if (nif.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Preencha o NIF para ativar a faturação automática.')),
+        );
+        return;
+      }
+      // Verificar se o utilizador já existe na XD (query_param 2.1)
+      final checkResponse = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPIXD_Post.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'query_param': 2.1,
+          'vat': nif,
+        }),
+      );
+      final checkData = json.decode(checkResponse.body);
+      if (checkData['success'] == true && checkData['customer'] != null && checkData['customer']['success'] == true) {
+        setState(() {
+          _autoBillNIF = true;
+        });
+        _saveUserInfo();
+        return;
+      }
+      // Se não existe, verificar se todos os campos estão preenchidos
+      final name = (userData['Nome'] ?? '').toString().trim();
+      final email = (userData['Email'] ?? '').toString().trim();
+      final phone = _tlfController.text.trim();
+      final address = _moradaController.text.trim();
+      final postalCode = _codigoPostalController.text.trim();
+      final city = _cidadeController.text.trim();
+      final country = 'PT';
+      if ([name, nif, address, postalCode, city, country, email, phone].any((v) => v.isEmpty)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Preencha todos os campos de faturação para ativar a faturação automática.')),
+        );
+        return;
+      }
+      // Criar utilizador na XD
+      final createResponse = await http.post(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPIXD_Post.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'query_param': 2,
+          'name': name,
+          'vat': nif,
+          'address': address,
+          'postalCode': postalCode,
+          'city': city,
+          'country': country,
+          'email': email,
+          'phone': phone,
+        }),
+      );
+      final createData = json.decode(createResponse.body);
+      if (createData['success'] == true) {
+        setState(() {
+          _autoBillNIF = true;
+        });
+        _saveUserInfo();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Faturação automática ativada com sucesso!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao ativar faturação automática: ${createData['message'] ?? 'Erro desconhecido'}')),
+        );
+      }
+    } else {
+      setState(() {
+        _autoBillNIF = false;
+      });
+      _saveUserInfo();
+    }
   }
 }
