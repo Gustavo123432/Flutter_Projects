@@ -2514,13 +2514,9 @@ return showDialog(
       bool requestInvoice = false;
       String nif = '';
       if (paymentMethod == 'mbway' || paymentMethod == 'dinheiro') {
-        requestInvoice = await _showInvoiceDialog();
-        if (requestInvoice) {
-          nif = await _showNifInputDialog() ?? '';
-          if (nif.isEmpty) {
-            return;
-          }
-        }
+        // Pergunta do NIF desativada temporariamente
+        requestInvoice = false;
+        nif = '';
       }
 
       // Extract user information

@@ -577,40 +577,15 @@ return showDialog(
                       ),
                       Switch(
                         value: _autoBillNIF,
-                        onChanged: _handleAutoBillNIFChange,
+                        onChanged: null,
                         activeColor: Color.fromARGB(255, 246, 141, 45),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.help_outline,
-                            size: 18, color: Colors.grey[600]),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: Text('Faturação Automática'),
-                              content: Text(
-                                  'Ao ativar esta opção, o seu NIF será automaticamente utilizado '
-                                  'em todas as suas compras, sem necessidade de o introduzir '
-                                  'manualmente em cada fatura. Pode desativar esta opção a '
-                                  'qualquer momento nas definições e a faturação deixará de ser automática.'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: Text(
-                                    'Entendi',
-                                    style: TextStyle(
-                                      color: Color.fromARGB(255, 246, 141, 45),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(),
-                        visualDensity: VisualDensity.compact,
+                      Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Text(
+                          'Funcionalidade em desenvolvimento',
+                          style: TextStyle(color: Colors.red, fontSize: 12, fontStyle: FontStyle.italic),
+                        ),
                       ),
                     ],
                   ),
