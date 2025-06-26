@@ -89,15 +89,15 @@ class _RobotMenuState extends State<RobotMenu> {
     // Check if robotIdd is missing or empty
     if (widget.robot.robotIdd.isEmpty) {
       setState(() {
-        debugInfo = 'Robot ID is missing. IP: ${widget.robot.ip}, Device ID: ${widget.robot.idDevice}';
-        error = 'Robot ID is missing. Please update robot information.';
+        debugInfo = 'O ID do robot está em falta. Endereço IP: ${widget.robot.ip}, ID do Robot: ${widget.robot.idDevice}';
+        error = 'O ID do robot está em falta. Atualize as informações do robot.';
         isLoading = false;
       });
       
       // Show error message
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showSnackBarMessage(
-          'Robot ID is missing. Please update robot information.',
+          'O ID do robot está em falta. Atualize as informações do robot.',
           backgroundColor: Colors.red,
         );
       });
@@ -114,7 +114,7 @@ class _RobotMenuState extends State<RobotMenu> {
     
     try {
       setState(() {
-        debugInfo = 'Fetching robot status...';
+        debugInfo = 'Procurando status do robot...';
       });
 
       final response = await http.get(
@@ -122,7 +122,7 @@ class _RobotMenuState extends State<RobotMenu> {
       ).timeout(
         const Duration(seconds: 5),
         onTimeout: () {
-          throw Exception('Timeout connecting to server');
+          throw Exception('Tempo limite de ligação ao servidor');
         },
       );
 
@@ -152,19 +152,19 @@ class _RobotMenuState extends State<RobotMenu> {
             // Update current location based on robot status
             _updateCurrentLocation();
             
-            debugInfo = 'Robot status updated successfully';
+            debugInfo = 'Estado do robot atualizado com sucesso';
             
             // Check if robot is in special status
             _checkRobotStatusForSpecialConditions();
           });
         } else {
-          debugInfo = 'Error parsing robot status: ${responseData['msg']}';
+          debugInfo = 'Erro ao analisar o estado do robot: ${responseData['msg']}';
         }
       } else {
-        debugInfo = 'Error ${response.statusCode} fetching robot status';
+        debugInfo = 'Erro ${response.statusCode} ao procurar o estado do robot';
       }
     } catch (e) {
-      debugInfo = 'Error fetching robot status: ${e.toString()}';
+      debugInfo = 'Erro ao procurar o estado do robot: ${e.toString()}';
       // Don't show snackbar for status errors to avoid spamming the user
     }
   }
@@ -227,7 +227,7 @@ class _RobotMenuState extends State<RobotMenu> {
     if (robotStatus.chargeStage == CHARGING_STATE || 
         robotStatus.chargeStage == CHARGE_FULL_STATE) {
       // Robot is charging, show the charging dialog
-      debugInfo += '\nRobot is currently charging';
+      debugInfo += '\nO robot está a carregar';
       
       // Prevent multiple dialog operations at the same time
       if (_dialogUpdateInProgress) {
@@ -284,7 +284,7 @@ class _RobotMenuState extends State<RobotMenu> {
         _processingQueue && _currentDestination != null) {
       
       // Robot has arrived, could show notification or update UI
-      debugInfo += '\nRobot has arrived at destination';
+      debugInfo += '\nO robot chegou ao destino';
       
       // Reset the flag if the state has changed to arrived
       if (isStateChanged) {
@@ -318,7 +318,7 @@ class _RobotMenuState extends State<RobotMenu> {
     if (robotStatus.moveState == IDLE_STATE && 
         robotStatus.robotState == FREE_STATE) {
       // Robot is available for new tasks
-      debugInfo += '\nRobot is available for new tasks';
+      debugInfo += '\nO Robot está disponível para novas tarefas';
       
       // If we're processing a queue and the robot is now idle, 
       // and no delay timer is active, move to next destination if available
@@ -410,7 +410,7 @@ class _RobotMenuState extends State<RobotMenu> {
       setState(() {
         isLoading = true;
         error = null;
-        debugInfo = 'Fetching destinations from: http://${widget.robot.ip}:5000/api/destinations?device=${widget.robot.idDevice}&robot_id=${widget.robot.robotIdd}&page_size=200&page_index=1';
+        debugInfo = 'Procurando destinos de: http://${widget.robot.ip}:5000/api/destinations?device=${widget.robot.idDevice}&robot_id=${widget.robot.robotIdd}&page_size=200&page_index=1';
       });
 
       final response = await http.get(
@@ -418,7 +418,7 @@ class _RobotMenuState extends State<RobotMenu> {
       ).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          throw Exception('Timeout connecting to server. Please check network connectivity.');
+          throw Exception('Tempo limite de ligação com o servidor. Verifique a conectividade da rede.');
         },
       );
 
@@ -436,27 +436,27 @@ class _RobotMenuState extends State<RobotMenu> {
                   .map((item) => Destination.fromJson(item))
                   .toList();
               isLoading = false;
-              debugInfo = 'Successfully loaded ${destinations.length} destinations';
+              debugInfo = 'Carregado com sucesso ${destinations.length} destinos';
             });
           } else {
-            throw Exception('Invalid destinations format');
+            throw Exception('Formato de destino inválido');
           }
         } else {
-          throw Exception('Error loading destinations: ${responseData['msg']}');
+          throw Exception('Erro ao carregar destinos: ${responseData['msg']}');
         }
       } else {
-        throw Exception('Error ${response.statusCode}: ${response.body}');
+        throw Exception('Erro ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       String errorMessage = e.toString();
-      if (errorMessage.contains('SocketException') || errorMessage.contains('No route to host')) {
-        errorMessage = 'Cannot connect to robot. Please check if the robot is on and connected to the network.';
+      if (errorMessage.contains('SocketException') || errorMessage.contains('Sem rota para hospedar')) {
+        errorMessage = 'Não é possível ligar ao robot. Verifique se o robot está ligado e ligado à rede.';
       }
       
       setState(() {
         error = errorMessage;
         isLoading = false;
-        debugInfo = 'Error: $errorMessage';
+        debugInfo = 'Erro: $errorMessage';
       });
       
       if (mounted) {
@@ -497,7 +497,7 @@ class _RobotMenuState extends State<RobotMenu> {
     try {
       setState(() {
         isLoading = true;
-        debugInfo = 'Sending robot to destination: ${destination.name}';
+        debugInfo = 'Envio de robot para o destino: ${destination.name}';
       });
       
       // Store the current destination
@@ -522,7 +522,7 @@ class _RobotMenuState extends State<RobotMenu> {
       ).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          throw Exception('Timeout connecting to server');
+          throw Exception('Tempo limite de ligação ao servidor');
         },
       );
       
@@ -531,7 +531,7 @@ class _RobotMenuState extends State<RobotMenu> {
         if (responseData['code'] == 0) {
           if (mounted) {
             _showSnackBarMessage(
-              'Robot sent to ${destination.name}!',
+              'Robot enviado para ${destination.name}!',
               backgroundColor: Colors.green,
             );
             
@@ -544,24 +544,24 @@ class _RobotMenuState extends State<RobotMenu> {
             _fetchRobotStatus();
           }
         } else {
-          throw Exception('Error sending robot: ${responseData['msg']}');
+          throw Exception('Erro ao enviar robot: ${responseData['msg']}');
         }
       } else {
-        throw Exception('Error ${response.statusCode}: ${response.body}');
+        throw Exception('Erro ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       String errorMessage = e.toString();
-      if (errorMessage.contains('SocketException') || errorMessage.contains('No route to host')) {
-        errorMessage = 'Cannot connect to robot. Please check if the robot is on and connected to the network.';
+      if (errorMessage.contains('SocketException') || errorMessage.contains('Sem rota para hospedar')) {
+        errorMessage = 'Não é possível ligar ao robot. Verifique se o robot está ligado e ligado à rede.';
       }
       
       setState(() {
-        debugInfo = 'Error sending robot: $errorMessage';
+        debugInfo = 'Erro ao enviar robot: $errorMessage';
       });
       
       if (mounted) {
         _showSnackBarMessage(
-          'Error sending robot: $errorMessage',
+          'Erro ao enviar robot: $errorMessage',
           backgroundColor: Colors.red,
         );
       }
@@ -642,7 +642,7 @@ class _RobotMenuState extends State<RobotMenu> {
     try {
       setState(() {
         isLoading = true;
-        debugInfo = 'Cancel robot to destination: ${_currentDestination!.name}';
+        debugInfo = 'Cancelar robot para destino: ${_currentDestination!.name}';
       });
       
       // Prepare the request body in the correct format
@@ -664,7 +664,7 @@ class _RobotMenuState extends State<RobotMenu> {
       ).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          throw Exception('Timeout connecting to server');
+          throw Exception('Tempo limite de ligação ao servidor');
         },
       );
       
@@ -673,7 +673,7 @@ class _RobotMenuState extends State<RobotMenu> {
         if (responseData['code'] == 0) {
           if (mounted) {
             _showSnackBarMessage(
-              'Robot cancellation successfully!',
+              'Cancelamento do robot com sucesso!',
               backgroundColor: Colors.green,
             );
             
@@ -694,24 +694,24 @@ class _RobotMenuState extends State<RobotMenu> {
             _fetchRobotStatus();
           }
         } else {
-          throw Exception('Error cancelling robot: ${responseData['msg']}');
+          throw Exception('Erro ao cancelar o robot: ${responseData['msg']}');
         }
       } else {
-        throw Exception('Error ${response.statusCode}: ${response.body}');
+        throw Exception('Erro ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       String errorMessage = e.toString();
-      if (errorMessage.contains('SocketException') || errorMessage.contains('No route to host')) {
-        errorMessage = 'Cannot connect to robot. Please check if the robot is on and connected to the network.';
+      if (errorMessage.contains('SocketException') || errorMessage.contains('Sem rota para hospedar')) {
+        errorMessage = 'Não é possível ligar ao robot. Verifique se o robot está ligado e ligado à rede.';
       }
       
       setState(() {
-        debugInfo = 'Error cancelling robot: $errorMessage';
+        debugInfo = 'Erro ao cancelar o robot: $errorMessage';
       });
       
       if (mounted) {
         _showSnackBarMessage(
-          'Error cancelling robot: $errorMessage',
+          'Erro ao cancelar o robot: $errorMessage',
           backgroundColor: Colors.red,
         );
       }
@@ -1299,7 +1299,7 @@ class _RobotMenuState extends State<RobotMenu> {
                   onPressed: () {
                     Navigator.pop(context);
                   },
-                  child: const Text('VOLTAR PARA DASHBOARD ROBOT'),
+                  child: const Text('VOLTAR PARA DASHBOARD DE ROBOTS'),
                 ),
               ],
             ),

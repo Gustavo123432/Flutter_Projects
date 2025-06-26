@@ -158,7 +158,7 @@ class _RegisterPuduState extends State<RegisterPudu> {
       ).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          throw Exception('Timeout ao conectar com o servidor');
+          throw Exception('Tempo expirado ao conectar com o servidor');
         },
       );
 
@@ -274,9 +274,14 @@ class _RegisterPuduState extends State<RegisterPudu> {
                         const SizedBox(height: 24),
                         TextFormField(
                           controller: _ipController,
+                          cursorColor: Colors.black,
                           decoration: const InputDecoration(
                             labelText: 'Endereço IP',
+                            labelStyle: TextStyle(color: Colors.black),
                             border: OutlineInputBorder(),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.black),
+                            ),
                             prefixIcon: Icon(Icons.wifi, color: Colors.black),
                           ),
                           validator: (value) {
@@ -289,9 +294,14 @@ class _RegisterPuduState extends State<RegisterPudu> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _idDeviceController,
+                          cursorColor: Colors.black,
                           decoration: const InputDecoration(
                             labelText: 'ID do Robot',
+                            labelStyle: TextStyle(color: Colors.black),
                             border: OutlineInputBorder(),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.black),
+                            ),
                             prefixIcon: Icon(Icons.devices, color: Colors.black),
                           ),
                           validator: (value) {
@@ -304,10 +314,14 @@ class _RegisterPuduState extends State<RegisterPudu> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _nameController,
+                          cursorColor: Colors.black,
                           decoration: InputDecoration(
                             labelText: 'Nome do Robot',
+                            labelStyle: TextStyle(color: Colors.black),
                             border: const OutlineInputBorder(),
-                            prefixIcon: Padding(
+                            focusedBorder: const OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.black),
+                            ), prefixIcon: Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Image.asset(
                                 'lib/assets/bellabot_icon.png',
@@ -327,9 +341,14 @@ class _RegisterPuduState extends State<RegisterPudu> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _secretDeviceController,
+                          cursorColor: Colors.black,
                           decoration: const InputDecoration(
                             labelText: 'Segredo do Robot',
+                            labelStyle: TextStyle(color: Colors.black),
                             border: OutlineInputBorder(),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.black),
+                            ),
                             prefixIcon: Icon(Icons.security, color: Colors.black),
                           ),
                           obscureText: true,
@@ -343,9 +362,14 @@ class _RegisterPuduState extends State<RegisterPudu> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _regionController,
+                          cursorColor: Colors.black,
                           decoration: const InputDecoration(
                             labelText: 'Região',
+                            labelStyle: TextStyle(color: Colors.black),
                             border: OutlineInputBorder(),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.black),
+                            ),
                             prefixIcon: Icon(Icons.location_on, color: Colors.black),
                           ),
                           validator: (value) {
@@ -360,7 +384,11 @@ class _RegisterPuduState extends State<RegisterPudu> {
                           value: _selectedType,
                           decoration: const InputDecoration(
                             labelText: 'Modelo do Robot',
+                            labelStyle: TextStyle(color: Colors.black),
                             border: OutlineInputBorder(),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.black),
+                            ),
                             prefixIcon: Icon(Icons.category, color: Colors.black),
                           ),
                           items: _robotTypes.map((String type) {
