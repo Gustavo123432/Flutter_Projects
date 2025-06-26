@@ -434,8 +434,44 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     }
   }
   
+  Future<bool?> _showPaymentConfirmationDialog(PurchaseOrder order) async {
+    String formattedTotal = double.parse(order.total).toStringAsFixed(2).replaceAll('.', ',');
+    String paymentMethodDisplay = order.paymentMethod.toLowerCase() == 'saldo' ? 'Saldo' : 'Dinheiro';
+
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirmar Pagamento'),
+        content: Text('Deseja confirmar o pagamento de ${formattedTotal}€ em $paymentMethodDisplay?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _markOrderAsCompleted(PurchaseOrder order) async {
+    bool? confirmed = true;
+
+    if (order.paymentMethod.toLowerCase() == 'dinheiro' || order.paymentMethod.toLowerCase() == 'saldo') {
+        confirmed = await _showPaymentConfirmationDialog(order);
+    }
+    
+    if (confirmed != true) {
+        return; // User cancelled
+    }
+      
     try {
       final response = await http.get(Uri.parse(
           'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}&op=2'));
