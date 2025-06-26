@@ -2199,14 +2199,35 @@ return showDialog(
                 users[0]['AutorizadoSaldo'] == '1')
               ListTile(
                 leading: Icon(Icons.account_balance_wallet,
-                    color: /*Colors.orange[700]*/Colors.grey),
+                    color: Colors.orange[700]/*Colors.grey*/),
                 title:
-                    Text('Saldo', style: TextStyle(color: /*Colors.orange[700]*/Colors.grey)),
-                onTap: () {
-                  _setLoading(true,
-                      message: 'Processando pagamento com saldo...');
-                  //Navigator.pop(context, 'saldo');
-                  _showUnavaiable();
+                    Text('Saldo', style: TextStyle(color: Colors.orange[700]/*Colors.grey*/)),
+                onTap: () async {
+                  bool? confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('Confirmar Pagamento'),
+                      content: Text('Tem a certeza que deseja comprar com saldo?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: Text('Cancelar', style: TextStyle(color: Colors.black)),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text('Confirmar'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) {
+                    _setLoading(true, message: 'Processando pagamento com saldo...');
+                    Navigator.pop(context, 'saldo');
+                  }
                 },
               ),
             SizedBox(height: 8),
@@ -3059,27 +3080,9 @@ return showDialog(
 
         // If the user is a professor, ask if they want an invoice with NIF
         if (userPermission == 'Professor') {
-          requestInvoice = await _showInvoiceRequestDialog();
-
-          if (requestInvoice) {
-            // Verifica se tem faturação automática ativa
-            bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' ||
-                users[0]['FaturacaoAutomatica'] == 1;
-
-            if (autoBillNIF &&
-                users[0]['NIF'] != null &&
-                users[0]['NIF'].toString().isNotEmpty) {
-              // Se tiver faturação automática e NIF, usa o NIF cadastrado
-              nif = users[0]['NIF'].toString();
-            } else {
-              // Se não tiver faturação automática ou NIF, pede para inserir
-              nif = await _showNifInputDialog() ?? '';
-              if (nif.isEmpty) {
-                // User cancelled NIF input
-                return;
-              }
-            }
-          }
+          // Pergunta do NIF desativada temporariamente
+          requestInvoice = false;
+          nif = '';
         }
 
         // Show payment method selection dialog
@@ -3616,17 +3619,26 @@ return showDialog(
         );
       }
     } else {
-      // Saldo insuficiente - navegar para a página de declínio
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => OrderDeclinedPage(
-            reason:
-                'Saldo insuficiente. Saldo atual: ${currentBalance.toStringAsFixed(2)}€',
-            amount: total,
+      // Saldo insuficiente - mostrar diálogo simples
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Saldo Insuficiente'),
+            content: Text('Saldo atual: ${currentBalance.toStringAsFixed(2)}€\nTotal do pedido: ${total.toStringAsFixed(2)}€\n\nSaldo insuficiente para completar a compra.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text('OK'),
+              ),
+            ],
           ),
-        ),
-      );
+        );
+      }
     }
   }
 
