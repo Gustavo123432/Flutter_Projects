@@ -67,6 +67,8 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   Timer? _pingTimer; // Timer para keep-alive
 
   bool? isDayOpen; // null = loading, false = closed, true = open
+  bool _showCalculator = false;
+  Offset _calculatorOffset = Offset(100, 200);
 
   @override
   void initState() {
@@ -602,260 +604,382 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     );
   }
 
+  void _toggleCalculator() {
+    setState(() {
+      _showCalculator = !_showCalculator;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 246, 141, 45),
-        title: Text('Pedidos'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              logout(context);
-            },
-            icon: Icon(Icons.logout),
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            backgroundColor: Color.fromARGB(255, 246, 141, 45),
+            title: Text('Pedidos'),
+            actions: [
+              IconButton(
+                onPressed: () {
+                  logout(context);
+                },
+                icon: Icon(Icons.logout),
+              ),
+            ],
           ),
-        ],
-      ),
-      drawer: DrawerBar(),
-      body: isDayOpen == null
-          ? Center(child: CircularProgressIndicator())
-          : isDayOpen == false
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.lock, size: 60, color: Colors.orange),
-                      SizedBox(height: 24),
-                      Text(
-                        'Precisa de abrir o dia para começar a entrar pedidos',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        icon: Icon(Icons.lock_open),
-                        label: Text('Abrir Dia'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                        ),
-                        onPressed: _openDay,
-                      ),
-                    ],
-                  ),
-                )
-              : SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  child: Center(
-                    child: StreamBuilder<List<PurchaseOrder>>(
-                      stream: purchaseOrderStream,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return FutureBuilder(
-                            future: Future.delayed(Duration(seconds: 5)),
-                            builder: (context, futureSnapshot) {
-                              if (futureSnapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return Center(
-                                    child:
-                                        CircularProgressIndicator());
-                              } else {
-                                return Center(
-                                    child: Text(
-                                        'Sem Pedidos'));
-                              }
-                            },
-                          );
-                        } else if (snapshot.hasError) {
-                          return Center(child: Text('Erro ao carregar pedidos'));
-                        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return Center(child: Text('Sem Pedidos'));
-                        }
-
-                        List<PurchaseOrder> data = snapshot.data!;
-
-                        return GridView.builder(
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(),
-                          padding: EdgeInsets.all(8.0),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                            childAspectRatio: 1.0,
+          drawer: DrawerBar(),
+          body: isDayOpen == null
+              ? Center(child: CircularProgressIndicator())
+              : isDayOpen == false
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.lock, size: 60, color: Colors.orange),
+                          SizedBox(height: 24),
+                          Text(
+                            'Precisa de abrir o dia para começar a entrar pedidos',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
                           ),
-                          itemCount: data.length,
-                          itemBuilder: (context, index) {
-                            PurchaseOrder order = data[index];
-                            String formattedTotal = double.parse(order.total)
-                                .toStringAsFixed(2)
-                                .replaceAll('.', ',');
-                            String base64String = order.imagem.toString();
-                            String cleanedBase64 = cleanBase64(base64String);
-                            Uint8List decodedBytes = safeBase64Decode(cleanedBase64);
-
-                            // Processar a descrição para agrupar itens
-                            Map<String, int> groupedItems = processDescription(order.description);
-                            String groupedDescription = groupedItems.entries
-                                .map((e) => '${e.value}x ${e.key}')
-                                .join(', ');
-
-                            Color buttonColor;
-                            String? buttonText;
-                            switch (int.parse(order.status)) {
-                              case 1:
-                                buttonColor = const Color.fromARGB(255, 221, 163, 2);
-                                buttonText = "Concluir";
-                                break;
-                              default:
-                                buttonColor = Color.fromARGB(255, 175, 175, 175);
-                                buttonText = "Preparar";
+                          SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            icon: Icon(Icons.lock_open),
+                            label: Text('Abrir Dia'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                            ),
+                            onPressed: _openDay,
+                          ),
+                        ],
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: Center(
+                        child: StreamBuilder<List<PurchaseOrder>>(
+                          stream: purchaseOrderStream,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return FutureBuilder(
+                                future: Future.delayed(Duration(seconds: 5)),
+                                builder: (context, futureSnapshot) {
+                                  if (futureSnapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return Center(
+                                        child:
+                                            CircularProgressIndicator());
+                                  } else {
+                                    return Center(
+                                        child: Text(
+                                            'Sem Pedidos'));
+                                  }
+                                },
+                              );
+                            } else if (snapshot.hasError) {
+                              return Center(child: Text('Erro ao carregar pedidos'));
+                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return Center(child: Text('Sem Pedidos'));
                             }
 
-                            return GestureDetector(
-                              onTap: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: Text(
-                                        'Detalhes do Pedido ${order.number}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      content: SingleChildScrollView(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Requisitante: ${order.requester}',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey[800],
-                                              ),
+                            List<PurchaseOrder> data = snapshot.data!;
+
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: NeverScrollableScrollPhysics(),
+                              padding: EdgeInsets.all(8.0),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 4,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                childAspectRatio: 1.0,
+                              ),
+                              itemCount: data.length,
+                              itemBuilder: (context, index) {
+                                PurchaseOrder order = data[index];
+                                String formattedTotal = double.parse(order.total)
+                                    .toStringAsFixed(2)
+                                    .replaceAll('.', ',');
+                                String base64String = order.imagem.toString();
+                                String cleanedBase64 = cleanBase64(base64String);
+                                Uint8List decodedBytes = safeBase64Decode(cleanedBase64);
+
+                                // Processar a descrição para agrupar itens
+                                Map<String, int> groupedItems = processDescription(order.description);
+                                String groupedDescription = groupedItems.entries
+                                    .map((e) => '${e.value}x ${e.key}')
+                                    .join(', ');
+
+                                Color buttonColor;
+                                String? buttonText;
+                                switch (int.parse(order.status)) {
+                                  case 1:
+                                    buttonColor = const Color.fromARGB(255, 221, 163, 2);
+                                    buttonText = "Concluir";
+                                    break;
+                                  default:
+                                    buttonColor = Color.fromARGB(255, 175, 175, 175);
+                                    buttonText = "Preparar";
+                                }
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (BuildContext context) {
+                                        return AlertDialog(
+                                          title: Text(
+                                            'Detalhes do Pedido ${order.number}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18,
+                                              color: Colors.black87,
                                             ),
-                                            SizedBox(height: 8),
-                                            Text(
-                                              'Turma: ${order.group}',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey[800],
-                                              ),
-                                            ),
-                                            SizedBox(height: 8),
-                                            Text(
-                                              'Descrição:',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey[800],
-                                              ),
-                                            ),
-                                            SizedBox(height: 4),
-                                            Text.rich(
-                                              TextSpan(
-                                                style: TextStyle(fontWeight: FontWeight.bold),
-                                                children: groupedItems.entries.map((entry) {
-                                                  return TextSpan(
-                                                    text: '• ${entry.value}x ${entry.key}\n',
-                                                    style: TextStyle(fontWeight: FontWeight.bold),
-                                                  );
-                                                }).toList(),
-                                              ),
-                                            ),
-                                            SizedBox(height: 8),
-                                            Text(
-                                              'Total: $formattedTotal€',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey[800],
-                                              ),
-                                            ),
-                                            SizedBox(height: 4),
-                                            Text(
-                                              'Troco: ${double.parse(order.troco).toStringAsFixed(2).replaceAll('.', ',')}€',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey[800],
-                                              ),
-                                            ),
-                                            SizedBox(height: 6),
-                                            Row(
+                                          ),
+                                          content: SingleChildScrollView(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  'Método de Pagamento: ',
+                                                  'Requisitante: ${order.requester}',
                                                   style: TextStyle(
                                                     fontSize: 14,
                                                     color: Colors.grey[800],
                                                   ),
                                                 ),
-                                                Container(
-                                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                                        ? Color.fromARGB(255, 232, 240, 254) 
-                                                        : order.paymentMethod.toLowerCase() == 'saldo'
-                                                            ? Colors.orange[50]
-                                                        : Color.fromARGB(255, 239, 249, 239),
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    border: Border.all(
-                                                      color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                                          ? Colors.red
-                                                          : order.paymentMethod.toLowerCase() == 'saldo'
-                                                              ? Colors.orange[700]!
-                                                          : Color.fromARGB(255, 76, 175, 80),
-                                                      width: 1,
-                                                    ),
+                                                SizedBox(height: 8),
+                                                Text(
+                                                  'Turma: ${order.group}',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[800],
                                                   ),
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(
-                                                        order.paymentMethod.toLowerCase() == 'mbway'
-                                                            ? Icons.phone_android
-                                                            : order.paymentMethod.toLowerCase() == 'saldo'
-                                                                ? Icons.account_balance_wallet
-                                                                : Icons.money,
-                                                        size: 16,
-                                                        color: order.paymentMethod.toLowerCase() == 'mbway'
-                                                            ? Colors.red
-                                                            : order.paymentMethod.toLowerCase() == 'saldo'
-                                                                ? Colors.orange[700]
-                                                            : Color.fromARGB(255, 76, 175, 80),
-                                                      ),
-                                                      SizedBox(width: 4),
-                                                      Text(
-                                                        order.paymentMethod.toLowerCase() == 'mbway'
-                                                            ? 'MBWay'
-                                                            : order.paymentMethod.toLowerCase() == 'saldo'
-                                                                ? 'Saldo'
-                                                                : 'Dinheiro',
+                                                ),
+                                                SizedBox(height: 8),
+                                                Text(
+                                                  'Descrição:',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[800],
+                                                  ),
+                                                ),
+                                                SizedBox(height: 4),
+                                                Text.rich(
+                                                  TextSpan(
+                                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                                    children: groupedItems.entries.map((entry) {
+                                                      return TextSpan(
+                                                        text: '• ${entry.value}x ${entry.key}\n',
+                                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                                      );
+                                                    }).toList(),
+                                                  ),
+                                                ),
+                                                SizedBox(height: 8),
+                                                Text(
+                                                  'Total: $formattedTotal€',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[800],
+                                                  ),
+                                                ),
+                                                SizedBox(height: 4),
+                                                Text(
+                                                  'Troco: ${double.parse(order.troco).toStringAsFixed(2).replaceAll('.', ',')}€',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[800],
+                                                  ),
+                                                ),
+                                                SizedBox(height: 6),
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      'Método de Pagamento: ',
                                                       style: TextStyle(
-                                                        fontSize: 12,
+                                                        fontSize: 14,
+                                                        color: Colors.grey[800],
+                                                      ),
+                                                    ),
+                                                    Container(
+                                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                      decoration: BoxDecoration(
                                                         color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                                            ? Colors.red
+                                                            ? Color.fromARGB(255, 232, 240, 254) 
+                                                            : order.paymentMethod.toLowerCase() == 'saldo'
+                                                                ? Colors.orange[50]
+                                                            : Color.fromARGB(255, 239, 249, 239),
+                                                        borderRadius: BorderRadius.circular(12),
+                                                        border: Border.all(
+                                                          color: order.paymentMethod.toLowerCase() == 'mbway' 
+                                                              ? Colors.red
+                                                              : order.paymentMethod.toLowerCase() == 'saldo'
+                                                                  ? Colors.orange[700]!
+                                                              : Color.fromARGB(255, 76, 175, 80),
+                                                          width: 1,
+                                                        ),
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Icon(
+                                                            order.paymentMethod.toLowerCase() == 'mbway'
+                                                                ? Icons.phone_android
+                                                                : order.paymentMethod.toLowerCase() == 'saldo'
+                                                                    ? Icons.account_balance_wallet
+                                                                    : Icons.money,
+                                                            size: 16,
+                                                            color: order.paymentMethod.toLowerCase() == 'mbway'
+                                                                ? Colors.red
                                                                 : order.paymentMethod.toLowerCase() == 'saldo'
                                                                     ? Colors.orange[700]
-                                                        : Color.fromARGB(255, 76, 175, 80),
+                                                                : Color.fromARGB(255, 76, 175, 80),
+                                                          ),
+                                                          SizedBox(width: 4),
+                                                          Text(
+                                                            order.paymentMethod.toLowerCase() == 'mbway'
+                                                                ? 'MBWay'
+                                                                : order.paymentMethod.toLowerCase() == 'saldo'
+                                                                    ? 'Saldo'
+                                                                    : 'Dinheiro',
+                                                          style: TextStyle(
+                                                                fontSize: 12,
+                                                            color: order.paymentMethod.toLowerCase() == 'mbway' 
+                                                                ? Colors.red
+                                                                    : order.paymentMethod.toLowerCase() == 'saldo'
+                                                                        ? Colors.orange[700]
+                                                            : Color.fromARGB(255, 76, 175, 80),
+                                                          ),
+                                                            ),
+                                                        ],
                                                       ),
-                                                      ),
-                                                    ],
+                                                    ),
+                                                  ],
+                                                ),
+                                                SizedBox(height: 12),
+                                                Card(
+                                                  elevation: 4,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: ClipRRect(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    child: Image.memory(
+                                                      decodedBytes,
+                                                      width: 100,
+                                                      height: 100,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (context, error, stackTrace) {
+                                                        return Container(
+                                                          width: 100,
+                                                          height: 100,
+                                                          color: Colors.grey[300],
+                                                          child: Icon(
+                                                            Icons.error,
+                                                            color: Colors.red,
+                                                            size: 40,
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                            SizedBox(height: 12),
-                                            Card(
-                                              elevation: 4,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              child: Text(
+                                                'Fechar',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.blue,
+                                                ),
                                               ),
-                                              child: ClipRRect(
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                              },
+                                            ),
+                                            TextButton(
+                                              child: Text(
+                                                'Eliminar Pedido',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                              onPressed: () {
+                                                _showDeleteDialog(order);
+                                              },
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                  child: Card(
+                                    color: Color.fromARGB(255, 228, 225, 223),
+                                    elevation: 4.0,
+                                    child: Padding(
+                                      padding: EdgeInsets.all(12.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Pedido ${order.number}',
+                                                      style: TextStyle(
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 14,
+                                                        color: Colors.black87,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                      maxLines: 1,
+                                                    ),
+                                                    SizedBox(height: 6),
+                                                    Text(
+                                                      'Nome: ${order.requester}',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[800],
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                      maxLines: 1,
+                                                    ),
+                                                    SizedBox(height: 4),
+                                                    Text(
+                                                      'Turma: ${order.group}',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[800],
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                      maxLines: 1,
+                                                    ),
+                                                    SizedBox(height: 4),
+                                                    Text(
+                                                      'Descrição: $groupedDescription',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[800],
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                      maxLines: 2,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              SizedBox(width: 12),
+                                              ClipRRect(
                                                 borderRadius: BorderRadius.circular(8),
                                                 child: Image.memory(
                                                   decodedBytes,
@@ -876,286 +1000,199 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                                   },
                                                 ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          child: Text(
-                                            'Fechar',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.blue,
-                                            ),
+                                            ],
                                           ),
-                                          onPressed: () {
-                                            Navigator.of(context).pop();
-                                          },
-                                        ),
-                                        TextButton(
-                                          child: Text(
-                                            'Eliminar Pedido',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.red,
-                                            ),
-                                          ),
-                                          onPressed: () {
-                                            _showDeleteDialog(order);
-                                          },
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                              child: Card(
-                                color: Color.fromARGB(255, 228, 225, 223),
-                                elevation: 4.0,
-                                child: Padding(
-                                  padding: EdgeInsets.all(12.0),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Pedido ${order.number}',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 14,
-                                                    color: Colors.black87,
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                  maxLines: 1,
-                                                ),
-                                                SizedBox(height: 6),
-                                                Text(
-                                                  'Nome: ${order.requester}',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey[800],
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                  maxLines: 1,
-                                                ),
-                                                SizedBox(height: 4),
-                                                Text(
-                                                  'Turma: ${order.group}',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey[800],
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                  maxLines: 1,
-                                                ),
-                                                SizedBox(height: 4),
-                                                Text(
-                                                  'Descrição: $groupedDescription',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey[800],
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                  maxLines: 2,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          SizedBox(width: 12),
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(8),
-                                            child: Image.memory(
-                                              decodedBytes,
-                                              width: 100,
-                                              height: 100,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Container(
-                                                  width: 100,
-                                                  height: 100,
-                                                  color: Colors.grey[300],
-                                                  child: Icon(
-                                                    Icons.error,
-                                                    color: Colors.red,
-                                                    size: 40,
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      SizedBox(height: 12),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            'Total: $formattedTotal€',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[800],
-                                            ),
-                                          ),
-                                          Text(
-                                            'Troco: ${double.parse(order.troco).toStringAsFixed(2).replaceAll('.', ',')}€',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[800],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      // Display payment method
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
-                                        children: [
-                                          Container(
-                                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                                  ? Color.fromARGB(255, 232, 240, 254) 
-                                                  : order.paymentMethod.toLowerCase() == 'saldo'
-                                                      ? Colors.orange[50]
-                                                  : Color.fromARGB(255, 239, 249, 239),
-                                              borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(
-                                                color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                                    ? Colors.red
-                                                    : order.paymentMethod.toLowerCase() == 'saldo'
-                                                        ? Colors.orange[700]!
-                                                    : Color.fromARGB(255, 76, 175, 80),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  order.paymentMethod.toLowerCase() == 'mbway'
-                                                      ? Icons.phone_android
-                                                      : order.paymentMethod.toLowerCase() == 'saldo'
-                                                          ? Icons.account_balance_wallet
-                                                          : Icons.money,
-                                                  size: 16,
-                                                  color: order.paymentMethod.toLowerCase() == 'mbway'
-                                                      ? Colors.red
-                                                      : order.paymentMethod.toLowerCase() == 'saldo'
-                                                          ? Colors.orange[700]
-                                                      : Color.fromARGB(255, 76, 175, 80),
-                                                ),
-                                                SizedBox(width: 4),
-                                                Text(
-                                                  order.paymentMethod.toLowerCase() == 'mbway'
-                                                      ? 'MBWay'
-                                                      : order.paymentMethod.toLowerCase() == 'saldo'
-                                                          ? 'Saldo'
-                                                          : 'Dinheiro',
+                                          SizedBox(height: 12),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                'Total: $formattedTotal€',
                                                 style: TextStyle(
-                                                      fontSize: 12,
+                                                  fontSize: 12,
+                                                  color: Colors.grey[800],
+                                                ),
+                                              ),
+                                              Text(
+                                                'Troco: ${double.parse(order.troco).toStringAsFixed(2).replaceAll('.', ',')}€',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[800],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          // Display payment method
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.end,
+                                            children: [
+                                              Container(
+                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                decoration: BoxDecoration(
                                                   color: order.paymentMethod.toLowerCase() == 'mbway' 
-                                                      ? Colors.red
+                                                      ? Color.fromARGB(255, 232, 240, 254) 
+                                                      : order.paymentMethod.toLowerCase() == 'saldo'
+                                                          ? Colors.orange[50]
+                                                      : Color.fromARGB(255, 239, 249, 239),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: order.paymentMethod.toLowerCase() == 'mbway' 
+                                                        ? Colors.red
+                                                        : order.paymentMethod.toLowerCase() == 'saldo'
+                                                            ? Colors.orange[700]!
+                                                        : Color.fromARGB(255, 76, 175, 80),
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      order.paymentMethod.toLowerCase() == 'mbway'
+                                                          ? Icons.phone_android
+                                                          : order.paymentMethod.toLowerCase() == 'saldo'
+                                                              ? Icons.account_balance_wallet
+                                                              : Icons.money,
+                                                      size: 16,
+                                                      color: order.paymentMethod.toLowerCase() == 'mbway'
+                                                          ? Colors.red
                                                           : order.paymentMethod.toLowerCase() == 'saldo'
                                                               ? Colors.orange[700]
-                                                  : Color.fromARGB(255, 76, 175, 80),
+                                                          : Color.fromARGB(255, 76, 175, 80),
+                                                    ),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      order.paymentMethod.toLowerCase() == 'mbway'
+                                                          ? 'MBWay'
+                                                          : order.paymentMethod.toLowerCase() == 'saldo'
+                                                              ? 'Saldo'
+                                                              : 'Dinheiro',
+                                                    style: TextStyle(
+                                                          fontSize: 12,
+                                                      color: order.paymentMethod.toLowerCase() == 'mbway' 
+                                                          ? Colors.red
+                                                              : order.paymentMethod.toLowerCase() == 'saldo'
+                                                                  ? Colors.orange[700]
+                                                      : Color.fromARGB(255, 76, 175, 80),
+                                                    ),
+                                                      ),
+                                                  ],
                                                 ),
-                                                  ),
-                                              ],
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(height: 12),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              if (buttonText == "Preparar") {
+                                                _prepareOrder(order, data);
+                                              } else if (buttonText == "Concluir") {
+                                                _markOrderAsCompleted(order);
+                                              }
+                                            },
+                                            child: Text(
+                                              buttonText!,
+                                              style: TextStyle(fontSize: 12),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: buttonColor,
+                                              foregroundColor: Colors.white,
+                                              minimumSize: Size(double.infinity, 40),
+                                              padding: EdgeInsets.symmetric(horizontal: 12),
                                             ),
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: 12),
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          if (buttonText == "Preparar") {
-                                            _prepareOrder(order, data);
-                                          } else if (buttonText == "Concluir") {
-                                            _markOrderAsCompleted(order);
-                                          }
-                                        },
-                                        child: Text(
-                                          buttonText!,
-                                          style: TextStyle(fontSize: 12),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: buttonColor,
-                                          foregroundColor: Colors.white,
-                                          minimumSize: Size(double.infinity, 40),
-                                          padding: EdgeInsets.symmetric(horizontal: 12),
-                                        ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             );
                           },
+                        ),
+                      ),
+                    ),
+          floatingActionButton: isDayOpen == true
+              ? SpeedDial(
+                  animatedIcon: AnimatedIcons.menu_close,
+                  backgroundColor: Color.fromARGB(255, 246, 141, 45),
+                  overlayColor: Colors.black,
+                  overlayOpacity: 0.3,
+                  children: [
+                    SpeedDialChild(
+                      child: Icon(Icons.add, color: Colors.white),
+                      backgroundColor: Colors.green,
+                      label: 'Novo Registo',
+                      labelStyle: TextStyle(fontWeight: FontWeight.bold),
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => NewRegistrationDialog(),
                         );
                       },
                     ),
-                  ),
-                ),
-      floatingActionButton: isDayOpen == true
-          ? SpeedDial(
-              animatedIcon: AnimatedIcons.menu_close,
-              backgroundColor: Color.fromARGB(255, 246, 141, 45),
-              overlayColor: Colors.black,
-              overlayOpacity: 0.3,
-              children: [
-                SpeedDialChild(
-                  child: Icon(Icons.add, color: Colors.white),
-                  backgroundColor: Colors.green,
-                  label: 'Novo Registo',
-                  labelStyle: TextStyle(fontWeight: FontWeight.bold),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => NewRegistrationDialog(),
-                    );
-                  },
-                ),
-                SpeedDialChild(
-                  child: Icon(Icons.close, color: Colors.white),
-                  backgroundColor: Colors.red,
-                  label: 'Fechar Dia',
-                  labelStyle: TextStyle(fontWeight: FontWeight.bold),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text('Fechar Dia'),
-                        content: Text('Tem a certeza que deseja fechar o dia?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: Text('Cancelar'),
+                    SpeedDialChild(
+                      child: Icon(Icons.close, color: Colors.white),
+                      backgroundColor: Colors.red,
+                      label: 'Fechar Dia',
+                      labelStyle: TextStyle(fontWeight: FontWeight.bold),
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text('Fechar Dia'),
+                            content: Text('Tem a certeza que deseja fechar o dia?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: Text('Cancelar'),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                ),
+                                onPressed: () async {
+                                  Navigator.of(context).pop();
+                                  await _closeDay();
+                                },
+                                child: Text('Fechar Dia'),
+                              ),
+                            ],
                           ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: () async {
-                              Navigator.of(context).pop();
-                              await _closeDay();
-                            },
-                            child: Text('Fechar Dia'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
-            )
-          : null,
+                        );
+                      },
+                    ),
+                    SpeedDialChild(
+                      child: Icon(Icons.calculate, color: Colors.white),
+                      backgroundColor: Colors.blue,
+                      label: 'Calculadora',
+                      labelStyle: TextStyle(fontWeight: FontWeight.bold),
+                      onTap: _toggleCalculator,
+                    ),
+                  ],
+                )
+              : null,
+        ),
+        if (_showCalculator)
+          Positioned(
+            left: _calculatorOffset.dx,
+            top: _calculatorOffset.dy,
+            child: Draggable(
+              feedback: Material(
+                color: Colors.transparent,
+                child: CalculatorWidget(onClose: _toggleCalculator),
+              ),
+              childWhenDragging: Container(),
+              onDragEnd: (details) {
+                setState(() {
+                  _calculatorOffset = details.offset;
+                });
+              },
+              child: CalculatorWidget(onClose: _toggleCalculator),
+            ),
+          ),
+      ],
     );
   }
 
@@ -1535,6 +1572,192 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
           ),
         )
       ],
+    );
+  }
+}
+
+// Widget de calculadora simples e movível
+class CalculatorWidget extends StatefulWidget {
+  final VoidCallback onClose;
+  const CalculatorWidget({required this.onClose});
+
+  @override
+  State<CalculatorWidget> createState() => _CalculatorWidgetState();
+}
+
+class _CalculatorWidgetState extends State<CalculatorWidget> {
+  String _expression = '';
+  String _result = '';
+
+  void _onPressed(String value) {
+    setState(() {
+      if (value == 'C') {
+        _expression = '';
+        _result = '';
+      } else if (value == '=') {
+        try {
+          _result = _calculate(_expression);
+        } catch (e) {
+          _result = 'Erro';
+        }
+      } else {
+        // Se já foi calculado e o utilizador clica num operador, continua com o resultado
+        if (_result.isNotEmpty) {
+          if ('+-*/'.contains(value)) {
+            _expression = _result + value;
+            _result = '';
+          } else if ('0123456789.'.contains(value)) {
+            // Se clicar num número, começa novo cálculo
+            _expression = value;
+            _result = '';
+          } else {
+            _expression += value;
+            _result = '';
+          }
+        } else {
+          _expression += value;
+        }
+      }
+    });
+  }
+
+  String _calculate(String expr) {
+    // Simples parser para + - * /
+    expr = expr.replaceAll('×', '*').replaceAll('÷', '/');
+    double res = double.parse(_evaluate(expr));
+    return res.toString();
+  }
+
+  String _evaluate(String expr) {
+    // Usa a função Expression do Dart, mas para simplicidade, faz apenas eval básico
+    // (não recomendado para produção, mas suficiente para calculadora simples)
+    try {
+      // Remove espaços
+      expr = expr.replaceAll(' ', '');
+      // Expressão simples, sem parênteses
+      List<String> tokens = [];
+      String number = '';
+      for (int i = 0; i < expr.length; i++) {
+        String c = expr[i];
+        if ('0123456789.'.contains(c)) {
+          number += c;
+        } else {
+          if (number.isNotEmpty) {
+            tokens.add(number);
+            number = '';
+          }
+          tokens.add(c);
+        }
+      }
+      if (number.isNotEmpty) tokens.add(number);
+      // Primeiro *, /
+      for (int i = 0; i < tokens.length; i++) {
+        if (tokens[i] == '*' || tokens[i] == '/') {
+          double left = double.parse(tokens[i - 1]);
+          double right = double.parse(tokens[i + 1]);
+          double res = tokens[i] == '*' ? left * right : left / right;
+          tokens.replaceRange(i - 1, i + 2, [res.toString()]);
+          i = 0;
+        }
+      }
+      // Depois +, -
+      double result = double.parse(tokens[0]);
+      for (int i = 1; i < tokens.length; i += 2) {
+        String op = tokens[i];
+        double next = double.parse(tokens[i + 1]);
+        if (op == '+') result += next;
+        if (op == '-') result -= next;
+      }
+      return result.toString();
+    } catch (e) {
+      return '0';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 260,
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Calculadora', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.orange[800])),
+                IconButton(
+                  icon: Icon(Icons.close, color: Colors.red),
+                  onPressed: widget.onClose,
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Container(
+              alignment: Alignment.centerRight,
+              child: Text(_expression, style: TextStyle(fontSize: 20, color: Colors.black87)),
+            ),
+            Container(
+              alignment: Alignment.centerRight,
+              child: Text(_result, style: TextStyle(fontSize: 22, color: Colors.green, fontWeight: FontWeight.bold)),
+            ),
+            SizedBox(height: 8),
+            GridView.count(
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              physics: NeverScrollableScrollPhysics(),
+              children: [
+                '7','8','9','/',
+                '4','5','6','*',
+                '1','2','3','-',
+                '0','.','C','+',
+                '='
+              ].map((e) {
+                if (e == '=') {
+                  return GridTile(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () => _onPressed(e),
+                      child: Text(e, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    ),
+                  );
+                }
+                return GridTile(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: e == 'C' ? Colors.red[200] : Colors.grey[200],
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () => _onPressed(e),
+                    child: Text(e, style: TextStyle(fontSize: 20)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
     );
   }
 } 
