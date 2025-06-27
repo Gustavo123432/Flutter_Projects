@@ -8,14 +8,12 @@ import 'package:appbar_epvc/Admin/drawerAdmin.dart';
 import 'package:appbar_epvc/Bar/produtoPageBar.dart';
 import 'package:appbar_epvc/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// import 'dart:io';
-// import 'package:pdf/pdf.dart';
-// import 'package:pdf/widgets.dart' as pw;
-// import 'package:path_provider/path_provider.dart';
-// import 'package:flutter/services.dart';
-
-// Conditional imports for web platform
-// import 'dart:html' if (dart.library.io) 'dart:io' as platform;
+import 'dart:io';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PurchaseOrder {
   final String number;
@@ -100,7 +98,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
       },
     );
   }
-  //coment
+
   /*
   Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildContext context) async {
     try {
@@ -150,7 +148,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
         build: (pw.Context context) {
           return pw.Center(
             child: pw.Text(
-              'Total: ${total.toStringAsFixed(2)}€',
+              'Total: [${total.toStringAsFixed(2)}€',
               style: pw.TextStyle(font: ttf, fontSize: 14),
             ),
           );
@@ -205,7 +203,6 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     }
   }
   */
-  //finish coment
 
   Future<void> _showDatePicker(List<PurchaseOrder> orders) async {
     final DateTime? selectedDate = await showDatePicker(
@@ -224,14 +221,123 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     );
     if (selectedDate != null) {
       final formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-      // await exportToPdf(orders, formattedDate, context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Funcionalidade temporariamente indisponível'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 3),
-        ),
-      );
+      //await exportToPdf(orders, formattedDate, context);
+    }
+  }
+
+  Future<void> exportProdutosVendidosToPdf(List<PurchaseOrder> orders, String selectedDate, BuildContext context) async {
+    // Agrupa produtos por nome base
+    final Map<String, Map<String, dynamic>> produtosAgrupados = {};
+    double totalDoDia = 0.0;
+
+    for (var order in orders) {
+      if (order.data.split(' ').first == selectedDate) {
+        final produtos = order.description.split(',');
+        final precoPorProduto = (double.tryParse(order.total.replaceAll(',', '.')) ?? 0.0) / produtos.length;
+        totalDoDia += double.tryParse(order.total.replaceAll(',', '.')) ?? 0.0;
+
+        for (var produto in produtos) {
+          final nomeBase = produto.split('-')[0].trim();
+
+          if (!produtosAgrupados.containsKey(nomeBase)) {
+            produtosAgrupados[nomeBase] = {
+              'quantidade': 1,
+              'valor': precoPorProduto,
+            };
+          } else {
+            produtosAgrupados[nomeBase]!['quantidade'] += 1;
+            produtosAgrupados[nomeBase]!['valor'] += precoPorProduto;
+          }
+        }
+      }
+    }
+
+    // Gera o PDF
+    final pdf = pw.Document();
+    final font = await rootBundle.load("lib/assets/fonts/Roboto-Regular.ttf");
+    final ttf = pw.Font.ttf(font);
+
+    pdf.addPage(
+      pw.MultiPage(
+        build: (pw.Context context) => [
+          pw.Table.fromTextArray(
+            headerStyle: pw.TextStyle(font: ttf, fontSize: 12),
+            cellStyle: pw.TextStyle(font: ttf, fontSize: 10),
+            data: <List<String>>[
+              ['Produto', 'Quantidade', 'Valor Total (€)'],
+              ...produtosAgrupados.entries.map((entry) => [
+                entry.key,
+                entry.value['quantidade'].toString(),
+                entry.value['valor'].toStringAsFixed(2).replaceAll('.', ','),
+              ]),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    // Adiciona página com o total do dia
+    pdf.addPage(pw.Page(
+      build: (pw.Context context) {
+        return pw.Center(
+          child: pw.Text(
+            'Total do Dia: ${totalDoDia.toStringAsFixed(2).replaceAll('.', ',')}€',
+            style: pw.TextStyle(font: ttf, fontSize: 14),
+          ),
+        );
+      },
+    ));
+
+    final bytes = await pdf.save();
+
+    if (kIsWeb) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exportação de PDF não suportada no web neste build.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } else {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/produtos_vendidos_$selectedDate.pdf');
+      await file.writeAsBytes(bytes);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF de produtos vendidos exportado com sucesso!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showDatePickerForProdutos(List<PurchaseOrder> orders) async {
+    final DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(primary: Color.fromARGB(255, 130, 201, 189)),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (selectedDate != null) {
+      final formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+      await exportProdutosVendidosToPdf(orders, formattedDate, context);
     }
   }
 
@@ -257,14 +363,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
                 title: Text('Exportar Produtos Vendidos'),
                 onTap: () {
                   Navigator.pop(context);
-                  // _showDatePickerForProducts(orders);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Funcionalidade temporariamente indisponível'),
-                      backgroundColor: Colors.orange,
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
+                  _showDatePickerForProdutos(orders);
                 },
               ),
             ],
