@@ -2155,8 +2155,8 @@ return showDialog(
                   style: TextStyle(color: /*Color.fromARGB(255, 177, 2, 2)*/Colors.grey)),
               onTap: () {
                 _setLoading(true, message: 'Processando MBWay...');
-                //Navigator.pop(context, 'mbway');
-                _showUnavaiable();
+                Navigator.pop(context, 'mbway');
+                //_showUnavaiable();
               },
             ),
             // Dinheiro Option
