@@ -344,11 +344,11 @@ class _BarRequestsState extends State<BarRequests> {
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       // Imagem grande
-                                      ClipRRect(
+                                      CachedBase64Image(
+                                        base64Image: order.products.isNotEmpty && order.products.first.imageUrl != null ? order.products.first.imageUrl! : '',
+                                        width: 80,
+                                        height: 80,
                                         borderRadius: BorderRadius.circular(12),
-                                        child: order.products.isNotEmpty && order.products.first.imageUrl != null
-                                            ? _buildImageWidget(order.products.first.imageUrl!)
-                                            : _buildPlaceholderImage(),
                                       ),
                                       const SizedBox(width: 28),
                                       // Info principal
@@ -565,4 +565,77 @@ class Product {
     required this.price,
     this.imageUrl,
   });
+}
+
+class CachedBase64Image extends StatefulWidget {
+  final String base64Image;
+  final double width;
+  final double height;
+  final BorderRadius borderRadius;
+  const CachedBase64Image({
+    required this.base64Image,
+    this.width = 80,
+    this.height = 80,
+    this.borderRadius = const BorderRadius.all(Radius.circular(12)),
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  State<CachedBase64Image> createState() => _CachedBase64ImageState();
+}
+
+class _CachedBase64ImageState extends State<CachedBase64Image> {
+  late Image imageWidget;
+  String? lastBase64;
+
+  @override
+  void didUpdateWidget(covariant CachedBase64Image oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.base64Image != lastBase64) {
+      _decodeImage();
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _decodeImage();
+  }
+
+  void _decodeImage() {
+    try {
+      if (widget.base64Image.isEmpty) {
+        imageWidget = _placeholder();
+      } else {
+        final bytes = base64Decode(widget.base64Image);
+        imageWidget = Image.memory(
+          bytes,
+          width: widget.width,
+          height: widget.height,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _placeholder(),
+        );
+      }
+    } catch (e) {
+      imageWidget = _placeholder();
+    }
+    lastBase64 = widget.base64Image;
+  }
+
+  Image _placeholder() {
+    return Image.asset(
+      'lib/assets/barapp.png',
+      width: widget.width,
+      height: widget.height,
+      fit: BoxFit.cover,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: widget.borderRadius,
+      child: imageWidget,
+    );
+  }
 } 
