@@ -2,10 +2,9 @@ import 'package:appbar_epvc/BotDelivery/homeBotDelivery.dart';
 import 'package:flutter/material.dart';
 import 'package:appbar_epvc/Bar/barPage.dart';
 import 'package:appbar_epvc/Bar/pedidosRegistados.dart';
-import 'package:appbar_epvc/Bar/pedidosRegistados.dart';
 import 'package:appbar_epvc/Bar/produtoPageBar.dart';
-import 'package:appbar_epvc/Bar/restaurantePage.dart';
 import 'package:appbar_epvc/Bar/saldoPage.dart';
+import 'package:appbar_epvc/Bar/barPedidosPage.dart';
 
 class DrawerBar extends StatefulWidget {
   const DrawerBar({super.key});
@@ -74,6 +73,16 @@ return showDialog(
               },
               leading: Icon(Icons.search),
               title: Text('Pedidos'),
+            ),
+             ListTile(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => BarRequests()),
+                );
+              },
+              leading: Icon(Icons.search),
+              title: Text('cdfsdfdsfsdf'),
             ),
             ListTile(
               onTap: () {
