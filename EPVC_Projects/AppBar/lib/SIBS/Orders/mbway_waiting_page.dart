@@ -756,6 +756,44 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
         'payment_method': 'mbway',
       };
 
+      // Add invoice information if requested
+      if (widget.orderData['requestInvoice'] == '1' && widget.orderData['nif'] != null && widget.orderData['nif'].toString().isNotEmpty) {
+        // Usar o NIF fornecido se disponível, senão usar 999999990
+        String nifRecebido = widget.orderData['nif'].toString();
+        String finalNIF = (nifRecebido.isNotEmpty && nifRecebido != '999999990') ? nifRecebido : '999999990';
+        String documentType = (nifRecebido.isNotEmpty && nifRecebido != '999999990') ? 'FR' : 'FS';
+        String idUser = widget.orderData['idUser']?.toString() ?? '0';
+        String customerName = '';
+        String customerAddress = '';
+        String customerPostalCode = '';
+        String customerCity = '';
+        
+        if (nifRecebido.isNotEmpty && nifRecebido != '999999990') {
+          // NIF real fornecido - usar dados reais
+          customerName = widget.orderData['customerName'] ?? '${widget.orderData['nome']} ${widget.orderData['apelido']}';
+          customerAddress = widget.orderData['customerAddress'] ?? 'Rua Exemplo';
+          customerPostalCode = widget.orderData['customerPostalCode'] ?? '1000-001';
+          customerCity = widget.orderData['customerCity'] ?? 'Lisboa';
+        } else {
+          // Fatura simplificada - "Consumidor Final"
+          customerName = 'Consumidor Final';
+          customerAddress = '';
+          customerPostalCode = '';
+          customerCity = '';
+        }
+        
+        webSocketData['RequestInvoice'] = '1';
+        webSocketData['NIF'] = finalNIF;
+        webSocketData['documentType'] = documentType;
+        webSocketData['idUser'] = idUser;
+        webSocketData['CustomerName'] = customerName;
+        webSocketData['CustomerAddress'] = customerAddress;
+        webSocketData['CustomerPostalCode'] = customerPostalCode;
+        webSocketData['CustomerCity'] = customerCity;
+        webSocketData['CustomerCountry'] = 'PT';
+        webSocketData['CustomerVAT'] = finalNIF;
+      }
+
       print('Sending over WebSocket: ${json.encode(webSocketData)}'); // Debugging
 
       // Send the order to the server

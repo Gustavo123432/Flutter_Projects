@@ -74,7 +74,7 @@ return showDialog(
               leading: Icon(Icons.search),
               title: Text('Pedidos'),
             ),
-             ListTile(
+            /* ListTile(
               onTap: () {
                 Navigator.push(
                   context,
@@ -83,7 +83,7 @@ return showDialog(
               },
               leading: Icon(Icons.search),
               title: Text('cdfsdfdsfsdf'),
-            ),
+            ),*/
             ListTile(
               onTap: () {
                 Navigator.push(

@@ -276,7 +276,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isValid = false;
   String _validationMessage = '';
 
-  void _validateNIF() {
+  bool _validateNIF() {
     final nif = _nifController.text;
     final result = validatePortugueseNIF(nif);
 
@@ -284,6 +284,8 @@ class _SettingsPageState extends State<SettingsPage> {
       _isValid = result.$1;
       _validationMessage = result.$2;
     });
+
+    return result.$1;
   }
 
   (bool, String) validatePortugueseNIF(String nif) {
@@ -331,26 +333,28 @@ class _SettingsPageState extends State<SettingsPage> {
         throw Exception('No user logged in');
       }
       
-      // Validar NIF
-      _validateNIF();
+      // Validar NIF apenas se o utilizador o alterou
+      bool isNifValid = true;
+      if (_nifController.text != _originalNif) {
+        isNifValid = _validateNIF();
+      }
       
-      // Validar telefone
+      // Validar telefone apenas se não estiver vazio
       bool isPhoneValid = true;
       String phoneErrorMessage = '';
-      
       if (_tlfController.text.isNotEmpty) {
         if (_tlfController.text.length != 9) {
           isPhoneValid = false;
           phoneErrorMessage = 'O número de telefone deve ter 9 dígitos';
-        } else if (!_tlfController.text.startsWith('9') && 
-                 !_tlfController.text.startsWith('2') && 
-                 !_tlfController.text.startsWith('3')) {
+        } else if (!_tlfController.text.startsWith('9') &&
+                   !_tlfController.text.startsWith('2') &&
+                   !_tlfController.text.startsWith('3')) {
           isPhoneValid = false;
           phoneErrorMessage = 'O número deve começar com 9, 2 ou 3';
         }
       }
       
-      if (_isValid && isPhoneValid) {
+      if (isNifValid && isPhoneValid) {
         // Debug: Mostrar o que estamos enviando
         print('Saving user info:');
         print('User: $user');
@@ -362,18 +366,24 @@ class _SettingsPageState extends State<SettingsPage> {
         print('Auto Bill NIF: ${_autoBillNIF ? '1' : '0'}');
         
         // Make API call to update user information
+        final Map<String, String> body = {
+          'query_param': '1.1',
+          'user': user,
+          'morada': _moradaController.text,
+          'cidade': _cidadeController.text,
+          'codigo_postal': _codigoPostalController.text,
+          'telefone': _tlfController.text,
+          'auto_bill_nif': _autoBillNIF ? '1' : '0',
+        };
+
+        if (_nifController.text != _originalNif) {
+          // Só envia o NIF se foi alterado (e nunca como '0')
+          body['nif'] = _nifController.text.isEmpty || _nifController.text == '0' ? '' : _nifController.text;
+        }
+
         final response = await http.post(
           Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-          body: {
-            'query_param': '1.1',
-            'user': user,
-            'nif': _nifController.text,
-            'morada': _moradaController.text,
-            'cidade': _cidadeController.text,
-            'codigo_postal': _codigoPostalController.text,
-            'telefone': _tlfController.text,
-            'auto_bill_nif': _autoBillNIF ? '1' : '0',
-          },
+          body: body,
         );
 
         print('API Response status: ${response.statusCode}');
@@ -411,6 +421,14 @@ class _SettingsPageState extends State<SettingsPage> {
             _isEditingCidade = false;
             _isEditingCodigoPostal = false;
             _isEditingPhone = false;
+
+            // Atualizar valores originais e flag de alterações
+            _originalNif = _nifController.text;
+            _originalPhone = _tlfController.text;
+            _originalMorada = _moradaController.text;
+            _originalCidade = _cidadeController.text;
+            _originalCodigoPostal = _codigoPostalController.text;
+            _hasUnsavedChanges = false;
           });
 
           // Atualizar nas SharedPreferences
@@ -577,16 +595,16 @@ return showDialog(
                       ),
                       Switch(
                         value: _autoBillNIF,
-                        onChanged: null,
+                        onChanged: _handleAutoBillNIFChange,
                         activeColor: Color.fromARGB(255, 246, 141, 45),
                       ),
-                      Padding(
+                      /*Padding(
                         padding: EdgeInsets.only(left: 8),
                         child: Text(
                           'Funcionalidade em desenvolvimento',
                           style: TextStyle(color: Colors.red, fontSize: 12, fontStyle: FontStyle.italic),
                         ),
-                      ),
+                      ),*/
                     ],
                   ),
                 ),

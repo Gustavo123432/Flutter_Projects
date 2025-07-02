@@ -15,7 +15,10 @@ class BarRequests extends StatefulWidget {
 
 class _BarRequestsState extends State<BarRequests> {
   List<PurchaseOrder> orders = [];
+  List<PurchaseOrder> deliveryOrders = []; // Lista para pedidos em entrega
+  Map<int, PurchaseOrder> allLocalOrders = {}; // Guardar todos os pedidos localmente
   Timer? statusTimer;
+  Timer? deliveryTimer; // Timer para remover pedidos em entrega
   bool isLoading = true;
   String? errorMessage;
 
@@ -24,11 +27,13 @@ class _BarRequestsState extends State<BarRequests> {
     super.initState();
     _loadOrders();
     _startRefreshTimer();
+    _startDeliveryTimer();
   }
 
   @override
   void dispose() {
     statusTimer?.cancel();
+    deliveryTimer?.cancel();
     super.dispose();
   }
 
@@ -49,31 +54,96 @@ class _BarRequestsState extends State<BarRequests> {
         try {
           final decoded = json.decode(response.body);
           List<dynamic> data;
-          if (decoded is List) {
+          
+          // Verificar se a resposta indica "no records found"
+          if (decoded is Map && decoded.containsKey('message') && 
+              decoded['message'].toString().contains('No records found')) {
+            print('[DEBUG] API retornou "No records found" - usando lista vazia');
+            data = [];
+          } else if (decoded is List) {
             data = decoded;
           } else if (decoded is Map && decoded.isEmpty) {
             data = [];
           } else {
             throw Exception('Resposta inesperada da API: $decoded');
           }
-          print('Parsed ${data.length} orders');
-          setState(() {
-            orders = data.map((json) {
-              try {
-                return PurchaseOrder.fromJson(json);
-              } catch (e) {
-                print('Error parsing order: $e');
-                print('Order data: $json');
-                return null;
+          
+          print('Parsed ${data.length} orders from API');
+          print('[DEBUG] Pedidos guardados localmente: ${allLocalOrders.keys}');
+          
+          // Processar pedidos da API
+          Set<int> currentApiOrderIds = {};
+          List<PurchaseOrder> newOrders = [];
+          
+          for (var json in data) {
+            try {
+              PurchaseOrder order = PurchaseOrder.fromJson(json);
+              currentApiOrderIds.add(order.id);
+              
+              // Guardar/atualizar no mapa local
+              allLocalOrders[order.id] = order;
+              
+              // Se está em preparação (estado 0, 1), adicionar à lista de preparação
+              if (order.status == '0' || order.status == '1') {
+                newOrders.add(order);
               }
-            }).where((order) => order != null).cast<PurchaseOrder>().toList();
+              
+              print('[DEBUG] Pedido da API: ID ${order.id}, Estado ${order.status}');
+            } catch (e) {
+              print('Error parsing order: $e');
+              print('Order data: $json');
+            }
+          }
+          
+          print('[DEBUG] IDs da API atual: $currentApiOrderIds');
+          
+          // Verificar quais pedidos locais não estão na API (mudaram de estado)
+          List<PurchaseOrder> ordersToMoveToDelivery = [];
+          List<int> ordersToRemove = [];
+          
+          for (var entry in allLocalOrders.entries) {
+            int orderId = entry.key;
+            PurchaseOrder localOrder = entry.value;
+            
+            // Se o pedido não está na API atual, pode ter mudado de estado
+            if (!currentApiOrderIds.contains(orderId)) {
+              print('[DEBUG] Pedido $orderId não encontrado na API - movendo para entrega');
+              
+              // Criar cópia com estado 2 (pronto)
+              PurchaseOrder deliveryOrder = localOrder.copyWith(status: '2');
+              ordersToMoveToDelivery.add(deliveryOrder);
+              
+              // Marcar para remover do mapa local após mover para entrega
+              ordersToRemove.add(orderId);
+            }
+          }
+          
+          // Remover pedidos do mapa local (fora da iteração)
+          for (int orderId in ordersToRemove) {
+            allLocalOrders.remove(orderId);
+          }
+          
+          // Adicionar pedidos à lista de entrega
+          for (var deliveryOrder in ordersToMoveToDelivery) {
+            if (!deliveryOrders.any((o) => o.id == deliveryOrder.id)) {
+              deliveryOrders.add(deliveryOrder);
+              print('[DEBUG] Pedido ${deliveryOrder.id} adicionado à entrega. Total em entrega: ${deliveryOrders.length}');
+            }
+          }
+          
+          // Limpar pedidos antigos da lista de preparação que não estão mais na API
+          orders = newOrders;
+          
+          setState(() {
             isLoading = false;
           });
+          
+          print('[DEBUG] Estado final - Preparação: ${orders.length}, Entrega: ${deliveryOrders.length}, Local: ${allLocalOrders.length}');
+          
         } catch (e) {
           print('Error parsing JSON: $e');
           setState(() {
             errorMessage = null;
-            orders = [];
             isLoading = false;
           });
         }
@@ -96,6 +166,16 @@ class _BarRequestsState extends State<BarRequests> {
   void _startRefreshTimer() {
     statusTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       _loadOrders();
+    });
+  }
+
+  void _startDeliveryTimer() {
+    // Timer para remover pedidos em entrega após 15 segundos
+    deliveryTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+      setState(() {
+        deliveryOrders.clear(); // Remove todos os pedidos em entrega
+        print('[DEBUG] Pedidos em entrega removidos após 15s');
+      });
     });
   }
 
@@ -179,7 +259,7 @@ class _BarRequestsState extends State<BarRequests> {
     try {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Pedidos Pendentes'),
+          title: const Text('Gestão de Pedidos'),
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
           actions: [
@@ -229,188 +309,24 @@ class _BarRequestsState extends State<BarRequests> {
                       ],
                     ),
                   )
-                : orders.isEmpty
-                    ? Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(32),
-                          margin: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
-                                spreadRadius: 2,
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 120,
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  color: Colors.orange[100],
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.receipt_long,
-                                  size: 60,
-                                  color: Colors.orange[700],
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Text(
-                                'Nenhum Pedido Ativo',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800],
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Não existem pedidos pendentes\nno momento.',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[600],
-                                  height: 1.4,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 24),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange[50],
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.orange[200]!,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.refresh,
-                                      size: 16,
-                                      color: Colors.orange[700],
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Auto-refresh a cada 3s',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.orange[700],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadOrders,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(8),
-                          itemCount: orders.length,
-                          itemBuilder: (context, index) {
-                            try {
-                              final order = orders[index];
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 20),
-                                elevation: 6,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      // Imagem grande
-                                      CachedBase64Image(
-                                        base64Image: order.products.isNotEmpty && order.products.first.imageUrl != null ? order.products.first.imageUrl! : '',
-                                        width: 80,
-                                        height: 80,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      const SizedBox(width: 28),
-                                      // Info principal
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Pedido #${order.id}',
-                                              style: const TextStyle(
-                                                fontSize: 32,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.orange,
-                                                letterSpacing: 1.2,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Text(
-                                              order.customerName,
-                                              style: const TextStyle(
-                                                fontSize: 26,
-                                                fontWeight: FontWeight.w700,
-                                                color: Colors.black,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 14),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                                              decoration: BoxDecoration(
-                                                color: _getStatusColor(order.status).withOpacity(0.15),
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              child: Text(
-                                                _getStatusText(order.status),
-                                                style: TextStyle(
-                                                  fontSize: 22,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: _getStatusColor(order.status),
-                                                  letterSpacing: 1.1,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            } catch (e) {
-                              print('Error building order item $index: $e');
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Text('Erro ao carregar pedido: $e'),
-                                ),
-                              );
-                            }
-                          },
-                        ),
+                : Row(
+                    children: [
+                      // Lado esquerdo - Em Preparação
+                      Expanded(
+                        child: _buildPreparationSection(),
                       ),
+                      // Divisor vertical mais espesso para Windows
+                      Container(
+                        width: 4,
+                        color: Colors.grey[400],
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      // Lado direito - Em Entrega
+                      Expanded(
+                        child: _buildDeliverySection(),
+                      ),
+                    ],
+                  ),
       );
     } catch (e) {
       print('Error in build method: $e');
@@ -440,6 +356,269 @@ class _BarRequestsState extends State<BarRequests> {
         ),
       );
     }
+  }
+
+  Widget _buildPreparationSection() {
+    return Column(
+      children: [
+        // Header da seção
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.orange[50],
+            border: Border(
+              bottom: BorderSide(color: Colors.orange[200]!, width: 2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.restaurant, color: Colors.orange[700], size: 32),
+              const SizedBox(width: 12),
+              Text(
+                'Em Preparação',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange[700],
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.orange[100],
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '${orders.length}',
+                  style: TextStyle(
+                    color: Colors.orange[700],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Lista de pedidos em preparação
+        Expanded(
+          child: orders.isEmpty
+              ? _buildEmptyState('Nenhum pedido em preparação', Icons.restaurant)
+              : RefreshIndicator(
+                  onRefresh: _loadOrders,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: orders.length,
+                    itemBuilder: (context, index) => _buildOrderCard(orders[index]),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeliverySection() {
+    return Column(
+      children: [
+        // Header da seção
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.green[50],
+            border: Border(
+              bottom: BorderSide(color: Colors.green[200]!, width: 2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.delivery_dining, color: Colors.green[700], size: 32),
+              const SizedBox(width: 12),
+              Text(
+                'Em Entrega',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green[700],
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.green[100],
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '${deliveryOrders.length}',
+                  style: TextStyle(
+                    color: Colors.green[700],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Lista de pedidos em entrega
+        Expanded(
+          child: deliveryOrders.isEmpty
+              ? _buildEmptyState('Nenhum pedido em entrega', Icons.delivery_dining)
+              : RefreshIndicator(
+                  onRefresh: _loadOrders,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: deliveryOrders.length,
+                    itemBuilder: (context, index) => _buildOrderCard(deliveryOrders[index], isDelivery: true),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(String message, IconData icon) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(48),
+        margin: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 2,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 24),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 20,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderCard(PurchaseOrder order, {bool isDelivery = false}) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 6,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDelivery ? Colors.green[200]! : Colors.orange[200]!,
+          width: 2,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            // Imagem do produto
+            CachedBase64Image(
+              base64Image: order.products.isNotEmpty && order.products.first.imageUrl != null 
+                  ? order.products.first.imageUrl! 
+                  : '',
+              width: 80,
+              height: 80,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            const SizedBox(width: 20),
+            // Informações do pedido
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pedido #${order.id}',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    order.customerName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    order.description,
+                    style: const TextStyle(fontSize: 14),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        '${order.total}€',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDelivery ? Colors.green[700] : Colors.orange[700],
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        _formatDateTime(order.time),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Status
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _getStatusColor(order.status).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _getStatusColor(order.status),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                _getStatusText(order.status),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: _getStatusColor(order.status),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

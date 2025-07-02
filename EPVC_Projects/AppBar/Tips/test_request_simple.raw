@@ -1,0 +1,6 @@
+POST https://appbar.epvc.pt/API/appBarAPI_GET.php HTTP/1.1
+Host: appbar.epvc.pt
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1150
+
+query_param=5&nome=Maria&apelido=Santos&turma=11ºB&descricao=Água, Sandes&permissao=Aluno&total=2.80&valor=3.00&imagem=data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/8A&payment_method=dinheiro&phone_number=--&requestInvoice=0&nif=&documentType=FS&idUser=0&customerName=Maria Santos&customerAddress=Rua Exemplo&customerPostalCode=1000-001&customerCity=Lisboa&customerCountry=PT&customerVAT=999999990&cartItems=[{"Nome":"Água","Preco":"0.80","Prencado":"0","PrepararPrencado":false,"Fresh":false,"Id":"125","idApp":"125","XDReference":"125"},{"Nome":"Sandes","Preco":"2.00","Prencado":"0","PrepararPrencado":false,"Fresh":false,"Id":"126","idApp":"126","XDReference":"126"}]&dinheiroAtual=3.00 

@@ -65,6 +65,9 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   List<PurchaseOrder> currentOrders = [];
   WebSocketChannel? _channel;
   Timer? _pingTimer; // Timer para keep-alive
+  
+  // Map para guardar os dados originais dos pedidos (incluindo dados de faturação)
+  Map<String, Map<String, dynamic>> rawOrdersData = {};
 
   bool? isDayOpen; // null = loading, false = closed, true = open
   bool _showCalculator = false;
@@ -174,12 +177,23 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
           if (message != null && message.isNotEmpty) {
             try {
               Map<String, dynamic> data = jsonDecode(message);
+              print('[DEBUG] Mensagem recebida do WebSocket: ' + message);
+              print('[DEBUG] Chaves recebidas do WebSocket: ' + data.keys.join(', '));
+              
+              // Guardar os dados originais do pedido
+              String orderNumber = data['NPedido']?.toString() ?? '';
+              if (orderNumber.isNotEmpty) {
+                rawOrdersData[orderNumber] = data;
+              }
+              
               PurchaseOrder order = PurchaseOrder.fromJson(data);
 
               setState(() {
                 // Remove completed orders (status 2)
                 if (order.status == '2') {
                   currentOrders.removeWhere((o) => o.number == order.number);
+                  // Remover também os dados originais
+                  rawOrdersData.remove(order.number);
                 } 
                 // Update existing orders
                 else {
@@ -473,70 +487,188 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     }
       
     try {
+      // Chamar a API de faturação ANTES de marcar como concluído
+      await _faturarPedidoSeNecessario(order);
+      
       final response = await http.get(Uri.parse(
           'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}&op=2'));
 
       if (response.statusCode == 200) {
         setState(() {
           currentOrders.removeWhere((o) => o.number == order.number);
+          // Remover também os dados originais
+          rawOrdersData.remove(order.number);
           purchaseOrderController.add(currentOrders);
         });
-
-        // Mostrar diálogo em vez do SnackBar
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                title: Text(
-                  'Pedido Concluído',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                content: Text(
-                  'O pedido ${order.number} foi concluído com sucesso!',
-                  style: TextStyle(fontSize: 16),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Color.fromARGB(255, 246, 141, 45),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'OK',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pedido ${order.number} concluído com sucesso!')),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao concluir pedido. Código: ${response.statusCode}')),
+          SnackBar(content: Text('Erro ao concluir pedido ${order.number}')),
         );
       }
     } catch (e) {
+      print('Erro ao concluir pedido: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao concluir pedido: ${e.toString()}')),
       );
+    }
+  }
+
+  // Função auxiliar para obter o XDReference pelo nome do produto
+  Future<String?> _getXDReferenceByName(String productName) async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=5.1&nome=${Uri.encodeComponent(productName)}'),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is List && data.isNotEmpty && data[0]['XDReference'] != null) {
+          return data[0]['XDReference'].toString();
+        }
+      }
+    } catch (e) {
+      print('Erro ao obter XDReference para $productName: $e');
+    }
+    return null;
+  }
+
+  // Função para construir order_lines a partir da descrição
+  Future<List<Map<String, dynamic>>> _buildOrderLinesFromDescricao(String descricao) async {
+    List<Map<String, dynamic>> orderLines = [];
+    print('[DEBUG] Descricao recebida para order_lines: $descricao');
+    
+    // Dividir por vírgulas E hífens, depois limpar cada item
+    List<String> items = [];
+    // Primeiro dividir por vírgulas
+    List<String> commaSplit = descricao.split(',');
+    for (String commaItem in commaSplit) {
+      // Depois dividir cada item por hífens
+      List<String> hyphenSplit = commaItem.split('-');
+      for (String hyphenItem in hyphenSplit) {
+        String trimmedItem = hyphenItem.trim();
+        if (trimmedItem.isNotEmpty) {
+          items.add(trimmedItem);
+        }
+      }
+    }
+    
+    print('[DEBUG] Items extraídos: $items');
+    
+    for (var item in items) {
+      item = item.trim();
+      RegExp reg = RegExp(r'^(\d+)x\s*(.+)$');
+      Match? match = reg.firstMatch(item);
+      int quantity = 1;
+      String productName = item;
+      if (match != null) {
+        quantity = int.tryParse(match.group(1) ?? '1') ?? 1;
+        productName = match.group(2)?.trim() ?? '';
+      }
+      String? xdReference = await _getXDReferenceByName(productName);
+      if (xdReference != null) {
+        orderLines.add({
+          'reference': xdReference,
+          'quantity': quantity,
+        });
+        print('[DEBUG] Produto adicionado: $productName (qty: $quantity, ref: $xdReference)');
+      } else {
+        print('XDReference não encontrado para "$productName".');
+      }
+    }
+    return orderLines;
+  }
+
+  // Função para chamar a API de faturação
+  Future<void> _faturarPedidoSeNecessario(PurchaseOrder order) async {
+    try {
+      Map<String, dynamic> rawData = rawOrdersData[order.number] ?? {};
+      final invoiceFlag = (rawData['RequestInvoice'] ?? rawData['requestInvoice'] ?? '0').toString();
+      print('RequestInvoice recebido: ${rawData['RequestInvoice']} / ${rawData['requestInvoice']}');
+      if (invoiceFlag != '1') {
+        print('Faturação não solicitada para o pedido ${order.number} (valor recebido: $invoiceFlag)');
+        return;
+      }
+      print('Chamando API de faturação para o pedido ${order.number}');
+      String customerName = rawData['CustomerName'] ?? order.requester;
+      String customerAddress = rawData['CustomerAddress'] ?? 'Rua Exemplo';
+      String customerPostalCode = rawData['CustomerPostalCode'] ?? '1000-001';
+      String customerCity = rawData['CustomerCity'] ?? 'Lisboa';
+      String customerCountry = 'PT';
+      
+      // Lógica para determinar o NIF a usar
+      String customerVAT;
+      String nifRecebido = rawData['NIF'] ?? '';
+      
+      // Se o NIF recebido não é 999999990, usar esse NIF (mesmo que idUser seja 0)
+      if (nifRecebido.isNotEmpty && nifRecebido != '999999990') {
+        customerVAT = nifRecebido;
+      } else {
+        // Se é 999999990 ou vazio, usar 999999990 (fatura simplificada)
+        customerVAT = '999999990';
+      }
+      
+      String documentType = rawData['documentType'] ?? 'FS';
+      String idUser = rawData['idUser']?.toString() ?? '0';
+      
+      // Debug: mostrar qual NIF está a ser usado
+      print('[DEBUG] NIF recebido do WebSocket: $nifRecebido');
+      print('[DEBUG] NIF que será usado na faturação: $customerVAT');
+      print('[DEBUG] idUser: $idUser');
+      print('[DEBUG] documentType: $documentType');
+      List<Map<String, dynamic>> orderLines = [];
+      // Esperar até order_lines não estar vazio (máximo 5 tentativas, 3 segundos)
+      int retryCount = 0;
+      while (orderLines.isEmpty && retryCount < 5) {
+        print('[DEBUG] order_lines vazio, a tentar novamente (${retryCount + 1}/5)...');
+        await Future.delayed(Duration(milliseconds: 600));
+        if (rawData['CartItems'] != null && rawData['CartItems'] is List) {
+          orderLines.clear();
+          for (var item in rawData['CartItems']) {
+            if (item is Map && item.containsKey('XDReference')) {
+              orderLines.add({
+                'reference': item['XDReference'] ?? item['Id'] ?? '123',
+                'quantity': 1
+              });
+            }
+          }
+        } else if (rawData['Descricao'] != null) {
+          orderLines = await _buildOrderLinesFromDescricao(rawData['Descricao']);
+        }
+        retryCount++;
+      }
+      if (orderLines.isEmpty) {
+        print('[ERRO] Não foi possível obter produtos para faturação após várias tentativas. Faturação não enviada.');
+        return;
+      }
+      Map<String, dynamic> billingPayload = {
+        'query_param': 1,
+        'user_id': idUser,
+        'vat': customerVAT,
+        'name': customerName,
+        'address': customerAddress,
+        'postalCode': customerPostalCode,
+        'city': customerCity,
+        'country': customerCountry,
+        'documentType': documentType,
+        'customer_id': '0',
+        'order_lines': orderLines
+      };
+      print('Payload da API de faturação: ${json.encode(billingPayload)}');
+      final response = await http.post(
+        Uri.parse('http://192.168.22.88/api/api.php'),
+        body: json.encode(billingPayload),
+      );
+      print('Resposta da API de faturação - Status: ${response.statusCode}');
+      print('Resposta da API de faturação - Body: ${response.body}');
+      if (response.statusCode == 200) {
+        print('Faturação processada com sucesso para o pedido ${order.number}');
+      } else {
+        print('Erro na API de faturação: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Erro ao chamar API de faturação: $e');
     }
   }
 

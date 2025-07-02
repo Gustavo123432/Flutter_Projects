@@ -2535,9 +2535,11 @@ return showDialog(
       bool requestInvoice = false;
       String nif = '';
       if (paymentMethod == 'mbway' || paymentMethod == 'dinheiro') {
-        // Pergunta do NIF desativada temporariamente
-        requestInvoice = false;
-        nif = '';
+        // Perguntar se o utilizador quer fatura com NIF
+        requestInvoice = await _showInvoiceRequestDialog();
+        if (requestInvoice) {
+          nif = await _showNifInputDialog() ?? '';
+        }
       }
 
       // Extract user information
@@ -2676,9 +2678,7 @@ return showDialog(
         bool prepararPrencado = item['PrepararPrencado'] ?? false;
         String prencado = item['Prencado'] ?? '0';
         bool isFresh = item['Fresh'] ?? false;
-
         String suffix = '';
-
         if (prencado == '1' && prepararPrencado) {
           suffix = ' - Prensado';
         } else if (prencado == '2' && prepararPrencado) {
@@ -2686,27 +2686,18 @@ return showDialog(
         } else if (prencado == '3' && isFresh) {
           suffix = ' - Fresco';
         }
-
         return '$name$suffix';
       }).toList();
-
       String descricao = formattedNames.join(', ');
-
       var turma = users[0]['Turma'];
       var nome = users[0]['Nome'];
       var permissao = users[0]['Permissao'];
       var imagem = users[0]['Imagem'];
-
-      // Calcular o troco usando o dinheiroAtual passado como parâmetro
-      double troco =
-          (dinheiroAtual ?? double.parse(total)) - double.parse(total);
+      double troco = (dinheiroAtual ?? double.parse(total)) - double.parse(total);
       String trocos = troco.toStringAsFixed(2);
-
       final channel = WebSocketChannel.connect(
         Uri.parse('ws://websocket.appbar.epvc.pt'),
       );
-
-      // Send order data
       Map<String, dynamic> orderData = {
         'QPediu': nome,
         'NPedido': orderNumber,
@@ -2720,17 +2711,107 @@ return showDialog(
         'MetodoDePagamento': paymentMethod,
         'DinheiroAtual': dinheiroAtual?.toString() ?? total,
       };
-
-      // Add invoice information if requested
-      if (requestInvoice) {
+      // Ao pagar com dinheiro, envia sempre os campos de faturação simplificada
+      if (paymentMethod == 'dinheiro') {
         orderData['RequestInvoice'] = '1';
-        orderData['NIF'] = nif;
+        // Usar o NIF fornecido se disponível, senão usar 999999990
+        String finalNIF = (nif.isNotEmpty && nif != '999999990') ? nif : '999999990';
+        String documentType = (nif.isNotEmpty && nif != '999999990') ? 'FR' : 'FS';
+        String idUser = '0';
+        String customerName = '';
+        String customerAddress = '';
+        String customerPostalCode = '';
+        String customerCity = '';
+        
+        if (nif.isNotEmpty && nif != '999999990') {
+          // NIF real fornecido - usar dados reais
+          customerName = '${users[0]['Nome']} ${users[0]['Apelido']}';
+          customerAddress = users[0]['Rua'] ?? 'Rua Exemplo';
+          customerPostalCode = users[0]['CodigoPostal'] ?? '1000-001';
+          customerCity = users[0]['Cidade'] ?? 'Lisboa';
+          
+          // Verificar se tem idXD (mesmo com faturação automática desativada)
+          if (users[0]['idXD'] != null && users[0]['idXD'].toString().isNotEmpty) {
+            idUser = users[0]['idXD'].toString();
+          }
+        } else {
+          // Fatura simplificada - "Consumidor Final"
+          customerName = 'Consumidor Final';
+          customerAddress = '';
+          customerPostalCode = '';
+          customerCity = '';
+        }
+        
+        orderData['NIF'] = finalNIF;
+        orderData['documentType'] = documentType;
+        orderData['idUser'] = idUser;
+        orderData['CustomerName'] = customerName;
+        orderData['CustomerAddress'] = customerAddress;
+        orderData['CustomerPostalCode'] = customerPostalCode;
+        orderData['CustomerCity'] = customerCity;
+        orderData['CustomerCountry'] = 'PT';
+        orderData['CustomerVAT'] = finalNIF;
+      } else if (requestInvoice) {
+        // Verificar se o utilizador tem faturação automática ativada
+        bool autoBillNIF = users[0]['FaturacaoAutomatica'] == '1' ||
+            users[0]['FaturacaoAutomatica'] == 1;
+        String finalNIF = '';
+        String documentType = 'FS';
+        String idUser = '0';
+        String customerName = '';
+        String customerAddress = '';
+        String customerPostalCode = '';
+        String customerCity = '';
+        
+        if (nif.isNotEmpty && nif != '999999990') {
+          // NIF real fornecido pelo utilizador
+          finalNIF = nif;
+          documentType = 'FR';
+          
+          // Verificar se tem idXD (mesmo com faturação automática desativada)
+          if (users[0]['idXD'] != null && users[0]['idXD'].toString().isNotEmpty) {
+            idUser = users[0]['idXD'].toString();
+          }
+          
+          // Usar dados reais do utilizador
+          customerName = '${users[0]['Nome']} ${users[0]['Apelido']}';
+          customerAddress = users[0]['Rua'] ?? 'Rua Exemplo';
+          customerPostalCode = users[0]['CodigoPostal'] ?? '1000-001';
+          customerCity = users[0]['Cidade'] ?? 'Lisboa';
+        } else if (nif == '999999990') {
+          // Fatura simplificada - "Consumidor Final"
+          finalNIF = '999999990';
+          documentType = 'FS';
+          idUser = '0';
+          customerName = 'Consumidor Final';
+          customerAddress = '';
+          customerPostalCode = '';
+          customerCity = '';
+        } else {
+          // NIF vazio ou não fornecido
+          finalNIF = '999999990';
+          documentType = 'FS';
+          idUser = '0';
+          customerName = 'Consumidor Final';
+          customerAddress = '';
+          customerPostalCode = '';
+          customerCity = '';
+        }
+        
+        orderData['RequestInvoice'] = '1';
+        orderData['NIF'] = finalNIF;
+        orderData['documentType'] = documentType;
+        orderData['idUser'] = idUser;
+        orderData['CustomerName'] = customerName;
+        orderData['CustomerAddress'] = customerAddress;
+        orderData['CustomerPostalCode'] = customerPostalCode;
+        orderData['CustomerCity'] = customerCity;
+        orderData['CustomerCountry'] = 'PT';
+        orderData['CustomerVAT'] = finalNIF;
       }
-
-      // Send the order and close the connection immediately
+      // Não enviar CartItems pelo WebSocket
       channel.sink.add(json.encode(orderData));
       channel.sink.close();
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2800,6 +2881,14 @@ return showDialog(
           'phone_number': '--',
           'requestInvoice': requestInvoice ? '1' : '0',
           'nif': nif,
+          'documentType': nif.isNotEmpty && nif != '999999990' ? 'FR' : 'FS',
+          'idUser': (users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1) && requestInvoice ? (users[0]['idXD']?.toString() ?? '0') : '0',
+          'customerName': '${users[0]['Nome']} ${users[0]['Apelido']}',
+          'customerAddress': users[0]['Rua'] ?? 'Rua Exemplo',
+          'customerPostalCode': users[0]['CodigoPostal'] ?? '1000-001',
+          'customerCity': users[0]['Cidade'] ?? 'Lisboa',
+          'customerCountry': 'PT',
+          'customerVAT': nif.isNotEmpty ? nif : '999999990',
         },
       );
 
@@ -2995,34 +3084,79 @@ return showDialog(
     }
   }
 
-  Future<int> checkQuantidade(String productName) async {
+  // Função para chamar a API de faturação
+  Future<void> _callBillingAPI(List<Map<String, dynamic>> cartItems, int orderNumber, double total, bool requestInvoice, String nif) async {
     try {
-      // Remove double quotes and trim the product name
-      String cleanProductName = productName.replaceAll('"', '').trim();
+      // Verificar se o pedido precisa de faturação
+      if (!requestInvoice || nif.isEmpty) {
+        print('Faturação não solicitada ou NIF não fornecido');
+        return;
+      }
 
-      // Make the API request
-      var response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
+      print('Chamando API de faturação para o pedido $orderNumber');
 
-      if (response.statusCode == 200) {
-        // Parse the response
-        var data = json.decode(response.body);
+      // Preparar os dados do cliente
+      String customerName = '${users[0]['Nome']} ${users[0]['Apelido']}';
+      String customerAddress = users[0]['Rua'] ?? 'Rua Exemplo';
+      String customerPostalCode = users[0]['CodigoPostal'] ?? '1000-001';
+      String customerCity = users[0]['Cidade'] ?? 'Lisboa';
+      String customerCountry = 'PT';
+      String customerVAT = nif;
 
-        // Check if there's an error in the response
-        if (data is Map && data.containsKey('error')) {
-          print('Error checking quantity: ${data['error']}');
-          return 0; // Return 0 if product not found
-        }
-
-        // If data is a list and not empty
-        if (data is List && data.isNotEmpty) {
-          return int.parse(data[0]['Qtd'].toString());
+      // Preparar as linhas do pedido
+      List<Map<String, dynamic>> orderLines = [];
+      for (var item in cartItems) {
+        if (item.containsKey('Nome') && item.containsKey('Preco')) {
+          orderLines.add({
+            'reference': item['XDReference'] ?? item['Id'] ?? '123',
+            'quantity': 1,
+            'product_value': item['Preco'].toString(),
+            'idSalesman': '456'
+          });
         }
       }
-      return 0; // Return 0 if no data or error
+
+      // Preparar o payload da API de faturação
+      Map<String, dynamic> billingPayload = {
+        'query_param': 1,
+        'user_id': 0,
+        'documentType': 'FS',
+        'customer_id': '0',
+        'vat': customerVAT,
+        'name': customerName,
+        'address': customerAddress,
+        'postalCode': customerPostalCode,
+        'city': customerCity,
+        'country': customerCountry,
+        'order': {
+          'idUser': '456'
+        },
+        'nr_order_lines': orderLines.length,
+        'order_lines': orderLines
+      };
+
+      print('Payload da API de faturação: ${json.encode(billingPayload)}');
+
+      // Chamar a API de faturação
+      final response = await http.post(
+        Uri.parse('http://192.168.22.88/api/api.php'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(billingPayload),
+      );
+
+      print('Resposta da API de faturação - Status: ${response.statusCode}');
+      print('Resposta da API de faturação - Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('Faturação processada com sucesso');
+      } else {
+        print('Erro na API de faturação: ${response.statusCode} - ${response.body}');
+      }
     } catch (e) {
-      print('Error checking quantity: $e');
-      return 0; // Return 0 on error
+      print('Erro ao chamar API de faturação: $e');
+      // Não interromper o fluxo do pedido se a faturação falhar
     }
   }
 
@@ -3080,9 +3214,11 @@ return showDialog(
 
         // If the user is a professor, ask if they want an invoice with NIF
         if (userPermission == 'Professor') {
-          // Pergunta do NIF desativada temporariamente
-          requestInvoice = false;
-          nif = '';
+          // Perguntar se o professor quer fatura com NIF
+          requestInvoice = await _showInvoiceRequestDialog();
+          if (requestInvoice) {
+            nif = await _showNifInputDialog() ?? '';
+          }
         }
 
         // Show payment method selection dialog
@@ -3123,6 +3259,36 @@ return showDialog(
           },
         );
       }
+    }
+  }
+   Future<int> checkQuantidade(String productName) async {
+    try {
+      // Remove double quotes and trim the product name
+      String cleanProductName = productName.replaceAll('"', '').trim();
+
+      // Make the API request
+      var response = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
+
+      if (response.statusCode == 200) {
+        // Parse the response
+        var data = json.decode(response.body);
+
+        // Check if there's an error in the response
+        if (data is Map && data.containsKey('error')) {
+          print('Error checking quantity: ${data['error']}');
+          return 0; // Return 0 if product not found
+        }
+
+        // If data is a list and not empty
+        if (data is List && data.isNotEmpty) {
+          return int.parse(data[0]['Qtd'].toString());
+        }
+      }
+      return 0; // Return 0 if no data or error
+    } catch (e) {
+      print('Error checking quantity: $e');
+      return 0; // Return 0 on error
     }
   }
 
@@ -3351,6 +3517,14 @@ return showDialog(
         'cartItems': json.encode(cartItems),
         'requestInvoice': requestInvoice ? '1' : '0',
         'nif': nif,
+        'documentType': nif.isNotEmpty && nif != '999999990' ? 'FR' : 'FS',
+        'idUser': (users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1) && requestInvoice ? (users[0]['idXD']?.toString() ?? '0') : '0',
+        'customerName': '${users[0]['Nome']} ${users[0]['Apelido']}',
+        'customerAddress': users[0]['Rua'] ?? 'Rua Exemplo',
+        'customerPostalCode': users[0]['CodigoPostal'] ?? '1000-001',
+        'customerCity': users[0]['Cidade'] ?? 'Lisboa',
+        'customerCountry': 'PT',
+        'customerVAT': nif.isNotEmpty ? nif : '999999990',
       };
 
       // Ir para a página de telefone MBWay com a lógica de pagamento
@@ -3457,6 +3631,16 @@ return showDialog(
             'phone_number': '--',
             'requestInvoice': requestInvoice ? '1' : '0',
             'nif': nif,
+            'documentType': nif.isNotEmpty && nif != '999999990' ? 'FR' : 'FS',
+            'idUser': (users[0]['FaturacaoAutomatica'] == '1' || users[0]['FaturacaoAutomatica'] == 1) && requestInvoice ? (users[0]['idXD']?.toString() ?? '0') : '0',
+            'customerName': '${users[0]['Nome']} ${users[0]['Apelido']}',
+            'customerAddress': users[0]['Rua'] ?? 'Rua Exemplo',
+            'customerPostalCode': users[0]['CodigoPostal'] ?? '1000-001',
+            'customerCity': users[0]['Cidade'] ?? 'Lisboa',
+            'customerCountry': 'PT',
+            'customerVAT': nif.isNotEmpty ? nif : '999999990',
+            'cartItems': json.encode(cartItems),
+            'dinheiroAtual': total.toString(),
           },
         );
 
