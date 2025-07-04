@@ -65,7 +65,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   List<PurchaseOrder> currentOrders = [];
   WebSocketChannel? _channel;
   Timer? _pingTimer; // Timer para keep-alive
-  
+
   // Map para guardar os dados originais dos pedidos (incluindo dados de faturação)
   Map<String, Map<String, dynamic>> rawOrdersData = {};
 

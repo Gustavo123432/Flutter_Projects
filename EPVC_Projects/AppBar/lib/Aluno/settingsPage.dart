@@ -346,9 +346,9 @@ class _SettingsPageState extends State<SettingsPage> {
         if (_tlfController.text.length != 9) {
           isPhoneValid = false;
           phoneErrorMessage = 'O número de telefone deve ter 9 dígitos';
-        } else if (!_tlfController.text.startsWith('9') &&
-                   !_tlfController.text.startsWith('2') &&
-                   !_tlfController.text.startsWith('3')) {
+        } else if (!_tlfController.text.startsWith('9') && 
+                 !_tlfController.text.startsWith('2') && 
+                 !_tlfController.text.startsWith('3')) {
           isPhoneValid = false;
           phoneErrorMessage = 'O número deve começar com 9, 2 ou 3';
         }
@@ -367,13 +367,13 @@ class _SettingsPageState extends State<SettingsPage> {
         
         // Make API call to update user information
         final Map<String, String> body = {
-          'query_param': '1.1',
-          'user': user,
-          'morada': _moradaController.text,
-          'cidade': _cidadeController.text,
-          'codigo_postal': _codigoPostalController.text,
-          'telefone': _tlfController.text,
-          'auto_bill_nif': _autoBillNIF ? '1' : '0',
+            'query_param': '1.1',
+            'user': user,
+            'morada': _moradaController.text,
+            'cidade': _cidadeController.text,
+            'codigo_postal': _codigoPostalController.text,
+            'telefone': _tlfController.text,
+            'auto_bill_nif': _autoBillNIF ? '1' : '0',
         };
 
         if (_nifController.text != _originalNif) {
@@ -383,7 +383,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
         final response = await http.post(
           Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-          body: body,
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode(body),
         );
 
         print('API Response status: ${response.statusCode}');
@@ -989,7 +990,6 @@ return showDialog(
       // Verificar se o utilizador já existe na XD (query_param 2.1)
       final checkResponse = await http.post(
         Uri.parse('https://appbar.epvc.pt/API/appBarAPIXD_Post.php'),
-        headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'query_param': 2.1,
           'vat': nif,
@@ -1020,7 +1020,6 @@ return showDialog(
       // Criar utilizador na XD
       final createResponse = await http.post(
         Uri.parse('https://appbar.epvc.pt/API/appBarAPIXD_Post.php'),
-        headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'query_param': 2,
           'name': name,

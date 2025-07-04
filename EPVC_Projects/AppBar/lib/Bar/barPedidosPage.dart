@@ -76,7 +76,7 @@ class _BarRequestsState extends State<BarRequests> {
           List<PurchaseOrder> newOrders = [];
           
           for (var json in data) {
-            try {
+              try {
               PurchaseOrder order = PurchaseOrder.fromJson(json);
               currentApiOrderIds.add(order.id);
               
@@ -89,9 +89,9 @@ class _BarRequestsState extends State<BarRequests> {
               }
               
               print('[DEBUG] Pedido da API: ID ${order.id}, Estado ${order.status}');
-            } catch (e) {
-              print('Error parsing order: $e');
-              print('Order data: $json');
+              } catch (e) {
+                print('Error parsing order: $e');
+                print('Order data: $json');
             }
           }
           
@@ -310,23 +310,23 @@ class _BarRequestsState extends State<BarRequests> {
                     ),
                   )
                 : Row(
-                    children: [
+                            children: [
                       // Lado esquerdo - Em Preparação
                       Expanded(
                         child: _buildPreparationSection(),
                       ),
                       // Divisor vertical mais espesso para Windows
-                      Container(
+                              Container(
                         width: 4,
                         color: Colors.grey[400],
                         margin: const EdgeInsets.symmetric(vertical: 8),
                       ),
                       // Lado direito - Em Entrega
-                      Expanded(
+                                      Expanded(
                         child: _buildDeliverySection(),
+                                            ),
+                                          ],
                       ),
-                    ],
-                  ),
       );
     } catch (e) {
       print('Error in build method: $e');
