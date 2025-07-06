@@ -23,8 +23,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _hasUnsavedChanges = false;
   bool _autoBillNIF = false;
 
-    SibsService? _sibsService;
-
+  SibsService? _sibsService;
 
   // Controllers for editable fields
   final TextEditingController _nifController = TextEditingController();
@@ -77,11 +76,11 @@ class _SettingsPageState extends State<SettingsPage> {
       await _fetchUserBalance();
 
       // Set initial values for the controllers
-      _nifController.text = userData['NIF'] ?? '';
-      _moradaController.text = userData['Rua'] ?? '';
-      _cidadeController.text = userData['Cidade'] ?? '';
-      _codigoPostalController.text = userData['CodigoPostal'] ?? '';
-      _tlfController.text = userData['Telefone'] ?? '';
+      _nifController.text = userData['NIF']?.toString() ?? '';
+      _moradaController.text = userData['Rua']?.toString() ?? '';
+      _cidadeController.text = userData['Cidade']?.toString() ?? '';
+      _codigoPostalController.text = userData['CodigoPostal']?.toString() ?? '';
+      _tlfController.text = userData['Telefone']?.toString() ?? '';
       _autoBillNIF = userData['FaturacaoAutomatica'] == '1' ||
           userData['FaturacaoAutomatica'] == 1;
 
@@ -154,7 +153,8 @@ class _SettingsPageState extends State<SettingsPage> {
     return true;
   }
 
-  Future<void> _handleNavigation(BuildContext context, Widget destination) async {
+  Future<void> _handleNavigation(
+      BuildContext context, Widget destination) async {
     if (_checkForUnsavedChanges()) {
       final shouldNavigate = await showDialog<bool>(
         context: context,
@@ -332,13 +332,28 @@ class _SettingsPageState extends State<SettingsPage> {
       if (user == null) {
         throw Exception('No user logged in');
       }
-      
+
       // Validar NIF apenas se o utilizador o alterou
       bool isNifValid = true;
-      if (_nifController.text != _originalNif) {
+      bool nifChanged = _nifController.text != _originalNif;
+      if (nifChanged) {
         isNifValid = _validateNIF();
+
+        // Se o NIF foi alterado e a faturação automática está ativada, desativar
+        if (isNifValid && _autoBillNIF) {
+          setState(() {
+            _autoBillNIF = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'NIF alterado. A faturação automática foi desativada. Reative-a se necessário.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
-      
+
       // Validar telefone apenas se não estiver vazio
       bool isPhoneValid = true;
       String phoneErrorMessage = '';
@@ -346,14 +361,14 @@ class _SettingsPageState extends State<SettingsPage> {
         if (_tlfController.text.length != 9) {
           isPhoneValid = false;
           phoneErrorMessage = 'O número de telefone deve ter 9 dígitos';
-        } else if (!_tlfController.text.startsWith('9') && 
-                 !_tlfController.text.startsWith('2') && 
-                 !_tlfController.text.startsWith('3')) {
+        } else if (!_tlfController.text.startsWith('9') &&
+            !_tlfController.text.startsWith('2') &&
+            !_tlfController.text.startsWith('3')) {
           isPhoneValid = false;
           phoneErrorMessage = 'O número deve começar com 9, 2 ou 3';
         }
       }
-      
+
       if (isNifValid && isPhoneValid) {
         // Debug: Mostrar o que estamos enviando
         print('Saving user info:');
@@ -364,27 +379,30 @@ class _SettingsPageState extends State<SettingsPage> {
         print('Código Postal: ${_codigoPostalController.text}');
         print('Telefone: ${_tlfController.text}');
         print('Auto Bill NIF: ${_autoBillNIF ? '1' : '0'}');
-        
+
         // Make API call to update user information
         final Map<String, String> body = {
-            'query_param': '1.1',
-            'user': user,
-            'morada': _moradaController.text,
-            'cidade': _cidadeController.text,
-            'codigo_postal': _codigoPostalController.text,
-            'telefone': _tlfController.text,
-            'auto_bill_nif': _autoBillNIF ? '1' : '0',
+          'query_param': '1.1',
+          'user': user,
+          'nif': _nifController.text,
+          'morada': _moradaController.text,
+          'cidade': _cidadeController.text,
+          'codigo_postal': _codigoPostalController.text,
+          'telefone': _tlfController.text,
+          'auto_bill_nif': _autoBillNIF ? '1' : '0',
         };
 
         if (_nifController.text != _originalNif) {
           // Só envia o NIF se foi alterado (e nunca como '0')
-          body['nif'] = _nifController.text.isEmpty || _nifController.text == '0' ? '' : _nifController.text;
+          body['nif'] =
+              _nifController.text.isEmpty || _nifController.text == '0'
+                  ? ''
+                  : _nifController.text;
         }
 
         final response = await http.post(
           Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
-          headers: {'Content-Type': 'application/json'},
-          body: json.encode(body),
+          body: body,
         );
 
         print('API Response status: ${response.statusCode}');
@@ -398,7 +416,7 @@ class _SettingsPageState extends State<SettingsPage> {
               Uri.parse(
                   'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=31&tlf=${_tlfController.text}&id=${userData['IdUser']}'),
             );
-            
+
             print('Phone API Response: ${phoneResponse.statusCode}');
             if (phoneResponse.statusCode == 200) {
               print('Phone number saved successfully using dedicated endpoint');
@@ -441,8 +459,43 @@ class _SettingsPageState extends State<SettingsPage> {
               backgroundColor: Colors.green,
             ),
           );
-          
+
           // Recarregar os dados após salvar para confirmar
+
+          // Só aqui, após sucesso local, chamar a API externa (XD) se existir idXD
+          if ((userData['IdXD'] ?? '').toString().isNotEmpty) {
+            final xdPayload = {
+              'query_param': 2.2,
+              'name': (userData['Nome'] ?? '').toString(),
+              'vat': _nifController.text,
+              'address': _moradaController.text,
+              'state': '', // preencha se necessário
+              'postalCode': _codigoPostalController.text,
+              'city': _cidadeController.text,
+              'country': 'PT',
+              'email': (userData['Email'] ?? '').toString(),
+              'phone': _tlfController.text,
+              'isActive': true,
+            };
+
+            final xdResponse = await http.post(
+              Uri.parse('https://appbar.epvc.pt/API/appBarAPIXD_Post.php'),
+              headers: {'Content-Type': 'application/json'},
+              body: json.encode(xdPayload),
+            );
+            final xdData = json.decode(xdResponse.body);
+            print('XD Response: ${xdResponse.body}');
+            if (xdData['success'] == true) {
+              await _fetchUserInfo();
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(xdData['message'] ??
+                        'Erro ao atualizar cliente na XD!'),
+                    backgroundColor: Colors.red),
+              );
+            }
+          } else {}
           await _fetchUserInfo();
         } else {
           throw Exception(
@@ -478,25 +531,27 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-    Future<String?> _showUnavaiable() async{
-return showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Método de Pagamento Indisponivel'),
-          content: Text(
-              'O método de pagamento encontra-se indisponível de momento, iremos tentar ser os mais breves possiveis.'),
-          actions: [
-            TextButton(
-              onPressed: () { Navigator.of(context).pop(); /*Navigator.of(context).pop();*/},
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
-              child: Text('OK'),
+  Future<String?> _showUnavaiable() async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Método de Pagamento Indisponivel'),
+        content: Text(
+            'O método de pagamento encontra-se indisponível de momento, iremos tentar ser os mais breves possiveis.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); /*Navigator.of(context).pop();*/
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
             ),
-          ],
-        ),
-      );
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -541,43 +596,62 @@ return showDialog(
         borderRadius: BorderRadius.circular(12),
       ),
       child: IntrinsicHeight(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                  Icon(Icons.person, size: 24, color: Color.fromARGB(255, 130, 201, 189)),
-                SizedBox(width: 8),
-                Text(
-                  'Informações Pessoais',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.person,
+                      size: 24, color: Color.fromARGB(255, 130, 201, 189)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Informações Pessoais',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            Divider(),
-            SizedBox(height: 8),
-            _buildInfoRow('Nome',
-                '${userData['Nome'] ?? 'N/A'} ${userData['Apelido'] ?? ''}'),
-            _buildInfoRow('Email', userData['Email'] ?? 'N/A'),
-            _buildInfoRow('Turma', userData['Turma'] ?? 'N/A'),
-            _buildEditableFieldRow(
-                'Telefone',
-                _tlfController,
-                _isEditingPhone,
-                () => setState(() => _isEditingPhone = !_isEditingPhone),
-                () => _saveUserInfo()),
-            _buildEditableFieldRow(
-                'NIF',
-                _nifController,
-                _isEditingNif,
-                () => setState(() => _isEditingNif = !_isEditingNif),
-                () => _saveUserInfo()),
+                ],
+              ),
+              Divider(),
+              SizedBox(height: 8),
+              _buildInfoRow('Nome',
+                  '${userData['Nome'] ?? 'N/A'} ${userData['Apelido'] ?? ''}'),
+              _buildInfoRow('Email', userData['Email'] ?? 'N/A'),
+              _buildInfoRow('Turma', userData['Turma'] ?? 'N/A'),
+              _buildEditableFieldRow(
+                  'Telefone',
+                  _tlfController,
+                  _isEditingPhone,
+                  () => setState(() => _isEditingPhone = !_isEditingPhone),
+                  () => _saveUserInfo()),
+              _buildEditableFieldRow('NIF', _nifController, _isEditingNif, () {
+                if (_autoBillNIF) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('Não é possível alterar o NIF'),
+                      content: Text(
+                          'Para alterar o NIF, desative primeiro a faturação automática.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.orange, // Orange background
+                            foregroundColor: Colors.white, // White text
+                          ),
+                          child: Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  setState(() => _isEditingNif = !_isEditingNif);
+                }
+              }, () => _saveUserInfo()),
               if (_nifController.text.isNotEmpty)
                 Padding(
                   padding: EdgeInsets.only(left: 0, top: 4),
@@ -615,6 +689,7 @@ return showDialog(
       ),
     );
   }
+
   Future<void> _initializeSibsService() async {
     try {
       _sibsService = SibsService(
@@ -701,25 +776,28 @@ return showDialog(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     ListTile(
-                                      leading: Icon(Icons.money, color: Colors.green[800]),
+                                      leading: Icon(Icons.money,
+                                          color: Colors.green[800]),
                                       title: Text('Dinheiro'),
                                       onTap: () {
                                         Navigator.pop(context);
                                         showDialog(
                                           context: context,
                                           builder: (context) => AlertDialog(
-                                            title: Text('Carregar com Dinheiro'),
+                                            title:
+                                                Text('Carregar com Dinheiro'),
                                             content: Text(
-                                              'Se deseja carregar com dinheiro, dirija-se ao estabelecimento '
-                                              'e informe o funcionário que deseja carregar a sua conta com dinheiro.'
-                                            ),
+                                                'Se deseja carregar com dinheiro, dirija-se ao estabelecimento '
+                                                'e informe o funcionário que deseja carregar a sua conta com dinheiro.'),
                                             actions: [
                                               TextButton(
-                                                onPressed: () => Navigator.pop(context),
+                                                onPressed: () =>
+                                                    Navigator.pop(context),
                                                 child: Text(
                                                   'Fechar',
                                                   style: TextStyle(
-                                                    color: Color.fromARGB(255, 246, 141, 45),
+                                                    color: Color.fromARGB(
+                                                        255, 246, 141, 45),
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
@@ -731,8 +809,13 @@ return showDialog(
                                     ),
                                     Divider(),
                                     ListTile(
-                                      leading: Icon(Icons.phone_android, color:/* Colors.red[900]*/ Colors.grey),
-                                      title: Text('MBWay', style:TextStyle( color:  Colors.grey,)),
+                                      leading: Icon(Icons.phone_android,
+                                          color: /* Colors.red[900]*/
+                                              Colors.grey),
+                                      title: Text('MBWay',
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                          )),
                                       onTap: () {
                                         Navigator.pop(context);
                                         if (_sibsService != null) {
@@ -753,8 +836,11 @@ return showDialog(
                                             ),
                                           );*/
                                         } else {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Serviço de pagamento indisponível. Tente mais tarde.')),
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                                content: Text(
+                                                    'Serviço de pagamento indisponível. Tente mais tarde.')),
                                           );
                                         }
                                       },
@@ -769,7 +855,8 @@ return showDialog(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color.fromARGB(255, 6, 165, 139),
                             foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -783,7 +870,7 @@ return showDialog(
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>  MovimentosPage(),
+                                builder: (context) => MovimentosPage(),
                               ),
                             );
                           },
@@ -792,7 +879,8 @@ return showDialog(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color.fromARGB(255, 246, 141, 45),
                             foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -810,8 +898,6 @@ return showDialog(
     );
   }
 
-  
-
   Widget _buildEditableAddressCard() {
     return Card(
       elevation: 4,
@@ -819,47 +905,48 @@ return showDialog(
         borderRadius: BorderRadius.circular(12),
       ),
       child: IntrinsicHeight(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                  Icon(Icons.home, size: 24, color: Color.fromARGB(255, 130, 201, 189)),
-                SizedBox(width: 8),
-                Text(
-                  'Dados de Faturação',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.home,
+                      size: 24, color: Color.fromARGB(255, 130, 201, 189)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Dados de Faturação',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            Divider(),
-            SizedBox(height: 8),
-            _buildEditableFieldRow(
-                'Endereço',
-                _moradaController,
-                _isEditingMorada,
-                () => setState(() => _isEditingMorada = !_isEditingMorada),
-                () => _saveUserInfo()),
-            _buildEditableFieldRow(
-                'Cidade',
-                _cidadeController,
-                _isEditingCidade,
-                () => setState(() => _isEditingCidade = !_isEditingCidade),
-                () => _saveUserInfo()),
-            _buildEditableFieldRow(
-                'Código Postal',
-                _codigoPostalController,
-                _isEditingCodigoPostal,
-                () => setState(
-                    () => _isEditingCodigoPostal = !_isEditingCodigoPostal),
-                () => _saveUserInfo()),
-          ],
+                ],
+              ),
+              Divider(),
+              SizedBox(height: 8),
+              _buildEditableFieldRow(
+                  'Endereço',
+                  _moradaController,
+                  _isEditingMorada,
+                  () => setState(() => _isEditingMorada = !_isEditingMorada),
+                  () => _saveUserInfo()),
+              _buildEditableFieldRow(
+                  'Cidade',
+                  _cidadeController,
+                  _isEditingCidade,
+                  () => setState(() => _isEditingCidade = !_isEditingCidade),
+                  () => _saveUserInfo()),
+              _buildEditableFieldRow(
+                  'Código Postal',
+                  _codigoPostalController,
+                  _isEditingCodigoPostal,
+                  () => setState(
+                      () => _isEditingCodigoPostal = !_isEditingCodigoPostal),
+                  () => _saveUserInfo()),
+            ],
           ),
         ),
       ),
@@ -964,10 +1051,18 @@ return showDialog(
           IconButton(
             icon: Icon(
               isEditing ? Icons.save : Icons.edit,
-              color: isEditing ? Colors.green : Color.fromARGB(255, 246, 141, 45),
+              color:
+                  isEditing ? Colors.green : Color.fromARGB(255, 246, 141, 45),
               size: 20,
             ),
-            onPressed: isEditing ? onSave : onEdit,
+            onPressed: isEditing
+                ? onSave
+                : () {
+                    print('Botão de edição clicado para: $label');
+                    print('Estado atual _isEditingNif: $_isEditingNif');
+                    print('Estado atual _autoBillNIF: $_autoBillNIF');
+                    onEdit();
+                  },
             tooltip: isEditing ? 'Guardar' : 'Editar',
             padding: EdgeInsets.all(4),
             constraints: BoxConstraints(),
@@ -983,7 +1078,9 @@ return showDialog(
       final nif = _nifController.text.trim();
       if (nif.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Preencha o NIF para ativar a faturação automática.')),
+          SnackBar(
+              content:
+                  Text('Preencha o NIF para ativar a faturação automática.')),
         );
         return;
       }
@@ -996,7 +1093,9 @@ return showDialog(
         }),
       );
       final checkData = json.decode(checkResponse.body);
-      if (checkData['success'] == true && checkData['customer'] != null && checkData['customer']['success'] == true) {
+      if (checkData['success'] == true &&
+          checkData['customer'] != null &&
+          checkData['customer']['success'] == true) {
         setState(() {
           _autoBillNIF = true;
         });
@@ -1011,9 +1110,12 @@ return showDialog(
       final postalCode = _codigoPostalController.text.trim();
       final city = _cidadeController.text.trim();
       final country = 'PT';
-      if ([name, nif, address, postalCode, city, country, email, phone].any((v) => v.isEmpty)) {
+      if ([name, nif, address, postalCode, city, country, email, phone]
+          .any((v) => v.isEmpty)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Preencha todos os campos de faturação para ativar a faturação automática.')),
+          SnackBar(
+              content: Text(
+                  'Preencha todos os campos de faturação para ativar a faturação automática.')),
         );
         return;
       }
@@ -1043,7 +1145,9 @@ return showDialog(
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao ativar faturação automática: ${createData['message'] ?? 'Erro desconhecido'}')),
+          SnackBar(
+              content: Text(
+                  'Erro ao ativar faturação automática: ${createData['message'] ?? 'Erro desconhecido'}')),
         );
       }
     } else {
