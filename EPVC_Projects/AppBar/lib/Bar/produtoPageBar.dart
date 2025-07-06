@@ -9,6 +9,7 @@ import 'package:appbar_epvc/login.dart';
 import 'package:appbar_epvc/models/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:appbar_epvc/widgets/loading_overlay.dart';
+import '../services/base_product_service.dart';
 
 List<Product> filteredProducts =
     []; // Assuming this is where filtered products will be stored
@@ -222,19 +223,234 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
   }
 
   void updateProductQuantity(String id, int quantityToAdd) async {
-    var response = await http.get(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=1&ids=$id&quantities=$quantityToAdd'),
-    );
-    if (response.statusCode == 200) {
+    try {
+      // Show loading indicator
       setState(() {
-        var index = products.indexWhere((product) => product.id == id);
-        if (index != -1) {
-          products[index].quantity += quantityToAdd; // Atualiza localmente apenas com o incremento
-          products[index].available = products[index].quantity >= 1;
-        }
+        isLoading = true;
       });
-    } else {
-      print('Erro ao atualizar a quantidade do produto\nPor favor contacte o responsável!');
+      
+      // First, check if this is a base product
+      var product = products.firstWhere((p) => p.id == id);
+      
+      // Check if this product has variations (is a base product)
+      var variations = products.where((p) => p.baseProductId == id).toList();
+      bool isBaseProduct = product.isBaseProduct || variations.isNotEmpty;
+      
+      // Also check if this product name suggests it's a base product
+      String productName = product.name.toLowerCase();
+      bool isLikelyBaseProduct = (productName.contains('pão') && 
+                                 !productName.contains('com') && 
+                                 !productName.contains('misto') &&
+                                 !productName.contains('fiambre') &&
+                                 !productName.contains('presunto') &&
+                                 !productName.contains('chouriço') &&
+                                 !productName.contains('atum') &&
+                                 !productName.contains('salsicha') &&
+                                 !productName.contains('frango')) ||
+                                (productName.contains('croissant') && !productName.contains('com')) ||
+                                (productName.contains('bico') && !productName.contains('com')) ||
+                                productName.contains('panado') ||
+                                productName.contains('rissol');
+      
+      if (isBaseProduct || isLikelyBaseProduct) {
+        // This is a base product, update it and all its variations
+        await _updateBaseProductAndVariations(id, quantityToAdd);
+      } else {
+        // This is a variation, update the base product instead
+        await _updateVariationQuantity(id, quantityToAdd);
+      }
+    } catch (e) {
+      print('Error updating product quantity: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao atualizar quantidade: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      // Hide loading indicator
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateBaseProductAndVariations(String baseProductId, int quantityToAdd) async {
+    try {
+      // Get the base product
+      var baseProduct = products.firstWhere((p) => p.id == baseProductId);
+      
+      // Get all variations of this base product
+      var variations = products.where((p) => p.baseProductId == baseProductId).toList();
+      
+      // Also find variations by name pattern if no linked variations found
+      if (variations.isEmpty) {
+        String baseName = baseProduct.name.toLowerCase();
+        print('Looking for variations of: $baseName');
+        
+        if (baseName.contains('pão')) {
+          // Find all pão variations (Pão com Queijo, Pão Misto, etc.)
+          variations = products.where((p) => 
+            p.name.toLowerCase().contains('pão') && 
+            p.id != baseProductId &&
+            (p.name.toLowerCase().contains('com') || 
+             p.name.toLowerCase().contains('misto') ||
+             p.name.toLowerCase().contains('fiambre') ||
+             p.name.toLowerCase().contains('presunto') ||
+             p.name.toLowerCase().contains('chouriço') ||
+             p.name.toLowerCase().contains('atum') ||
+             p.name.toLowerCase().contains('salsicha') ||
+             p.name.toLowerCase().contains('frango'))
+          ).toList();
+          print('Found pão variations: ${variations.map((v) => v.name).join(', ')}');
+        } else if (baseName.contains('croissant')) {
+          variations = products.where((p) => 
+            p.name.toLowerCase().contains('croissant') && 
+            p.name.toLowerCase().contains('com') &&
+            p.id != baseProductId
+          ).toList();
+        } else if (baseName.contains('bico')) {
+          variations = products.where((p) => 
+            p.name.toLowerCase().contains('bico') && 
+            p.name.toLowerCase().contains('com') &&
+            p.id != baseProductId
+          ).toList();
+        } else if (baseName.contains('panado')) {
+          variations = products.where((p) => 
+            p.name.toLowerCase().contains('panado') &&
+            p.id != baseProductId
+          ).toList();
+        } else if (baseName.contains('rissol')) {
+          variations = products.where((p) => 
+            p.name.toLowerCase().contains('rissol') &&
+            p.id != baseProductId
+          ).toList();
+        }
+      }
+      
+      // Update base product first
+      var baseResponse = await http.get(
+        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=1&ids=$baseProductId&quantities=$quantityToAdd'),
+      );
+      
+      if (baseResponse.statusCode == 200) {
+        // Get the new base product quantity
+        int newBaseQuantity = baseProduct.quantity + quantityToAdd;
+        
+        // Update base product in local state
+        setState(() {
+          var baseIndex = products.indexWhere((product) => product.id == baseProductId);
+          if (baseIndex != -1) {
+            products[baseIndex].quantity = newBaseQuantity;
+            products[baseIndex].available = newBaseQuantity >= 1;
+          }
+        });
+        
+        // Update each variation individually in the database
+        List<String> updatedVariations = [];
+        List<String> alreadyUpdatedVariations = [];
+        
+        for (var variation in variations) {
+          try {
+            // Calculate how much to add to this variation to match base product
+            int currentVariationQuantity = variation.quantity;
+            int quantityToAddToVariation = newBaseQuantity - currentVariationQuantity;
+            
+            if (quantityToAddToVariation != 0) {
+              print('Updating variation ${variation.name}: current=$currentVariationQuantity, target=$newBaseQuantity, adding=$quantityToAddToVariation');
+              
+              var variationResponse = await http.get(
+                Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=1&ids=${variation.id}&quantities=$quantityToAddToVariation'),
+              );
+              
+              if (variationResponse.statusCode == 200) {
+                // Update variation in local state
+                setState(() {
+                  var variationIndex = products.indexWhere((product) => product.id == variation.id);
+                  if (variationIndex != -1) {
+                    products[variationIndex].quantity = newBaseQuantity;
+                    products[variationIndex].available = newBaseQuantity >= 1;
+                  }
+                });
+                
+                updatedVariations.add(variation.name);
+                print('✅ Updated variation in database: ${variation.name}');
+              } else {
+                print('❌ Failed to update variation in database: ${variation.name}');
+              }
+            } else {
+              // Variation already has the correct quantity
+              alreadyUpdatedVariations.add(variation.name);
+              print('ℹ️ Variation ${variation.name} already has correct quantity: $currentVariationQuantity');
+            }
+          } catch (e) {
+            print('❌ Error updating variation ${variation.name}: $e');
+          }
+        }
+        
+        // Show success message
+        String message;
+        if (variations.isNotEmpty) {
+          if (updatedVariations.isNotEmpty && alreadyUpdatedVariations.isNotEmpty) {
+            message = '${baseProduct.name} atualizado. ${updatedVariations.length} variações atualizadas na BD, ${alreadyUpdatedVariations.length} já estavam corretas.';
+          } else if (updatedVariations.isNotEmpty) {
+            message = '${baseProduct.name} e ${updatedVariations.length} variações atualizadas na base de dados';
+          } else {
+            message = '${baseProduct.name} atualizado. Todas as variações já estavam corretas.';
+          }
+        } else {
+          message = '${baseProduct.name} atualizado';
+        }
+            
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Debug info
+        print('Updated base product: ${baseProduct.name}');
+        print('Updated variations in database: ${updatedVariations.join(', ')}');
+        print('Already correct variations: ${alreadyUpdatedVariations.join(', ')}');
+      } else {
+        throw Exception('Erro ao atualizar produto base');
+      }
+    } catch (e) {
+      print('Error updating base product and variations: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _updateVariationQuantity(String variationId, int quantityToAdd) async {
+    try {
+      // Get the variation product
+      var variation = products.firstWhere((p) => p.id == variationId);
+      
+      if (variation.baseProductId != null && variation.baseProductId!.isNotEmpty) {
+        // Update the base product instead
+        await _updateBaseProductAndVariations(variation.baseProductId!, quantityToAdd);
+      } else {
+        // Fallback to regular update if no base product found
+        var response = await http.get(
+          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=1&ids=$variationId&quantities=$quantityToAdd'),
+        );
+        
+        if (response.statusCode == 200) {
+          setState(() {
+            var index = products.indexWhere((product) => product.id == variationId);
+            if (index != -1) {
+              products[index].quantity += quantityToAdd;
+              products[index].available = products[index].quantity >= 1;
+            }
+          });
+        } else {
+          throw Exception('Erro ao atualizar variação');
+        }
+      }
+    } catch (e) {
+      print('Error updating variation quantity: $e');
+      rethrow;
     }
   }
 
@@ -489,6 +705,8 @@ class _ProductCardState extends State<ProductCard> {
       },
       child: Card(
         margin: EdgeInsets.all(8.0),
+        color: widget.product.isBaseProduct ? Colors.orange[50] : 
+               widget.product.isVariation ? Colors.blue[50] : null,
         child: Padding(
           padding: EdgeInsets.all(12.0),
           child: Column(
@@ -507,16 +725,36 @@ class _ProductCardState extends State<ProductCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          widget.product.name,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.product.name,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: widget.product.isBaseProduct ? Colors.orange[800] : 
+                                         widget.product.isVariation ? Colors.blue[800] : Colors.black,
+                                ),
+                              ),
+                            ),
+                            if (widget.product.isBaseProduct)
+                              Icon(Icons.inventory, color: Colors.orange, size: 16),
+                            if (widget.product.isVariation)
+                              Icon(Icons.link, color: Colors.blue, size: 16),
+                          ],
                         ),
                         Text(
                           'Preço: ${widget.product.price.toStringAsFixed(2).replaceAll('.', ',')}€',
                           style: TextStyle(fontSize: 14),
+                        ),
+                        Text(
+                          'Quantidade: ${widget.product.displayQuantity}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: widget.product.isVariation ? Colors.blue : Colors.black,
+                          ),
                         ),
                         Text(
                           'Estado: ${isAvailable ? 'Disponível' : 'Indisponível'}',
@@ -528,6 +766,35 @@ class _ProductCardState extends State<ProductCard> {
                         Text(
                           'Categoria: ${widget.product.category}',
                           style: TextStyle(fontSize: 14),
+                        ),
+                        if (widget.product.isBaseProduct)
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Produto Base',
+                              style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        if (widget.product.isVariation && widget.product.baseProductName != null)
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Base: ${widget.product.baseProductName}',
+                              style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        // Debug info
+                        Text(
+                          'ID: ${widget.product.id} | BaseID: ${widget.product.baseProductId ?? "null"}',
+                          style: TextStyle(fontSize: 10, color: Colors.grey),
                         ),
                       ],
                     ),

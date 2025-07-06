@@ -10,6 +10,7 @@ import 'package:appbar_epvc/Bar/drawerBar.dart';
 import 'package:appbar_epvc/login.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:diacritic/diacritic.dart';
+import '../services/base_product_service.dart';
 
 class PurchaseOrder {
   final String number;
@@ -1622,6 +1623,11 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
     return qty;
   }
 
+  // Get effective quantity for display (shows base product quantity for variations)
+  Future<int> getEffectiveQuantity(String productName) async {
+    return await BaseProductService.getEffectiveQuantity(productName);
+  }
+
   Future<int> _checkQuantity(String productName) async {
     try {
       String cleanProductName = removeDiacritics(
@@ -2049,7 +2055,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
                             subtitle: Text('${product['Preco']}€',
                                 style: TextStyle(color: Colors.grey[600])),
                             trailing: FutureBuilder<int>(
-                              future: getAvailableQuantity(productName),
+                              future: getEffectiveQuantity(productName),
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState ==
                                         ConnectionState.waiting &&

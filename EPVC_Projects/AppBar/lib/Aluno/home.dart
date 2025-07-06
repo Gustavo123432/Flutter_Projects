@@ -1270,30 +1270,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     }
   }
 
-  Future<bool> _checkEstablishmentOpen() async {
-    try {
-      final response = await http.get(
-        Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=37'),
-      );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        int open = 0;
-        if (data is List &&
-            data.isNotEmpty &&
-            (data[0]['open'] != null || data[0]['Open'] != null)) {
-          open =
-              int.tryParse((data[0]['open'] ?? data[0]['Open']).toString()) ??
-                  0;
-        } else if (data is Map &&
-            (data['open'] != null || data['Open'] != null)) {
-          open = int.tryParse((data['open'] ?? data['Open']).toString()) ?? 0;
-        }
-        return open == 1;
-      }
-    } catch (e) {}
-    return false;
-  }
+
 }
 
 class CategoryPage extends StatefulWidget {
@@ -2510,6 +2487,16 @@ return showDialog(
       return;
     }
 
+    // Se o estabelecimento está aberto, perguntar o NIF primeiro
+    String nif = '';
+    bool requestInvoice = false;
+    
+    // Perguntar se o utilizador quer fatura com NIF
+    requestInvoice = await _showInvoiceRequestDialog();
+    if (requestInvoice) {
+      nif = await _showNifInputDialog() ?? '';
+    }
+
     // First confirmation dialog
     bool confirmOrder = await _showOrderConfirmationDialog();
     if (!confirmOrder) return;
@@ -2531,17 +2518,6 @@ return showDialog(
       // Mostrar diálogo de seleção de método de pagamento
       String? paymentMethod = await _showPaymentMethodDialog();
       if (paymentMethod == null) return;
-
-      // Check if invoice is needed
-      bool requestInvoice = false;
-      String nif = '';
-      if (paymentMethod == 'mbway' || paymentMethod == 'dinheiro') {
-        // Perguntar se o utilizador quer fatura com NIF
-        requestInvoice = await _showInvoiceRequestDialog();
-        if (requestInvoice) {
-          nif = await _showNifInputDialog() ?? '';
-        }
-      }
 
       // Extract user information
       var turma = users[0]['Turma'] ?? '';
@@ -3185,6 +3161,18 @@ return showDialog(
       );
       return;
     }
+
+    // Se o estabelecimento está aberto, perguntar o NIF primeiro
+    String nif = '';
+    bool requestInvoice = false;
+    
+    // Perguntar se o utilizador quer fatura com NIF
+    requestInvoice = await _showInvoiceRequestDialog();
+    if (requestInvoice) {
+      nif = await _showNifInputDialog() ?? '';
+    }
+
+    // Verificar disponibilidade dos produtos
     bool allAvailable = true;
     List<String> unavailableItems = <String>[]; // Explicitly specify the type
 
@@ -3206,22 +3194,6 @@ return showDialog(
 
     if (cartItems.isNotEmpty) {
       if (allAvailable) {
-        // Check if user is a professor before proceeding to payment
-        String userPermission = users != null && users.isNotEmpty
-            ? users[0]['Permissao'] ?? ''
-            : '';
-        String nif = '';
-        bool requestInvoice = false;
-
-        // If the user is a professor, ask if they want an invoice with NIF
-        if (userPermission == 'Professor') {
-          // Perguntar se o professor quer fatura com NIF
-          requestInvoice = await _showInvoiceRequestDialog();
-          if (requestInvoice) {
-            nif = await _showNifInputDialog() ?? '';
-          }
-        }
-
         // Show payment method selection dialog
         final paymentMethod = await _showPaymentMethodDialog();
         if (paymentMethod == null) return;
