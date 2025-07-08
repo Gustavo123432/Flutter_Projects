@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, use_build_context_synchronously, annotate_overrides
 import 'dart:async';
 import 'dart:convert';
+import 'package:appbar_epvc/Monitor/barPedidosPage.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:appbar_epvc/Admin/dashboard.dart';
@@ -524,6 +525,11 @@ void verifylogin(context) async {
     } else if (type == "Bar") {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => BarPagePedidos()),
+      );
+    }
+     else if (type == "Monitor") {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => BarRequests()),
       );
     }
   } catch (e) {
