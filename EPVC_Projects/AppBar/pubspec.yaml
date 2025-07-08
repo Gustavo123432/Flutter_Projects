@@ -72,6 +72,7 @@ dependencies:
   google_fonts: ^6.2.1
   sqflite: ^2.3.2
   path: ^1.8.3
+  audioplayers: ^6.5.0
 
 flutter_launcher_icons:
   ios: true
@@ -114,6 +115,7 @@ flutter:
     - lib/assets/bellabotwhiteandorange_icon.png
     - lib/assets/bellabot_icon.png
     - lib/assets/barapp2.png
+    - assets/sound/appBarNotification.mp3
 
     #- lib/assets/fonts/Helvetica.ttf
 

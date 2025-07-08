@@ -11,6 +11,7 @@ import 'package:appbar_epvc/login.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:diacritic/diacritic.dart';
 import '../services/base_product_service.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class PurchaseOrder {
   final String number;
@@ -68,6 +69,9 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   List<PurchaseOrder> currentOrders = [];
   WebSocketChannel? _channel;
   Timer? _pingTimer; // Timer para keep-alive
+  Timer? _inactivityTimer;
+  final Duration inactivityDuration = Duration(minutes:2); // ajuste o tempo aqui
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   // Map para guardar os dados originais dos pedidos (incluindo dados de faturação)
   Map<String, Map<String, dynamic>> rawOrdersData = {};
@@ -78,6 +82,9 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
 
   // 1. No início do widget/página pai (exemplo: BarPage):
   List<Map<String, dynamic>> _cart = [];
+
+  DateTime? _lastOrderReceived;
+  bool _shouldPlayNotification = false;
 
   @override
   void initState() {
@@ -167,6 +174,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
         setState(() {
           currentOrders = orders.where((order) => order.status != '2').toList();
           purchaseOrderController.add(currentOrders);
+          _resetInactivityTimer();
         });
       } else {
         throw Exception('Erro ao carregar pedidos. Verifique a Internet.');
@@ -196,8 +204,15 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       });
 
       _channel!.stream.listen(
-        (message) {
+        (message) async {
           if (message != null && message.isNotEmpty) {
+            final now = DateTime.now();
+            if (_shouldPlayNotification) {
+              print('[NOTIFICAÇÃO] Tocando som de notificação após inatividade de 2 minutos');
+await _audioPlayer.play(   AssetSource('sound/appBarNotification.mp3'));
+              _shouldPlayNotification = false;
+            }
+            _lastOrderReceived = now;
             try {
               Map<String, dynamic> data = jsonDecode(message);
               print('[DEBUG] Mensagem recebida do WebSocket: ' + message);
@@ -230,6 +245,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                   }
                 }
                 purchaseOrderController.add(currentOrders);
+                _resetInactivityTimer();
               });
             } catch (e) {
               print('Erro ao processar a mensagem: $e');
@@ -520,13 +536,13 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     }
 
     try {
-      // Chamar a API de faturação ANTES de marcar como concluído
-      await _faturarPedidoSeNecessario(order);
-
+      // Primeiro, marcar como concluído
       final response = await http.get(Uri.parse(
           'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}&op=2'));
 
       if (response.statusCode == 200) {
+        // Só depois faturar
+        await _faturarPedidoSeNecessario(order);
         setState(() {
           currentOrders.removeWhere((o) => o.number == order.number);
           // Remover também os dados originais
@@ -545,7 +561,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     } catch (e) {
       print('Erro ao concluir pedido: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao concluir pedido: ${e.toString()}')),
+        SnackBar(content: Text('Erro ao concluir pedido: \\${e.toString()}')),
       );
     }
   }
@@ -617,8 +633,30 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     return orderLines;
   }
 
-  // Função para chamar a API de faturação
-  Future<void> _faturarPedidoSeNecessario(PurchaseOrder order) async {
+  // Adicione uma função para salvar pedidos não faturados
+  Future<void> _saveUnbilledOrder(PurchaseOrder order) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> failedOrders = prefs.getStringList('unbilled_orders') ?? [];
+    failedOrders.add(order.number);
+    await prefs.setStringList('unbilled_orders', failedOrders);
+  }
+
+  // Adicione uma função para buscar pedidos não faturados
+  Future<List<String>> _getUnbilledOrders() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList('unbilled_orders') ?? [];
+  }
+
+  // Adicione uma função para remover pedido não faturado após sucesso
+  Future<void> _removeUnbilledOrder(String orderNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> failedOrders = prefs.getStringList('unbilled_orders') ?? [];
+    failedOrders.remove(orderNumber);
+    await prefs.setStringList('unbilled_orders', failedOrders);
+  }
+
+  // Modifique a função de faturação para tentar 5 vezes e salvar se falhar
+  Future<bool> _faturarPedidoSeNecessario(PurchaseOrder order) async {
     try {
       Map<String, dynamic> rawData = rawOrdersData[order.number] ?? {};
       final invoiceFlag =
@@ -629,7 +667,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       if (invoiceFlag != '1') {
         print(
             'Faturação não solicitada para o pedido ${order.number} (valor recebido: $invoiceFlag)');
-        return;
+        return true;
       }
       print('Chamando API de faturação para o pedido ${order.number}');
       String customerName = rawData['CustomerName'] ?? order.requester;
@@ -642,28 +680,23 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
       String customerVAT;
       String nifRecebido = rawData['NIF'] ?? '';
 
-      // Se o NIF recebido não é 999999990, usar esse NIF (mesmo que idUser seja 0)
       if (nifRecebido.isNotEmpty && nifRecebido != '999999990') {
         customerVAT = nifRecebido;
       } else {
-        // Se é 999999990 ou vazio, usar 999999990 (fatura simplificada)
         customerVAT = '999999990';
       }
 
       String documentType = rawData['documentType'] ?? 'FS';
       String idUser = rawData['idUser']?.toString() ?? '0';
 
-      // Debug: mostrar qual NIF está a ser usado
       print('[DEBUG] NIF recebido do WebSocket: $nifRecebido');
       print('[DEBUG] NIF que será usado na faturação: $customerVAT');
       print('[DEBUG] idUser: $idUser');
       print('[DEBUG] documentType: $documentType');
       List<Map<String, dynamic>> orderLines = [];
-      // Esperar até order_lines não estar vazio (máximo 5 tentativas, 3 segundos)
       int retryCount = 0;
       while (orderLines.isEmpty && retryCount < 5) {
-        print(
-            '[DEBUG] order_lines vazio, a tentar novamente (${retryCount + 1}/5)...');
+        print('[DEBUG] order_lines vazio, a tentar novamente (${retryCount + 1}/5)...');
         await Future.delayed(Duration(milliseconds: 600));
         if (rawData['CartItems'] != null && rawData['CartItems'] is List) {
           orderLines.clear();
@@ -682,9 +715,9 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
         retryCount++;
       }
       if (orderLines.isEmpty) {
-        print(
-            '[ERRO] Não foi possível obter produtos para faturação após várias tentativas. Faturação não enviada.');
-        return;
+        print('[ERRO] Não foi possível obter produtos para faturação após várias tentativas. Faturação não enviada.');
+        await _saveUnbilledOrder(order);
+        return false;
       }
       Map<String, dynamic> billingPayload = {
         'query_param': 1,
@@ -700,33 +733,58 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
         'order_lines': orderLines
       };
       print('Payload da API de faturação: ${json.encode(billingPayload)}');
-      final response = await http.post(
-        Uri.parse('http://192.168.22.88/api/api.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(billingPayload),
-      );
-      print('Resposta da API de faturação - Status: ${response.statusCode}');
-      print('Resposta da API de faturação - Body: ${response.body}');
-      if (response.statusCode == 200) {
-        print('Faturação processada com sucesso para o pedido ${order.number}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Fatura emitida com sucesso para o pedido ${order.number}!'),
-              backgroundColor: Colors.green),
+      bool faturado = false;
+      for (int i = 0; i < 5; i++) {
+        final response = await http.post(
+          Uri.parse('http://192.168.22.88/api/api.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode(billingPayload),
         );
+        print('Tentativa de faturação ${i + 1}/5 - Status: ${response.statusCode}');
+        print('Tentativa de faturação ${i + 1}/5 - Body: ${response.body}');
+        if (response.statusCode == 200) {
+          faturado = true;
+          break;
+        } else {
+          await Future.delayed(Duration(seconds: 2));
+        }
+      }
+      if (!faturado) {
+        print('[ERRO] Não foi possível faturar após 5 tentativas. Salvando localmente.');
+        await _saveUnbilledOrder(order);
+        return false;
       } else {
-        print(
-            'Erro na API de faturação: ${response.statusCode} - ${response.body}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Erro ao emitir fatura: ${response.body}'),
-              backgroundColor: Colors.red),
-        );
+        await _removeUnbilledOrder(order.number);
+        return true;
       }
     } catch (e) {
       print('Erro ao chamar API de faturação: $e');
+      await _saveUnbilledOrder(order);
+      return false;
     }
+  }
+
+  // Adicione um método para exibir os pedidos não faturados (exemplo: dialog)
+  Future<void> showUnbilledOrdersDialog(BuildContext context) async {
+    List<String> unbilled = await _getUnbilledOrders();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Pedidos Não Faturados'),
+        content: unbilled.isEmpty
+            ? Text('Todos os pedidos foram faturados.')
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: unbilled.map((orderNum) => Text('Pedido Nº $orderNum')).toList(),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Fechar'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showDeleteDialog(PurchaseOrder order) {
@@ -840,6 +898,13 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     });
   }
 
+  void _resetInactivityTimer() {
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(inactivityDuration, () {
+      _shouldPlayNotification = true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -904,7 +969,29 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                     return Center(
                                         child: CircularProgressIndicator());
                                   } else {
-                                    return Center(child: Text('Sem Pedidos'));
+                                    return Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.inbox, size: 80, color: Colors.orange[300]),
+                                          SizedBox(height: 24),
+                                          Text(
+                                            'Ainda não há pedidos!',
+                                            style: TextStyle(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.orange[800],
+                                            ),
+                                          ),
+                                          SizedBox(height: 12),
+                                          Text(
+                                            'Quando um pedido for registado, ele aparecerá aqui.',
+                                            style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    );
                                   }
                                 },
                               );
@@ -913,7 +1000,29 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                   child: Text('Erro ao carregar pedidos'));
                             } else if (!snapshot.hasData ||
                                 snapshot.data!.isEmpty) {
-                              return Center(child: Text('Sem Pedidos'));
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.inbox, size: 80, color: Colors.orange[300]),
+                                    SizedBox(height: 24),
+                                    Text(
+                                      'Ainda não há pedidos!',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange[800],
+                                      ),
+                                    ),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'Quando um pedido for registado, ele aparecerá aqui.',
+                                      style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              );
                             }
 
                             List<PurchaseOrder> data = snapshot.data!;
@@ -1440,12 +1549,11 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
                                                                     'saldo'
                                                                 ? Colors
                                                                     .orange[700]
-                                                                : Color
-                                                                    .fromARGB(
-                                                                        255,
-                                                                        76,
-                                                                        175,
-                                                                        80),
+                                                                : Color.fromARGB(
+                                                                    255,
+                                                                    76,
+                                                                    175,
+                                                                    80),
                                                       ),
                                                     ),
                                                   ],
@@ -1578,6 +1686,8 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     _pingTimer?.cancel();
     _channel?.sink.close();
     purchaseOrderController.close();
+    _inactivityTimer?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
   }
 }
@@ -1630,8 +1740,8 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
 
   Future<int> _checkQuantity(String productName) async {
     try {
-      String cleanProductName = removeDiacritics(
-          productName.replaceAll('"', '').trim().toLowerCase());
+      // Use o nome original, sem removeDiacritics
+      String cleanProductName = productName.replaceAll('"', '').trim();
       final response = await http.get(Uri.parse(
           'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
       if (response.statusCode == 200) {
@@ -1934,6 +2044,8 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
           'user_id': userId,
         },
       );
+                print('Desconto de stock - Status: \\${response.body}');
+
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -1944,11 +2056,15 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
           final grouped = _getGroupedCart();
           final ids = grouped.keys.map((name) {
             final item = widget.cart.firstWhere((p) => p['Nome'] == name);
-            return item['Id'].toString();
+            // Tente pegar idApp, Id, id, etc.
+            return (item['idApp'] ?? item['Id'] ?? item['id'] ?? '').toString();
           }).join(',');
           final quantities = grouped.values.join(',');
           final stockResponse = await http.get(Uri.parse(
               'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$ids&quantities=$quantities'));
+          // Debug da resposta da API de desconto de stock
+          print('Desconto de stock - Status: \\${stockResponse.statusCode}');
+          print('Desconto de stock - Body: \\${stockResponse.body}');
           // Opcional: podes verificar stockResponse.statusCode e mostrar erro se necessário
 
           // Mark the order as completed immediately
@@ -2001,38 +2117,50 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)),
-      title: Text(
-        'Novo Registo de Compra',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Colors.orange[800],
-        ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.0)),
+      title: Row(
+        children: [
+          Icon(Icons.shopping_cart, color: Colors.orange, size: 28),
+          SizedBox(width: 8),
+          Text(
+            'Novo Registo de Compra',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.orange[800],
+              fontSize: 20,
+            ),
+          ),
+        ],
       ),
       content: Container(
         width: double.maxFinite,
-        height: 500,
+        height: 540,
         child: _isLoading
             ? Center(child: CircularProgressIndicator(color: Colors.orange))
             : Column(
                 children: [
-                  TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      labelText: 'Pesquisar Produto',
-                      labelStyle: TextStyle(color: Colors.orange),
-                      prefixIcon: Icon(Icons.search, color: Colors.orange),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.orange, width: 2),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            BorderSide(color: Colors.orange.withOpacity(0.5)),
+                  Material(
+                    elevation: 2,
+                    borderRadius: BorderRadius.circular(10),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: 'Pesquisar produto por nome...',
+                        labelStyle: TextStyle(color: Colors.orange),
+                        prefixIcon: Icon(Icons.search, color: Colors.orange),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.orange, width: 2),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.orange.withOpacity(0.5)),
+                        ),
+                        filled: true,
+                        fillColor: Colors.orange[50],
                       ),
                     ),
                   ),
@@ -2043,24 +2171,35 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
                       itemBuilder: (context, index) {
                         final product = _filteredProducts[index];
                         final productName = product['Nome'].toString();
-
+                        final productImage = product['Imagem'] as String?;
                         return Card(
                           elevation: 2,
                           margin: EdgeInsets.symmetric(vertical: 4),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
                           child: ListTile(
+                            leading: productImage != null && productImage.isNotEmpty
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.memory(
+                                      base64Decode(productImage),
+                                      width: 40,
+                                      height: 40,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : Icon(Icons.fastfood, color: Colors.orange, size: 32),
                             title: Text(productName,
-                                style: TextStyle(fontWeight: FontWeight.w500)),
+                                style: TextStyle(fontWeight: FontWeight.w600)),
                             subtitle: Text('${product['Preco']}€',
-                                style: TextStyle(color: Colors.grey[600])),
+                                style: TextStyle(
+                                    color: Colors.orange[800],
+                                    fontWeight: FontWeight.bold)),
                             trailing: FutureBuilder<int>(
-                              future: getEffectiveQuantity(productName),
+                              future: getAvailableQuantity(productName),
                               builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                        ConnectionState.waiting &&
-                                    !_availableQuantities
-                                        .containsKey(productName)) {
+                                if (snapshot.connectionState == ConnectionState.waiting &&
+                                    !_availableQuantities.containsKey(productName)) {
                                   return SizedBox(
                                       width: 24,
                                       height: 24,
@@ -2068,44 +2207,15 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
                                           strokeWidth: 2,
                                           color: Colors.orange));
                                 }
-
-                                final qty =
-                                    _availableQuantities[productName] ?? 0;
+                                final qty = _availableQuantities[productName] ?? 0;
                                 final isAvailable = qty > 0;
-
-                                return IconButton(
-                                  icon: Icon(Icons.add_shopping_cart,
-                                      color: isAvailable
-                                          ? Colors.orange
-                                          : Colors.grey[400]),
-                                  onPressed: () {
-                                    if (isAvailable) {
-                                      _addToCart(product);
-                                    } else {
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: Text('Produto Indisponível'),
-                                          content: Text(
-                                              'Este produto está indisponível no momento.'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.of(context).pop(),
-                                              style: ElevatedButton.styleFrom(
-                                                  backgroundColor:
-                                                      Colors.orange,
-                                                  foregroundColor:
-                                                      Colors.white),
-                                              child: Text(
-                                                'OK',
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }
-                                  },
+                                return Tooltip(
+                                  message: isAvailable ? 'Adicionar ao carrinho' : 'Indisponível',
+                                  child: IconButton(
+                                    icon: Icon(Icons.add_circle,
+                                        color: isAvailable ? Colors.green : Colors.grey[400], size: 28),
+                                    onPressed: isAvailable ? () => _addToCart(product) : null,
+                                  ),
                                 );
                               },
                             ),
@@ -2115,44 +2225,56 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
                     ),
                   ),
                   Divider(height: 20, thickness: 1),
-                  Text('Carrinho',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.orange[800])),
+                  Row(
+                    children: [
+                      Icon(Icons.shopping_basket, color: Colors.orange[800]),
+                      SizedBox(width: 8),
+                      Text('Carrinho',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.orange[800])),
+                    ],
+                  ),
                   Expanded(
                     child: widget.cart.isEmpty
-                        ? Center(
-                            child: Text('Carrinho vazio.',
-                                style: TextStyle(color: Colors.grey)))
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.remove_shopping_cart, size: 48, color: Colors.grey[400]),
+                              SizedBox(height: 8),
+                              Text('O carrinho está vazio.',
+                                  style: TextStyle(color: Colors.grey, fontSize: 16)),
+                            ],
+                          )
                         : ListView.builder(
                             itemCount: _getGroupedCart().length,
                             itemBuilder: (context, index) {
-                              final entry =
-                                  _getGroupedCart().entries.elementAt(index);
+                              final entry = _getGroupedCart().entries.elementAt(index);
                               final productName = entry.key;
                               final quantity = entry.value;
-                              final item = widget.cart
-                                  .firstWhere((p) => p['Nome'] == productName);
-
+                              final item = widget.cart.firstWhere((p) => p['Nome'] == productName);
                               return Card(
+                                color: Colors.orange[50],
                                 elevation: 1,
                                 margin: EdgeInsets.symmetric(vertical: 4),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8)),
                                 child: ListTile(
                                   dense: true,
+                                  leading: Icon(Icons.shopping_cart, color: Colors.orange[700]),
                                   title: Text('$quantity x $productName',
                                       style: TextStyle(
-                                          fontWeight: FontWeight.w500)),
+                                          fontWeight: FontWeight.w600)),
                                   subtitle: Text('${item['Preco']}€ cada',
-                                      style:
-                                          TextStyle(color: Colors.grey[600])),
-                                  trailing: IconButton(
-                                    icon: Icon(Icons.remove_circle_outline,
-                                        color: Colors.red[700]),
-                                    onPressed: () =>
-                                        _removeFromCart(productName),
+                                      style: TextStyle(
+                                          color: Colors.orange[800], fontWeight: FontWeight.bold)),
+                                  trailing: Tooltip(
+                                    message: 'Remover do carrinho',
+                                    child: IconButton(
+                                      icon: Icon(Icons.remove_circle_outline, color: Colors.red[700]),
+                                      onPressed: () => _removeFromCart(productName),
+                                    ),
                                   ),
                                 ),
                               );
@@ -2164,7 +2286,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
                     'Total: ${_calculateTotal().toStringAsFixed(2)}€',
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 20,
+                        fontSize: 22,
                         color: Colors.orange[900]),
                   ),
                 ],
@@ -2173,22 +2295,30 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
       actions: [
         TextButton(
           onPressed: () => {Navigator.of(context).pop(), widget.cart.clear()},
-          child: Text('Cancelar', style: TextStyle(color: Colors.orange)),
+          child: Row(
+            children: [
+              Icon(Icons.cancel, color: Colors.orange),
+              SizedBox(width: 4),
+              Text('Cancelar', style: TextStyle(color: Colors.orange)),
+            ],
+          ),
         ),
-        ElevatedButton(
+        ElevatedButton.icon(
           onPressed: _isLoading || widget.cart.isEmpty
               ? null
               : () async {
                   await showFaturacaoDialogERegistrarCompra(context);
                 },
-          child: Text('Registar Compra'),
+          icon: Icon(Icons.check_circle, color: Colors.white),
+          label: Text('Registar Compra'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.orange,
             foregroundColor: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            textStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
-        )
+        ),
       ],
     );
   }
@@ -2578,7 +2708,6 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
       );
       print('[INVOICE API] Status: ' + response.statusCode.toString());
       print('[INVOICE API] Body: ' + response.body);
-
       // Fechar loading
       Navigator.pop(context);
 
@@ -2638,6 +2767,22 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
           ),
         );
       }
+
+      // Descontar stock dos produtos comprados após faturação XD
+      final grouped = <String, int>{};
+      for (var item in cart) {
+        final name = item['Nome'].toString();
+        grouped[name] = (grouped[name] ?? 0) + 1;
+      }
+      final ids = grouped.keys.map((name) {
+        final item = cart.firstWhere((p) => p['Nome'] == name);
+        return (item['idApp'] ?? item['Id'] ?? item['id'] ?? '').toString();
+      }).join(',');
+      final quantities = grouped.values.join(',');
+      final stockResponse = await http.get(Uri.parse(
+          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$ids&quantities=$quantities'));
+      print('Desconto de stock - Status: ${stockResponse.statusCode}');
+      print('Desconto de stock - Body: ${stockResponse.body}');
     } catch (e) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(

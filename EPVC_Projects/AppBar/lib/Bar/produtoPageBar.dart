@@ -512,18 +512,29 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
                   Expanded(
                     child: RefreshIndicator(
                       onRefresh: _onRefresh,
-                      child: ListView.builder(
+                      child: GridView.builder(
+                        padding: EdgeInsets.all(8),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: MediaQuery.of(context).size.width > 600 ? 2 : 1,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 2.8,
+                        ),
                         itemCount: filteredProducts.length,
                         itemBuilder: (context, index) {
-                          return ProductCard(
-                            product: filteredProducts[index],
-                            onUpdate: (newAvailability) {
-                              updateProduct(
-                                  filteredProducts[index].id, newAvailability);
-                            },
-                            onQuantityChange: (id, quantity) {
-                              updateProductQuantity(id, quantity);
-                            },
+                          return AnimatedScale(
+                            scale: 1,
+                            duration: Duration(milliseconds: 350),
+                            child: ProductCard(
+                              product: filteredProducts[index],
+                              onUpdate: (newAvailability) {
+                                updateProduct(filteredProducts[index].id, newAvailability);
+                              },
+                              onQuantityChange: (id, quantity) {
+                                updateProductQuantity(id, quantity);
+                              },
+                              modern: true, // novo parâmetro para design moderno
+                            ),
                           );
                         },
                       ),
@@ -553,11 +564,13 @@ class ProductCard extends StatefulWidget {
   final Product product;
   final Function(bool) onUpdate;
   final Function(String, int) onQuantityChange;
+  final bool modern;
 
   ProductCard({
     required this.product,
     required this.onUpdate,
     required this.onQuantityChange,
+    this.modern = false,
   });
 
   @override
@@ -584,285 +597,438 @@ class _ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Update availability based on quantity
     bool isAvailable = widget.product.quantity >= 1;
-    
-    return Dismissible(
-      key: Key(widget.product.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        color: Color.fromARGB(255, 130, 201, 189),
-        alignment: Alignment.centerRight,
-        padding: EdgeInsets.only(right: 20.0),
-        child: Icon(
-          Icons.swap_horizontal_circle_outlined,
-          color: Colors.white,
+    final priceStr = widget.product.price.toStringAsFixed(2).replaceAll('.', ',') + '€';
+    if (!widget.modern) {
+      return Dismissible(
+        key: Key(widget.product.id),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          color: Color.fromARGB(255, 130, 201, 189),
+          alignment: Alignment.centerRight,
+          padding: EdgeInsets.only(right: 20.0),
+          child: Icon(
+            Icons.swap_horizontal_circle_outlined,
+            color: Colors.white,
+          ),
         ),
-      ),
-      confirmDismiss: (direction) async {
-        int currentQuantity = widget.product.quantity;
-        int quantityToAdd = 0;
-        return await showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return StatefulBuilder(
-              builder: (context, setState) {
-                return AlertDialog(
-                  title: Text("Atualizar Quantidade", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange[800])),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Atual:', style: TextStyle(fontSize: 15)),
-                          Text(currentQuantity.toString(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Acrescentar:', style: TextStyle(fontSize: 15)),
-                          Container(
-                            width: 60,
-                            height: 36,
-                            alignment: Alignment.center,
-                            child: TextField(
-                              controller: _slideQuantityController,
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 15),
-                              decoration: InputDecoration(
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: Colors.orange, width: 1),
+        confirmDismiss: (direction) async {
+          int currentQuantity = widget.product.quantity;
+          int quantityToAdd = 0;
+          return await showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return StatefulBuilder(
+                builder: (context, setState) {
+                  return AlertDialog(
+                    title: Text("Atualizar Quantidade", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange[800])),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Atual:', style: TextStyle(fontSize: 15)),
+                            Text(currentQuantity.toString(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          ],
+                        ),
+                        SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Acrescentar:', style: TextStyle(fontSize: 15)),
+                            Container(
+                              width: 60,
+                              height: 36,
+                              alignment: Alignment.center,
+                              child: TextField(
+                                controller: _slideQuantityController,
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 15),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.orange, width: 1),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.orange, width: 2),
+                                  ),
                                 ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: Colors.orange, width: 2),
+                                onChanged: (value) {
+                                  int val = int.tryParse(value) ?? 0;
+                                  setState(() {
+                                    quantityToAdd = val;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Total:', style: TextStyle(fontSize: 15)),
+                            Text((currentQuantity + quantityToAdd).toString(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.orange[800])),
+                          ],
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        child: Text("Cancelar", style: TextStyle(color: Colors.grey[700])),
+                        onPressed: () {
+                          Navigator.of(context).pop(false);
+                        },
+                      ),
+                      ElevatedButton(
+                        child: Text("Guardar", style: TextStyle(fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                        ),
+                        onPressed: () {
+                          int? newQuantity = int.tryParse(_slideQuantityController.text);
+                          if (newQuantity != null) {
+                            widget.onQuantityChange(widget.product.id, newQuantity);
+                            Navigator.of(context).pop(false);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Por favor, insira uma quantidade válida'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          );
+        },
+        child: Card(
+          margin: EdgeInsets.all(8.0),
+          color: widget.product.isBaseProduct ? Colors.orange[50] : 
+                 widget.product.isVariation ? Colors.blue[50] : null,
+          child: Padding(
+            padding: EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Image.memory(
+                      base64Decode(widget.product.base64Image),
+                      width: 50,
+                      height: 50,
+                      fit: BoxFit.cover,
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  widget.product.name,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: widget.product.isBaseProduct ? Colors.orange[800] : 
+                                           widget.product.isVariation ? Colors.blue[800] : Colors.black,
+                                  ),
                                 ),
                               ),
-                              onChanged: (value) {
-                                int val = int.tryParse(value) ?? 0;
-                                setState(() {
-                                  quantityToAdd = val;
-                                });
-                              },
+                              if (widget.product.isBaseProduct)
+                                Icon(Icons.inventory, color: Colors.orange, size: 16),
+                              if (widget.product.isVariation)
+                                Icon(Icons.link, color: Colors.blue, size: 16),
+                            ],
+                          ),
+                          Text(
+                            'Preço: ${widget.product.price.toStringAsFixed(2).replaceAll('.', ',')}€',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          Text(
+                            'Quantidade: ${widget.product.displayQuantity}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: widget.product.isVariation ? Colors.blue : Colors.black,
                             ),
+                          ),
+                          Text(
+                            'Estado: ${isAvailable ? 'Disponível' : 'Indisponível'}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isAvailable ? Colors.green : Colors.red,
+                            ),
+                          ),
+                          Text(
+                            'Categoria: ${widget.product.category}',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          if (widget.product.isBaseProduct)
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Produto Base',
+                                style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          if (widget.product.isVariation && widget.product.baseProductName != null)
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Base: ${widget.product.baseProductName}',
+                                style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          // Debug info
+                          Text(
+                            'ID: ${widget.product.id} | BaseID: ${widget.product.baseProductId ?? "null"}',
+                            style: TextStyle(fontSize: 10, color: Colors.grey),
                           ),
                         ],
                       ),
-                      SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total:', style: TextStyle(fontSize: 15)),
-                          Text((currentQuantity + quantityToAdd).toString(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.orange[800])),
-                        ],
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      child: Text("Cancelar", style: TextStyle(color: Colors.grey[700])),
-                      onPressed: () {
-                        Navigator.of(context).pop(false);
-                      },
                     ),
+                  ],
+                ),
+                SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
                     ElevatedButton(
-                      child: Text("Guardar", style: TextStyle(fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                      ),
-                      onPressed: () {
-                        int? newQuantity = int.tryParse(_slideQuantityController.text);
-                        if (newQuantity != null) {
-                          widget.onQuantityChange(widget.product.id, newQuantity);
-                          Navigator.of(context).pop(false);
+                      onPressed: () async {
+                        int currentQty = widget.product.quantity;
+                        if (currentQty > 0) {
+                          // Envia o valor negativo para zerar o stock
+                          widget.onQuantityChange(widget.product.id, -currentQty);
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Por favor, insira uma quantidade válida'),
+                              content: Text('Produto já está indisponível!'),
                               backgroundColor: Colors.red,
                             ),
                           );
                         }
                       },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text('Indisponível'),
                     ),
                   ],
-                );
-              },
-            );
-          },
-        );
-      },
-      child: Card(
-        margin: EdgeInsets.all(8.0),
-        color: widget.product.isBaseProduct ? Colors.orange[50] : 
-               widget.product.isVariation ? Colors.blue[50] : null,
-        child: Padding(
-          padding: EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    // Novo visual moderno:
+    return Card(
+      elevation: 5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      color: Colors.white,
+      child: Padding(
+        padding: EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Imagem circular
+            ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: Image.memory(
+                base64Decode(widget.product.base64Image),
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Image.memory(
-                    base64Decode(widget.product.base64Image),
-                    width: 50,
-                    height: 50,
-                    fit: BoxFit.cover,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.product.name,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: widget.product.isBaseProduct ? Colors.orange[800] : widget.product.isVariation ? Colors.blue[800] : Colors.black,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (widget.product.isBaseProduct)
+                        Chip(
+                          label: Text('Base', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          backgroundColor: Colors.orange,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      if (widget.product.isVariation && widget.product.baseProductName != null)
+                        Chip(
+                          label: Text('Variação', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          backgroundColor: Colors.blue,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                    ],
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Chip(
+                        label: Text(widget.product.category, style: TextStyle(color: Colors.white)),
+                        backgroundColor: Colors.deepOrange,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      SizedBox(width: 8),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isAvailable ? Colors.green[100] : Colors.red[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
                           children: [
-                            Expanded(
-                              child: Text(
-                                widget.product.name,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: widget.product.isBaseProduct ? Colors.orange[800] : 
-                                         widget.product.isVariation ? Colors.blue[800] : Colors.black,
-                                ),
-                              ),
-                            ),
-                            if (widget.product.isBaseProduct)
-                              Icon(Icons.inventory, color: Colors.orange, size: 16),
-                            if (widget.product.isVariation)
-                              Icon(Icons.link, color: Colors.blue, size: 16),
+                            Icon(isAvailable ? Icons.check_circle : Icons.cancel, color: isAvailable ? Colors.green : Colors.red, size: 16),
+                            SizedBox(width: 4),
+                            Text(isAvailable ? 'Disponível' : 'Indisponível', style: TextStyle(fontWeight: FontWeight.bold, color: isAvailable ? Colors.green[800] : Colors.red[800])),
                           ],
                         ),
-                        Text(
-                          'Preço: ${widget.product.price.toStringAsFixed(2).replaceAll('.', ',')}€',
-                          style: TextStyle(fontSize: 14),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text('Preço: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(priceStr, style: TextStyle(fontSize: 16)),
+                      SizedBox(width: 16),
+                      Text('Qtd: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        Text(
-                          'Quantidade: ${widget.product.displayQuantity}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: widget.product.isVariation ? Colors.blue : Colors.black,
-                          ),
+                        child: Text(widget.product.quantity.toString(), style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange[800])),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          int currentQty = widget.product.quantity;
+                          if (currentQty > 0) {
+                            widget.onQuantityChange(widget.product.id, -currentQty);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Produto já está indisponível!'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        icon: Icon(Icons.block, size: 18),
+                        label: Text('Indisponível'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        Text(
-                          'Estado: ${isAvailable ? 'Disponível' : 'Indisponível'}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isAvailable ? Colors.green : Colors.red,
-                          ),
+                      ),
+                      SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          int? addQtd = await showDialog<int>(
+                            context: context,
+                            builder: (context) {
+                              final controller = TextEditingController();
+                              return AlertDialog(
+                                title: Text('Atualizar Stock', style: TextStyle(color: Colors.orange[800], fontWeight: FontWeight.bold)),
+                                content: TextField(
+                                  controller: controller,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    labelText: 'Quantidade (+ ou -)',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    child: Text('Cancelar'),
+                                    onPressed: () => Navigator.of(context).pop(),
+                                  ),
+                                  ElevatedButton(
+                                    child: Text('Atualizar'),
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                                    onPressed: () {
+                                      int? val = int.tryParse(controller.text);
+                                      if (val != null && val != 0) {
+                                        Navigator.of(context).pop(val);
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Insira um valor diferente de zero!'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                          if (addQtd != null && addQtd != 0) {
+                            widget.onQuantityChange(widget.product.id, addQtd);
+                          }
+                        },
+                        icon: Icon(Icons.add, size: 18),
+                        label: Text('Atualizar Stock'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        Text(
-                          'Categoria: ${widget.product.category}',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                        if (widget.product.isBaseProduct)
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.orange,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Produto Base',
-                              style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        if (widget.product.isVariation && widget.product.baseProductName != null)
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Base: ${widget.product.baseProductName}',
-                              style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        // Debug info
-                        Text(
-                          'ID: ${widget.product.id} | BaseID: ${widget.product.baseProductId ?? "null"}',
-                          style: TextStyle(fontSize: 10, color: Colors.grey),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                 /* ElevatedButton(
-                    onPressed: isAvailable ? () {
-                      // Show purchase dialog
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text('Confirmar Compra'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Produto: ${widget.product.name}'),
-                                SizedBox(height: 8),
-                                Text('Preço: ${widget.product.price.toStringAsFixed(2).replaceAll('.', ',')}€'),
-                                SizedBox(height: 8),
-                                Text('Quantidade: ${widget.product.quantity}'),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                child: Text('Cancelar'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  // Here you would implement the purchase logic
-                                  Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Produto adicionado ao carrinho'),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color.fromARGB(255, 246, 141, 45),
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: Text('Confirmar'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    } : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isAvailable ? Color.fromARGB(255, 246, 141, 45) : Colors.grey,
-                      foregroundColor: Colors.white,
-                    ),
-                    //child: Text('Comprar'),
-                  ),*/
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
