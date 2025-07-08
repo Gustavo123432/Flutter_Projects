@@ -148,6 +148,12 @@ class _LoginFormState extends State<LoginForm> {
               MaterialPageRoute(builder: (context) => BarPagePedidos()),
             );
             break;
+            case "Monitor":
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => BarRequests()),
+            );
+            break;
           default:
             _showErrorSnackBar('Tipo de usuário não reconhecido.');
         }

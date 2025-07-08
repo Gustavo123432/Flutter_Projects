@@ -259,6 +259,7 @@ class _BarRequestsState extends State<BarRequests> {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Gestão de Pedidos'),
+          automaticallyImplyLeading: false,
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
           actions: [
@@ -287,7 +288,6 @@ class _BarRequestsState extends State<BarRequests> {
             ),
           ],
         ),
-        drawer: const DrawerBar(),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : errorMessage != null
@@ -394,7 +394,7 @@ class _BarRequestsState extends State<BarRequests> {
                   style: TextStyle(
                     color: Colors.orange[700],
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: 24,
                   ),
                 ),
               ),
@@ -455,7 +455,7 @@ class _BarRequestsState extends State<BarRequests> {
                   style: TextStyle(
                     color: Colors.green[700],
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: 24,
                   ),
                 ),
               ),
@@ -582,7 +582,7 @@ class _BarRequestsState extends State<BarRequests> {
               child: Text(
                 _getStatusText(order.status),
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: _getStatusColor(order.status),
                 ),
