@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:appbar_epvc/Bar/drawerBar.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class BarRequests extends StatefulWidget {
   const BarRequests({Key? key}) : super(key: key);
@@ -21,6 +22,9 @@ class _BarRequestsState extends State<BarRequests> {
   Timer? deliveryTimer; // Timer para remover pedidos em entrega
   bool isLoading = true;
   String? errorMessage;
+  Timer? _deliveryInactivityTimer;
+  final Duration deliveryInactivityDuration = Duration(minutes: 2);
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -28,12 +32,14 @@ class _BarRequestsState extends State<BarRequests> {
     _loadOrders();
     _startRefreshTimer();
     _startDeliveryTimer();
+    _resetDeliveryInactivityTimer();
   }
 
   @override
   void dispose() {
     statusTimer?.cancel();
     deliveryTimer?.cancel();
+    _deliveryInactivityTimer?.cancel();
     super.dispose();
   }
 
@@ -76,7 +82,7 @@ class _BarRequestsState extends State<BarRequests> {
           List<PurchaseOrder> newOrders = [];
           
           for (var json in data) {
-              try {
+            try {
               PurchaseOrder order = PurchaseOrder.fromJson(json);
               currentApiOrderIds.add(order.id);
               
@@ -89,9 +95,9 @@ class _BarRequestsState extends State<BarRequests> {
               }
               
               print('[DEBUG] Pedido da API: ID ${order.id}, Estado ${order.status}');
-              } catch (e) {
-                print('Error parsing order: $e');
-                print('Order data: $json');
+            } catch (e) {
+              print('Error parsing order: $e');
+              print('Order data: $json');
             }
           }
           
@@ -128,6 +134,8 @@ class _BarRequestsState extends State<BarRequests> {
             if (!deliveryOrders.any((o) => o.id == deliveryOrder.id)) {
               deliveryOrders.add(deliveryOrder);
               print('[DEBUG] Pedido ${deliveryOrder.id} adicionado à entrega. Total em entrega: ${deliveryOrders.length}');
+              await _playNotificationSound();
+              _resetDeliveryInactivityTimer(); // Reinicia o timer de inatividade
             }
           }
           
@@ -164,19 +172,34 @@ class _BarRequestsState extends State<BarRequests> {
   }
 
   void _startRefreshTimer() {
-    statusTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    statusTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       _loadOrders();
     });
   }
 
   void _startDeliveryTimer() {
     // Timer para remover pedidos em entrega após 15 segundos
-    deliveryTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+    deliveryTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       setState(() {
         deliveryOrders.clear(); // Remove todos os pedidos em entrega
-        print('[DEBUG] Pedidos em entrega removidos após 15s');
       });
     });
+  }
+
+  void _resetDeliveryInactivityTimer() {
+    _deliveryInactivityTimer?.cancel();
+    _deliveryInactivityTimer = Timer(deliveryInactivityDuration, () async {
+      await _playNotificationSound();
+      print('[INATIVIDADE] Nenhum pedido novo em entrega há 2 minutos.');
+    });
+  }
+
+  Future<void> _playNotificationSound() async {
+    try {
+      await _audioPlayer.play(AssetSource('sound/appBarNotification.mp3'));
+    } catch (e) {
+      print('Erro ao tocar som: $e');
+    }
   }
 
   Widget _buildImageWidget(String base64Image) {
@@ -260,6 +283,7 @@ class _BarRequestsState extends State<BarRequests> {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Gestão de Pedidos'),
+          automaticallyImplyLeading: false,
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
           actions: [
@@ -288,7 +312,6 @@ class _BarRequestsState extends State<BarRequests> {
             ),
           ],
         ),
-        drawer: const DrawerBar(),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : errorMessage != null
@@ -310,23 +333,23 @@ class _BarRequestsState extends State<BarRequests> {
                     ),
                   )
                 : Row(
-                            children: [
+                    children: [
                       // Lado esquerdo - Em Preparação
                       Expanded(
                         child: _buildPreparationSection(),
                       ),
                       // Divisor vertical mais espesso para Windows
-                              Container(
+                      Container(
                         width: 4,
                         color: Colors.grey[400],
                         margin: const EdgeInsets.symmetric(vertical: 8),
                       ),
                       // Lado direito - Em Entrega
-                                      Expanded(
+                      Expanded(
                         child: _buildDeliverySection(),
-                                            ),
-                                          ],
                       ),
+                    ],
+                  ),
       );
     } catch (e) {
       print('Error in build method: $e');
@@ -373,12 +396,12 @@ class _BarRequestsState extends State<BarRequests> {
           ),
           child: Row(
             children: [
-              Icon(Icons.restaurant, color: Colors.orange[700], size: 32),
+              Icon(Icons.restaurant, color: Colors.orange[700], size: 52),
               const SizedBox(width: 12),
               Text(
                 'Em Preparação',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 48,
                   fontWeight: FontWeight.bold,
                   color: Colors.orange[700],
                 ),
@@ -395,7 +418,7 @@ class _BarRequestsState extends State<BarRequests> {
                   style: TextStyle(
                     color: Colors.orange[700],
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: 24,
                   ),
                 ),
               ),
@@ -434,12 +457,12 @@ class _BarRequestsState extends State<BarRequests> {
           ),
           child: Row(
             children: [
-              Icon(Icons.delivery_dining, color: Colors.green[700], size: 32),
+              Icon(Icons.delivery_dining, color: Colors.green[700], size: 52),
               const SizedBox(width: 12),
               Text(
                 'Em Entrega',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 48,
                   fontWeight: FontWeight.bold,
                   color: Colors.green[700],
                 ),
@@ -456,7 +479,7 @@ class _BarRequestsState extends State<BarRequests> {
                   style: TextStyle(
                     color: Colors.green[700],
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: 24,
                   ),
                 ),
               ),
@@ -548,9 +571,9 @@ class _BarRequestsState extends State<BarRequests> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pedido #${order.id}',
+                    'Pedido nº${order.id}',
                     style: const TextStyle(
-                      fontSize: 22,
+                      fontSize: 64,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -558,39 +581,13 @@ class _BarRequestsState extends State<BarRequests> {
                   Text(
                     order.customerName,
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 20,
                       color: Colors.grey[600],
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    order.description,
-                    style: const TextStyle(fontSize: 14),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text(
-                        '${order.total}€',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: isDelivery ? Colors.green[700] : Colors.orange[700],
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        _formatDateTime(order.time),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
+                 
                 ],
               ),
             ),
@@ -609,7 +606,7 @@ class _BarRequestsState extends State<BarRequests> {
               child: Text(
                 _getStatusText(order.status),
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: _getStatusColor(order.status),
                 ),

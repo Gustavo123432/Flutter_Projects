@@ -209,7 +209,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
             final now = DateTime.now();
             if (_shouldPlayNotification) {
               print('[NOTIFICAÇÃO] Tocando som de notificação após inatividade de 2 minutos');
-await _audioPlayer.play(   AssetSource('sound/appBarNotification.mp3'));
+              await _audioPlayer.play(   AssetSource('sound/appBarNotification.mp3'));
               _shouldPlayNotification = false;
             }
             _lastOrderReceived = now;
