@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:appbar_epvc/login.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 class DashboardPage extends StatefulWidget {
   @override
@@ -175,21 +177,21 @@ class _DashboardPageState extends State<DashboardPage> {
           double total = 0;
 
           for (var month in monthlyData) {
-            final monthName = month['month'].substring(0, 3);
+            final monthNumber = month['month_number']?.toString() ?? '';
             final value = (month['monthly_total'] as num).toDouble();
-
-            // Store both numeric and formatted values
-            numericSalesData[monthName] = value;
-            formattedSalesData[monthName] = euroFormat.format(value);
-            total += value;
+            if (monthNumber.isNotEmpty) {
+              numericSalesData[monthNumber] = value;
+              formattedSalesData[monthNumber] = euroFormat.format(value);
+              total += value;
+            }
           }
 
           // Format the total
           final formattedTotal = euroFormat.format(total);
 
           // Update state
-          salesData = numericSalesData;
-          displayData = formattedSalesData;
+          salesData = Map.fromEntries(numericSalesData.entries.toList()..sort((a, b) => int.parse(a.key).compareTo(int.parse(b.key))));
+          displayData = Map.fromEntries(formattedSalesData.entries.toList()..sort((a, b) => int.parse(a.key).compareTo(int.parse(b.key))));
 
         });
       } else {
@@ -692,9 +694,9 @@ Widget _buildBasicSalesChart() {
                                 tooltipBgColor: Colors.orange[300],
                                 getTooltipItem:
                                     (group, groupIndex, rod, rodIndex) {
-                                  final monthNumber = group.x.toInt() + 1;
+                                  final monthNumber = group.x.toInt();
                                   final monthName = portugueseMonths[monthNumber] ?? 'Mês $monthNumber';
-                                  final value = salesData.values.elementAt(group.x.toInt());
+                                  final value = salesData[monthNumber.toString()] ?? 0.0;
                                   return BarTooltipItem(
                                     '$monthName\n€${value.toStringAsFixed(2).replaceAll('.', ',')}',
                                     TextStyle(color: Colors.white),
@@ -709,21 +711,17 @@ Widget _buildBasicSalesChart() {
                                   showTitles: true,
                                   reservedSize: 30,
                                   getTitlesWidget: (value, meta) {
-                                    final monthNumber = value.toInt() + 1;
-                                    final monthName = portugueseMonths[monthNumber] ?? 'Mês $monthNumber';
-                                    if (value.toInt() >= 0 && value.toInt() < salesData.length) {
-                                      return Padding(
-                                        padding: EdgeInsets.only(top: 8),
-                                        child: Text(
-                                          monthName,
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.grey[700],
-                                          ),
+                                    final monthName = portugueseMonths[value.toInt()] ?? 'Mês ${value.toInt()}';
+                                    return Padding(
+                                      padding: EdgeInsets.only(top: 8),
+                                      child: Text(
+                                        monthName,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey[700],
                                         ),
-                                      );
-                                    }
-                                    return Text('');
+                                      ),
+                                    );
                                   },
                                 ),
                               ),
@@ -765,9 +763,9 @@ Widget _buildBasicSalesChart() {
                               ),
                             ),
                             barGroups: salesData.entries.map((entry) {
-                              final index = salesData.keys.toList().indexOf(entry.key);
+                              final monthNumber = int.parse(entry.key);
                               return BarChartGroupData(
-                                x: index,
+                                x: monthNumber,
                                 barRods: [
                                   BarChartRodData(
                                     toY: entry.value,

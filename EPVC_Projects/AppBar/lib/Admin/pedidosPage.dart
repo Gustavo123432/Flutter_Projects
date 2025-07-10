@@ -14,6 +14,10 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:open_file/open_file.dart';
+// Adicionar import condicional para web
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 class PurchaseOrder {
   final String number;
@@ -99,7 +103,6 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     );
   }
 
-  /*
   Future<void> exportToPdf(List<PurchaseOrder> orders, String selectedDate, BuildContext context) async {
     try {
       final pdf = pw.Document();
@@ -148,7 +151,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
         build: (pw.Context context) {
           return pw.Center(
             child: pw.Text(
-              'Total: [${total.toStringAsFixed(2)}€',
+              'Total: ${total.toStringAsFixed(2)}€',
               style: pw.TextStyle(font: ttf, fontSize: 14),
             ),
           );
@@ -158,18 +161,33 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
       final bytes = await pdf.save();
       
       if (kIsWeb) {
-        // For web platform
-        final blob = platform.Blob([bytes], 'application/pdf');
-        final url = platform.Url.createObjectUrlFromBlob(blob);
-        final anchor = platform.AnchorElement(href: url)
+        // Para web: criar download do PDF
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
           ..setAttribute('download', 'pedidos_$selectedDate.pdf')
           ..click();
-        platform.Url.revokeObjectUrl(url);
+        html.Url.revokeObjectUrl(url);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('PDF exportado com sucesso!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.all(8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
+        }
       } else {
         // For mobile/desktop platforms
         final directory = await getApplicationDocumentsDirectory();
         final file = File('${directory.path}/pedidos_$selectedDate.pdf');
         await file.writeAsBytes(bytes);
+        print('PDF salvo em: ${file.path}');
+        await OpenFile.open(file.path);
         
         // Show success message
         if (context.mounted) {
@@ -202,7 +220,6 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
       }
     }
   }
-  */
 
   Future<void> _showDatePicker(List<PurchaseOrder> orders) async {
     final DateTime? selectedDate = await showDatePicker(
@@ -221,7 +238,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     );
     if (selectedDate != null) {
       final formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-      //await exportToPdf(orders, formattedDate, context);
+      await exportToPdf(orders, formattedDate, context);
     }
   }
 
@@ -291,11 +308,23 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
     final bytes = await pdf.save();
 
     if (kIsWeb) {
+      // Para web: criar download do PDF
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', 'produtos_vendidos_$selectedDate.pdf')
+        ..click();
+      html.Url.revokeObjectUrl(url);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Exportação de PDF não suportada no web neste build.'),
-            backgroundColor: Colors.orange,
+            content: Text('PDF de produtos vendidos exportado com sucesso!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
       }
