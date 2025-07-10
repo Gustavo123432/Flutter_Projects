@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:appbar_epvc/Bar/drawerBar.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class BarRequests extends StatefulWidget {
   const BarRequests({Key? key}) : super(key: key);
@@ -21,6 +22,7 @@ class _BarRequestsState extends State<BarRequests> {
   Timer? deliveryTimer; // Timer para remover pedidos em entrega
   bool isLoading = true;
   String? errorMessage;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -74,6 +76,7 @@ class _BarRequestsState extends State<BarRequests> {
           // Processar pedidos da API
           Set<int> currentApiOrderIds = {};
           List<PurchaseOrder> newOrders = [];
+          bool playSound = false;
           
           for (var json in data) {
             try {
@@ -81,11 +84,16 @@ class _BarRequestsState extends State<BarRequests> {
               currentApiOrderIds.add(order.id);
               
               // Guardar/atualizar no mapa local
+              bool isNewPreparing = false;
+              if (!allLocalOrders.containsKey(order.id) && order.status == '0') {
+                isNewPreparing = true;
+              }
               allLocalOrders[order.id] = order;
               
               // Se está em preparação (estado 0, 1), adicionar à lista de preparação
               if (order.status == '0' || order.status == '1') {
                 newOrders.add(order);
+                if (isNewPreparing) playSound = true;
               }
               
               print('[DEBUG] Pedido da API: ID ${order.id}, Estado ${order.status}');
@@ -94,6 +102,7 @@ class _BarRequestsState extends State<BarRequests> {
               print('Order data: $json');
             }
           }
+          if (playSound) await _playNotificationSound();
           
           print('[DEBUG] IDs da API atual: $currentApiOrderIds');
           
@@ -136,6 +145,8 @@ class _BarRequestsState extends State<BarRequests> {
           
           setState(() {
             isLoading = false;
+            errorMessage = null; // Limpa o erro se a chamada for bem-sucedida
+            orders = newOrders; // Garante atualização visual
           });
           
           print('[DEBUG] Estado final - Preparação: ${orders.length}, Entrega: ${deliveryOrders.length}, Local: ${allLocalOrders.length}');
@@ -176,6 +187,14 @@ class _BarRequestsState extends State<BarRequests> {
         deliveryOrders.clear(); // Remove todos os pedidos em entrega
       });
     });
+  }
+
+  Future<void> _playNotificationSound() async {
+    try {
+      await _audioPlayer.play(AssetSource('sound/appBarNotification.mp3'));
+    } catch (e) {
+      print('Erro ao tocar som de notificação: $e');
+    }
   }
 
   Widget _buildImageWidget(String base64Image) {
@@ -288,44 +307,71 @@ class _BarRequestsState extends State<BarRequests> {
             ),
           ],
         ),
-        body: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : errorMessage != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          errorMessage!,
-                          style: const TextStyle(color: Colors.red),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _loadOrders,
-                          child: const Text('Tentar Novamente'),
-                        ),
-                      ],
+        body: Column(
+          children: [
+            if (isLoading && errorMessage != null)
+              Container(
+                width: double.infinity,
+                color: Colors.orange[100],
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
                     ),
-                  )
-                : Row(
-                    children: [
-                      // Lado esquerdo - Em Preparação
-                      Expanded(
-                        child: _buildPreparationSection(),
-                      ),
-                      // Divisor vertical mais espesso para Windows
-                      Container(
-                        width: 4,
-                        color: Colors.grey[400],
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                      // Lado direito - Em Entrega
-                      Expanded(
-                        child: _buildDeliverySection(),
-                      ),
-                    ],
-                  ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Reconectando... aguardando internet',
+                      style: TextStyle(color: Colors.orange[900], fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : errorMessage != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                errorMessage!,
+                                style: const TextStyle(color: Colors.red),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _loadOrders,
+                                child: const Text('Tentar Novamente'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Row(
+                          children: [
+                            // Lado esquerdo - Em Preparação
+                            Expanded(
+                              child: _buildPreparationSection(),
+                            ),
+                            // Divisor vertical mais espesso para Windows
+                            Container(
+                              width: 4,
+                              color: Colors.grey[400],
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            // Lado direito - Em Entrega
+                            Expanded(
+                              child: _buildDeliverySection(),
+                            ),
+                          ],
+                        ),
+            ),
+          ],
+        ),
       );
     } catch (e) {
       print('Error in build method: $e');
