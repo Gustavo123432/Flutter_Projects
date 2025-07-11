@@ -14,7 +14,7 @@ String generateRandomPassword() {
   const String chars = '0123456789';
   final Random random = Random.secure();
   final int length = 8; // Password length of 8 digits
-  
+
   return List.generate(length, (index) {
     return chars[random.nextInt(chars.length)];
   }).join();
@@ -131,7 +131,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
                                     : Icon(
                                         Icons.person,
                                         size: 47,
-                                        color: Color.fromARGB(255, 246, 141, 45),
+                                        color:
+                                            Color.fromARGB(255, 246, 141, 45),
                                       ),
                               ),
                             ),
@@ -156,7 +157,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      prefixIcon: Icon(Icons.person, color: Color.fromARGB(255, 130, 201, 189)),
+                      prefixIcon: Icon(Icons.person,
+                          color: Color.fromARGB(255, 130, 201, 189)),
                     ),
                     validator: (value) {
                       if (value!.isEmpty) {
@@ -173,7 +175,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      prefixIcon: Icon(Icons.person_outline, color: Color.fromARGB(255, 130, 201, 189)),
+                      prefixIcon: Icon(Icons.person_outline,
+                          color: Color.fromARGB(255, 130, 201, 189)),
                     ),
                     validator: (value) {
                       if (value!.isEmpty) {
@@ -190,7 +193,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      prefixIcon: Icon(Icons.email, color: Color.fromARGB(255, 130, 201, 189)),
+                      prefixIcon: Icon(Icons.email,
+                          color: Color.fromARGB(255, 130, 201, 189)),
                     ),
                     validator: (value) {
                       if (value!.isEmpty) {
@@ -225,7 +229,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        prefixIcon: Icon(Icons.lock, color: Color.fromARGB(255, 130, 201, 189)),
+                        prefixIcon: Icon(Icons.lock,
+                            color: Color.fromARGB(255, 130, 201, 189)),
                       ),
                       obscureText: true,
                       validator: (value) {
@@ -243,7 +248,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        prefixIcon: Icon(Icons.lock_outline, color: Color.fromARGB(255, 130, 201, 189)),
+                        prefixIcon: Icon(Icons.lock_outline,
+                            color: Color.fromARGB(255, 130, 201, 189)),
                       ),
                       obscureText: true,
                       validator: (value) {
@@ -265,7 +271,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      prefixIcon: Icon(Icons.badge, color: Color.fromARGB(255, 130, 201, 189)),
+                      prefixIcon: Icon(Icons.badge,
+                          color: Color.fromARGB(255, 130, 201, 189)),
                     ),
                   ),
                   SizedBox(height: 15),
@@ -361,7 +368,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color.fromARGB(255, 246, 141, 45),
-                          padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 15),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -381,7 +389,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color.fromARGB(255, 130, 201, 189),
-                          padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 15),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -409,13 +418,14 @@ class _AddUserDialogState extends State<AddUserDialog> {
     String nome = _nomeController.text;
     String apelido = _apelidoController.text;
     String username = _usernameController.text;
-    
+
     // Generate random password if using default
     if (_useDefaultPassword) {
       _generatedPassword = generateRandomPassword();
     }
-    
-    String password = _useDefaultPassword ? _generatedPassword! : _passwordController.text;
+
+    String password =
+        _useDefaultPassword ? _generatedPassword! : _passwordController.text;
     // Encrypt password with crypto MD5
     String encryptedPassword = md5.convert(utf8.encode(password)).toString();
     print(password);
@@ -465,10 +475,10 @@ class _AddUserDialogState extends State<AddUserDialog> {
           } else {
             await sendEmailUser();
             // Show the generated password in the success message if using default
-            String successMessage = _useDefaultPassword 
+            String successMessage = _useDefaultPassword
                 ? 'Utilizador criado com sucesso na base de dados!\nPassword gerada: $_generatedPassword'
                 : 'Utilizador criado com sucesso na base de dados!';
-                
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(successMessage),
@@ -496,7 +506,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
         print('Erro ao fazer a requisição POST: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao criar utilizador. Por favor, tente novamente.'),
+            content:
+                Text('Erro ao criar utilizador. Por favor, tente novamente.'),
             backgroundColor: Colors.red,
             duration: Duration(seconds: 3),
           ),
@@ -533,25 +544,33 @@ class _AddUserDialogState extends State<AddUserDialog> {
               ),
             );
           } else {
-            // Show the generated password in the success message if using default
-            String successMessage = _useDefaultPassword 
-                ? 'Utilizador criado com sucesso na base de dados!\nPassword gerada: $_generatedPassword'
-                : 'Utilizador criado com sucesso na base de dados!';
-                
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(successMessage),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 5),
-              ),
+            var response = await http.get(
+              Uri.parse(
+                  'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14.2&email=$username&pwd=$_generatedPassword'),
+            );
+            dynamic res = json.decode(response.body);
+            if (response.statusCode == 200 && res['success'] == true) {
+              String successMessage = _useDefaultPassword
+                  ? 'Utilizador criado com sucesso na base de dados!\nPassword gerada: $_generatedPassword'
+                  : 'Utilizador criado com sucesso na base de dados!';
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(successMessage),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 5),
+                ),
+              );
+            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      AdminDrawer(currentPage: UserTable(), numero: 1)),
             );
           }
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) =>
-                    AdminDrawer(currentPage: UserTable(), numero: 1)),
-          );
+
+          // Show the generated password in the success message if using default
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -565,7 +584,8 @@ class _AddUserDialogState extends State<AddUserDialog> {
         print('Erro ao fazer a requisição POST: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao criar utilizador. Por favor, tente novamente.'),
+            content:
+                Text('Erro ao criar utilizador. Por favor, tente novamente.'),
             backgroundColor: Colors.red,
             duration: Duration(seconds: 3),
           ),
@@ -588,11 +608,13 @@ class _AddUserDialogState extends State<AddUserDialog> {
   Future<void> sendEmailUser() async {
     try {
       // Get the non-encrypted password
-      String password = _useDefaultPassword ? _generatedPassword! : _passwordController.text;
-      
+      String password =
+          _useDefaultPassword ? _generatedPassword! : _passwordController.text;
+
       // Call the API to send email with password
       var response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14.2&email=${_usernameController.text}&pwd=$password'),
+        Uri.parse(
+            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14.2&email=${_usernameController.text}&pwd=$password'),
       );
 
       if (response.statusCode == 200) {
