@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/product.dart';
+import '../config/app_config.dart';
 
 class BaseProductService {
-  static const String baseUrl = 'https://appbar.epvc.pt/API';
+  static String get baseUrl => AppConfig.apiBaseUrl;
 
   // Get available quantity for a product (considering base product if it's a variation)
   static Future<int> getAvailableQuantity(String productName, {String? productId}) async {

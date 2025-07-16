@@ -8,6 +8,7 @@ import 'mbway_waiting_page.dart';
 import 'order_confirmation_page.dart';
 import 'order_declined_page.dart';
 import 'package:appbar_epvc/Aluno/home.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class MBWayPhoneNumberSaldoPage extends StatefulWidget {
   final Function(bool success, int orderNumber) onResult;
@@ -63,7 +64,7 @@ class _MBWayPhoneNumberSaldoPageState extends State<MBWayPhoneNumberSaldoPage> {
 
       print('Fetching user data from API...');
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '1',
           'user': idUser,

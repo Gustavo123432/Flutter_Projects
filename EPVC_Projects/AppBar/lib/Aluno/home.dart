@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:appbar_epvc/config/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:appbar_epvc/Aluno/drawerHome.dart';
@@ -40,7 +41,7 @@ List<Map<String, dynamic>> filteredProducts = [];
 Future<bool> checkEstablishmentOpen() async {
   try {
     final response = await http.get(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=37'),
+      Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=37'),
     );
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -168,7 +169,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     try {
       final response = await http.get(
         Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=37'),
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=37'),
       );
       print(response.body);
       if (response.statusCode == 200) {
@@ -223,7 +224,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     var user = prefs.getString("username");
 
     final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+      Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
       body: {
         'query_param': '1',
         'user': user,
@@ -282,7 +283,7 @@ class _HomeAlunoState extends State<HomeAluno> {
     String productNamee = productName.replaceAll('"', '');
 
     var response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$productNamee'));
+        '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=8&nome=$productNamee'));
 
     if (response.statusCode == 200) {
       setState(() {
@@ -304,7 +305,7 @@ class _HomeAlunoState extends State<HomeAluno> {
         for (var userData in userr) {
           var user = userData['Email'];
           var response = await http.post(
-            Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+            Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
             body: {
               'query_param': '7',
               'user': user,
@@ -341,7 +342,7 @@ class _HomeAlunoState extends State<HomeAluno> {
   void _getAllProducts() async {
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '4',
         },
@@ -1246,7 +1247,7 @@ class _HomeAlunoState extends State<HomeAluno> {
 
       // Make the API request
       var response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
 
       if (response.statusCode == 200) {
         // Parse the response
@@ -1299,7 +1300,7 @@ class _CategoryPageState extends State<CategoryPage> {
     try {
       String cleanProductName = productName.replaceAll('"', '').trim();
       var response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
         if (data is Map && data.containsKey('error')) {
@@ -2018,7 +2019,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     var user = prefs.getString("username");
 
     final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+      Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
       body: {
         'query_param': '1',
         'user': user,
@@ -2609,7 +2610,7 @@ return showDialog(
                       'Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
                   var response = await http.get(
                     Uri.parse(
-                        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
+                        '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
                   );
                   print(
                       'Resposta da API após atualizar quantidades: \\${response.body}');
@@ -2842,7 +2843,7 @@ return showDialog(
 
       // Criar o pedido com as informações de pagamento em dinheiro
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php'),
         body: {
           'query_param': '5',
           'nome': nome,
@@ -2910,7 +2911,7 @@ return showDialog(
                 'Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
             var response = await http.get(
               Uri.parse(
-                  'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
+                  '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
             );
             print(
                 'Resposta da API após atualizar quantidades: \\${response.body}');
@@ -3033,7 +3034,7 @@ return showDialog(
 
         // Enviar solicitação POST para a API para cada pedido
         var response = await http.post(
-          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+          Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
           body: {
             'query_param': '6',
             'user': user,
@@ -3116,7 +3117,7 @@ return showDialog(
 
       // Chamar a API de faturação
       final response = await http.post(
-        Uri.parse('http://192.168.22.88/api/api.php'),
+        Uri.parse('${AppConfig.externalXdApiUrl}'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -3241,7 +3242,7 @@ return showDialog(
 
       // Make the API request
       var response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
 
       if (response.statusCode == 200) {
         // Parse the response
@@ -3394,8 +3395,7 @@ return showDialog(
                           users[0]['NIF'].toString() != nif) {
                         try {
                           final response = await http.post(
-                            Uri.parse(
-                                'https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+                            Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
                             body: {
                               'query_param': 'update_nif',
                               'user_id': users[0]['IdUser'].toString(),
@@ -3588,7 +3588,7 @@ return showDialog(
 
         // Primeiro, criar o pedido para obter o número do pedido
         final orderResponse = await http.post(
-          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+          Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php'),
           body: {
             'query_param': '5',
             'nome': nome,
@@ -3627,7 +3627,7 @@ return showDialog(
 
             // Call API to deduct balance and record transaction
             final response = await http.post(
-              Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+              Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
               body: {
                 'query_param': '9.1',
                 'email': userEmail,
@@ -3669,7 +3669,7 @@ return showDialog(
                     'Atualizando quantidades dos produtos: IDs $idsParam para quantidades $quantitiesParam');
                 var response = await http.get(
                   Uri.parse(
-                      'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
+                      '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=18&op=2&ids=$idsParam&quantities=$quantitiesParam'),
                 );
                 print(
                     'Resposta da API após atualizar quantidades: \\${response.body}');
@@ -4683,7 +4683,7 @@ class _RecentBuysPageState extends State<RecentBuysPage> {
       String cleanProductName = productName.replaceAll('"', '').trim();
 
       var response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
 
       if (response.statusCode == 200) {
         var data = json.decode(response.body);

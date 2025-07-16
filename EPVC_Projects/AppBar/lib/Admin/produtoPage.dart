@@ -6,6 +6,7 @@ import 'package:appbar_epvc/Admin/addProduto.dart';
 import 'package:appbar_epvc/Admin/drawerAdmin.dart';
 import 'package:appbar_epvc/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 class Product {
   String id; // Assuming your API returns an ID for each product
@@ -108,7 +109,7 @@ class _ProductPageState extends State<ProdutoPage> {
 
   Future<void> fetchData() async {
     final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+      Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
       body: {
         'query_param': '4',
       },
@@ -136,7 +137,7 @@ class _ProductPageState extends State<ProdutoPage> {
     var categoria = product.category;
     var response = await http.get(
       Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=6&id=$id&nome=$nome&preco=$preco&available=$qtd&categoria=$categoria'),
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=6&id=$id&nome=$nome&preco=$preco&available=$qtd&categoria=$categoria'),
     );
     print(response);
     if (response.statusCode == 200) {
@@ -481,7 +482,7 @@ class _ProductCardState extends State<ProductCard> {
 
 void removeProduct(String id) async {
   var response = await http.get(
-    Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=7&id=$id'),
+    Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=7&id=$id'),
     //body: jsonEncode(product.toJson()),
   );
   print(response);

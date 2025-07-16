@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 import 'package:appbar_epvc/Bar/drawerBar.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class RestaurantePage extends StatefulWidget {
   @override
@@ -34,7 +35,7 @@ class _RestaurantePageState extends State<RestaurantePage> {
   Future<void> fetchReservations() async {
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarMonteAPI_Post.php'),
         body: {
           'query_param': '3', // Adjust this according to your API
         },
@@ -62,7 +63,7 @@ class _RestaurantePageState extends State<RestaurantePage> {
 Future<void> fetchMenuItems() async {
   try {
     final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+      Uri.parse('${AppConfig.apiBaseUrl}/appBarMonteAPI_Post.php'),
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: {'query_param': '4'},
     );
@@ -104,7 +105,7 @@ Future<void> fetchMenuItems() async {
   Future<void> addMenuItem() async {
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarMonteAPI_Post.php'),
         body: {
           'query_param': 'add_menu_item',
           'name': _menuNameController.text,
@@ -130,7 +131,7 @@ Future<void> fetchMenuItems() async {
   Future<void> deleteMenuItem(String id) async {
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarMonteAPI_Post.php'),
         body: {
           'query_param': '7',
           'id': id,
@@ -200,7 +201,7 @@ Future<void> fetchMenuItems() async {
   Future<void> toggleMenuItemStatus(String id, String newStatus) async {
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarMonteAPI_Post.php'),
         body: {
           'query_param': '5',
           'id': id,
@@ -319,7 +320,7 @@ Future<void> fetchMenuItems() async {
 Future<void> updateReservationState(String id, String newState) async {
   try {
     final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+      Uri.parse('${AppConfig.apiBaseUrl}/appBarMonteAPI_Post.php'),
       body: {
         'query_param': '5.1',
         'id': id,

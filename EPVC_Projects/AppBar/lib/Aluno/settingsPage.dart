@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:appbar_epvc/Aluno/drawerHome.dart';
 import 'package:appbar_epvc/SIBS/Saldo/mbway_phone_page.dart';
 import 'package:appbar_epvc/SIBS/sibs_service.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -218,7 +219,7 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+      Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
       body: {
         'query_param': '1',
         'user': user,
@@ -401,7 +402,7 @@ class _SettingsPageState extends State<SettingsPage> {
         }
 
         final response = await http.post(
-          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+          Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
           body: body,
         );
 
@@ -414,7 +415,7 @@ class _SettingsPageState extends State<SettingsPage> {
             print('Saving phone number via dedicated endpoint');
             final phoneResponse = await http.get(
               Uri.parse(
-                  'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=31&tlf=${_tlfController.text}&id=${userData['IdUser']}'),
+                  '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=31&tlf=${_tlfController.text}&id=${userData['IdUser']}'),
             );
 
             print('Phone API Response: ${phoneResponse.statusCode}');
@@ -479,7 +480,7 @@ class _SettingsPageState extends State<SettingsPage> {
             };
 
             final xdResponse = await http.post(
-              Uri.parse('https://appbar.epvc.pt/API/appBarAPIXD_Post.php'),
+              Uri.parse('${AppConfig.apiBaseUrl}/appBarAPIXD_Post.php'),
               headers: {'Content-Type': 'application/json'},
               body: json.encode(xdPayload),
             );
@@ -1086,7 +1087,7 @@ class _SettingsPageState extends State<SettingsPage> {
       }
       // Verificar se o utilizador já existe na XD (query_param 2.1)
       final checkResponse = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPIXD_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPIXD_Post.php'),
         body: json.encode({
           'query_param': 2.1,
           'vat': nif,
@@ -1121,7 +1122,7 @@ class _SettingsPageState extends State<SettingsPage> {
       }
       // Criar utilizador na XD
       final createResponse = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPIXD_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPIXD_Post.php'),
         body: json.encode({
           'query_param': 2,
           'name': name,

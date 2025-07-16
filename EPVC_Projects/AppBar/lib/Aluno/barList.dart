@@ -1,5 +1,6 @@
 import 'dart:async'; // Import Timer
 import 'dart:typed_data';
+import 'package:appbar_epvc/config/app_config.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -17,7 +18,7 @@ class _ListaProdutosState extends State<ListaProdutos> {
   Future<void> fetchData() async {
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '4',
         },

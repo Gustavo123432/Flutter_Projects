@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:appbar_epvc/Aluno/drawerHome.dart';
 import 'package:appbar_epvc/Aluno/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class Reservaspagealuno extends StatefulWidget {
   @override
@@ -38,7 +39,7 @@ class _ReservaspagealunoState extends State<Reservaspagealuno> {
 
     if (user != null) {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '1',
           'user': user,
@@ -59,7 +60,7 @@ class _ReservaspagealunoState extends State<Reservaspagealuno> {
       var user = users[0]['Email'];
 
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarMonteAPI_Post.php'),
         body: {
           'query_param': '8',
           'aluno': user,
@@ -80,7 +81,7 @@ class _ReservaspagealunoState extends State<Reservaspagealuno> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarMonteAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarMonteAPI_Post.php'),
         body: {
           'query_param': '9',
           'id': id,

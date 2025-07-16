@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:appbar_epvc/widgets/loading_overlay.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class SaldoPage extends StatefulWidget {
   @override
@@ -44,7 +45,7 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
     
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '13',
          
@@ -73,7 +74,7 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
   Future<void> _fetchTurmas() async {
     try {
       final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=20'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=20'),
       );
       
       if (response.statusCode == 200) {
@@ -102,7 +103,7 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
     
     try {
       final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2.3&op=$turma'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=2.3&op=$turma'),
       );
       
       if (response.statusCode == 200) {
@@ -135,7 +136,7 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
       print('Attempting to authorize user with ID: $userId'); // Debug print
       
       final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=33&op=0&id=$userId'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=33&op=0&id=$userId'),
       );
       
       print('Authorization response status: ${response.statusCode}'); // Debug print
@@ -176,7 +177,7 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
     
     try {
       final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=33&op=1&id=$userId'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=33&op=1&id=$userId'),
       );
       
       print('Revoke response: ${response.body}'); // Debug print
@@ -255,7 +256,7 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
     
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '22', // Assuming this is the endpoint to update user image
           'userId': userId,
@@ -361,7 +362,7 @@ class _SaldoPageState extends State<SaldoPage> with SingleTickerProviderStateMix
       
       // Update balance and record transaction in one call
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '9',
           'email': userId,

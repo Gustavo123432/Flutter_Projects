@@ -125,7 +125,7 @@ return showDialog(
               leading: Icon(Icons.account_balance_wallet),
               title: Text('Saldo'),
             ),
-            ListTile(
+           /* ListTile(
               onTap: () {
                 Navigator.push(
                   context,
@@ -138,7 +138,7 @@ return showDialog(
                 height: 28,
               ),
               title: Text('Bot Delivery'),
-            ),
+            ),*/
         
             Spacer(),
             DefaultTextStyle(

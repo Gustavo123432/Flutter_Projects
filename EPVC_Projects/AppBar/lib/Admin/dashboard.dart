@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:appbar_epvc/login.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import '../config/app_config.dart';
 
 class DashboardPage extends StatefulWidget {
   @override
@@ -63,7 +64,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> fetchPaymentStats() async {
     try {
       final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=32'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=32'),
       );
 
       if (response.statusCode == 200) {
@@ -84,7 +85,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void fetchQuantidadeClientes() {
     http
         .get(Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2'))
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=2'))
         .then((response) {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -102,7 +103,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void fetchQuantidadeProdutos() {
     http
         .get(Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=25'))
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=25'))
         .then((response) {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -120,7 +121,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void fetchQuantidadePedidos() {
     http
         .get(Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=26'))
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=26'))
         .then((response) {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -138,7 +139,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void fetchAnualReceita() {
     http
         .get(Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=27'))
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=27'))
         .then((response) {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -156,7 +157,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void fetchMonthTotalValue() {
     http
         .get(Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=28'))
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=28'))
         .then((response) {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -205,7 +206,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> fetchRecentOrders() async {
     try {
       final response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=29'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=29'));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -244,7 +245,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 void fetchPopularProducts() {
   http.get(
-    Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=30')
+    Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=30')
   ).then((response) {
     if (response.statusCode == 200) {
       try {

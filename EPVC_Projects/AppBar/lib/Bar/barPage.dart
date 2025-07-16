@@ -12,6 +12,7 @@ import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:diacritic/diacritic.dart';
 import '../services/base_product_service.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class PurchaseOrder {
   final String number;
@@ -99,7 +100,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     try {
       final response = await http.get(
         Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=37'),
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=37'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -138,7 +139,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     try {
       final response = await http.get(
         Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=37.2'),
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=37.2'),
       );
       if (response.statusCode == 200 && response.body.contains('Dia Aberto')) {
         setState(() {
@@ -164,7 +165,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     try {
       final response = await http.get(
         Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=10'),
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=10'),
       );
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
@@ -458,7 +459,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   Future<void> _markOrderAsPrepared(PurchaseOrder order) async {
     try {
       final response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}&op=1'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}&op=1'));
 
       if (response.statusCode == 200) {
         setState(() {
@@ -538,7 +539,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     try {
       // Primeiro, marcar como concluído
       final response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}&op=2'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=17&nome=${order.requester}&npedido=${order.number}&op=2'));
 
       if (response.statusCode == 200) {
         // Só depois faturar
@@ -571,7 +572,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     try {
       final response = await http.get(
         Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=5.1&nome=${Uri.encodeComponent(productName)}'),
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=5.1&nome=${Uri.encodeComponent(productName)}'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -813,7 +814,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
   Future<void> _deleteOrder(PurchaseOrder order) async {
     try {
       final response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=24&nome=${order.requester}&ids=${order.number}'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=24&nome=${order.requester}&ids=${order.number}'));
 
       if (response.statusCode == 200) {
         setState(() {
@@ -842,7 +843,7 @@ class _BarPagePedidosState extends State<BarPagePedidos> {
     try {
       final response = await http.get(
         Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=37.1'),
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=37.1'),
       );
       if (response.statusCode == 200 && response.body.contains('Dia Fechado')) {
         setState(() {
@@ -1743,7 +1744,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
       // Use o nome original, sem removeDiacritics
       String cleanProductName = productName.replaceAll('"', '').trim();
       final response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=8&nome=$cleanProductName'));
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
         if (data is Map && data.containsKey('error')) return 0;
@@ -1761,7 +1762,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
   Future<void> _getAllProducts() async {
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {'query_param': '4'},
       );
       if (response.statusCode == 200) {
@@ -1867,7 +1868,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
 
       // 1. Regista a compra na base de dados
       final registoResponse = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php'),
         body: {
           'query_param': '5',
           'nome': nomeCliente,
@@ -1907,7 +1908,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
         if (orderNumber != null) {
           // 2. Marca como concluído
           final concluirResponse = await http.get(Uri.parse(
-              'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=$nomeCliente&npedido=$orderNumber&op=2'));
+              '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=17&nome=$nomeCliente&npedido=$orderNumber&op=2'));
           if (concluirResponse.statusCode == 200) {
             // 3. Só agora faz a faturação
             await registrarCompraComFaturacao(context,
@@ -2021,7 +2022,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
       };
 
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php'),
         body: {
           'query_param': '5',
           'nome': 'Bar',
@@ -2061,7 +2062,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
           }).join(',');
           final quantities = grouped.values.join(',');
           final stockResponse = await http.get(Uri.parse(
-              'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$ids&quantities=$quantities'));
+              '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=18&op=2&ids=$ids&quantities=$quantities'));
           // Debug da resposta da API de desconto de stock
           print('Desconto de stock - Status: \\${stockResponse.statusCode}');
           print('Desconto de stock - Body: \\${stockResponse.body}');
@@ -2069,7 +2070,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
 
           // Mark the order as completed immediately
           final completeResponse = await http.get(Uri.parse(
-              'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=Bar&npedido=$orderNumber&op=2'));
+              '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=17&nome=Bar&npedido=$orderNumber&op=2'));
 
           if (completeResponse.statusCode == 200) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -2647,7 +2648,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
         try {
           final response = await http.get(
             Uri.parse(
-                'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=5.1&nome=${Uri.encodeComponent(productName)}'),
+                '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=5.1&nome=${Uri.encodeComponent(productName)}'),
           );
           if (response.statusCode == 200) {
             final data = json.decode(response.body);
@@ -2719,7 +2720,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
           final orderNumber = data['orderNumber'] ?? null;
           if (orderNumber != null) {
             final completeResponse = await http.get(Uri.parse(
-                'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=17&nome=Bar&npedido=$orderNumber&op=2'));
+                '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=17&nome=Bar&npedido=$orderNumber&op=2'));
             print('[INVOICE API] Mark as completed status: ' +
                 completeResponse.statusCode.toString());
             print('[INVOICE API] Mark as completed body: ' +
@@ -2780,7 +2781,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
       }).join(',');
       final quantities = grouped.values.join(',');
       final stockResponse = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=2&ids=$ids&quantities=$quantities'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=18&op=2&ids=$ids&quantities=$quantities'));
       print('Desconto de stock - Status: ${stockResponse.statusCode}');
       print('Desconto de stock - Body: ${stockResponse.body}');
     } catch (e) {
@@ -2799,7 +2800,7 @@ class _NewRegistrationDialogState extends State<NewRegistrationDialog> {
     try {
       final response = await http.get(
         Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=5.1&nome=${Uri.encodeComponent(productName)}'),
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=5.1&nome=${Uri.encodeComponent(productName)}'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

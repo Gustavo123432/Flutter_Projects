@@ -8,6 +8,7 @@ import 'mbway_waiting_page.dart';
 import 'order_confirmation_page.dart';
 import 'order_declined_page.dart';
 import 'package:appbar_epvc/Aluno/home.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class MBWayPhoneNumberPage extends StatefulWidget {
   final double amount;
@@ -70,7 +71,7 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
 
       print('Making API request with user ID: $idUser');
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '1',
           'user': idUser,
@@ -190,7 +191,7 @@ class _MBWayPhoneNumberPageState extends State<MBWayPhoneNumberPage> {
         // Salvar no banco de dados
         final savePhoneResponse = await http.get(
           Uri.parse(
-              'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=31&tlf=$phoneNumber&id=${users[0]['IdUser']}'),
+              '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=31&tlf=$phoneNumber&id=${users[0]['IdUser']}'),
         );
 
         print('Save phone response: ${savePhoneResponse.statusCode}');

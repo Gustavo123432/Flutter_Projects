@@ -25,6 +25,8 @@ if ($conn->connect_error) {
     die(json_encode(array("message" => "Connection failed: " . $conn->connect_error)));
 }
 
+$externalXdApiUrl = getenv('EXTERNAL_XD_API_URL') ?: 'http://192.168.22.88/api/api.php';
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $input = file_get_contents('php://input');
     $jsonData = json_decode($input, true);
@@ -40,7 +42,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         // Enviar para a API externa
-        $ch = curl_init('http://192.168.22.88/api/api.php');
+        $ch = curl_init($externalXdApiUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
@@ -87,7 +89,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             exit;
         }
         // Enviar para a API externa
-        $ch = curl_init('http://192.168.22.88/api/api.php');
+        $ch = curl_init($externalXdApiUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
@@ -132,7 +134,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             exit;
         }
         // Enviar para a API externa
-        $ch = curl_init('http://192.168.22.88/api/api.php');
+        $ch = curl_init($externalXdApiUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
@@ -200,7 +202,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             'totalAmount' => round($totalAmount, 2),
         ];
         // Enviar para a API externa
-        $ch = curl_init('http://192.168.22.88/api/api.php');
+        $ch = curl_init($externalXdApiUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:appbar_epvc/Bar/drawerBar.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class BarRequests extends StatefulWidget {
   const BarRequests({Key? key}) : super(key: key);
@@ -43,7 +44,7 @@ class _BarRequestsState extends State<BarRequests> {
     try {
       print('Loading orders...');
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '14',
         },

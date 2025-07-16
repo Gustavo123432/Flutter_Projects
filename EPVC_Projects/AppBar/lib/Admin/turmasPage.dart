@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:appbar_epvc/Admin/drawerAdmin.dart';
+import '../config/app_config.dart';
 
 class Turma {
   final String turma;
@@ -36,7 +37,7 @@ class _TurmasPageState extends State<TurmasPage> {
 
   Future<void> _fetchTurmas() async {
     final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=20'));
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=20'));
     if (response.statusCode == 200) {
       final List<dynamic> responseData = json.decode(response.body);
       List<Turma> fetchedTurmas =
@@ -53,7 +54,7 @@ class _TurmasPageState extends State<TurmasPage> {
 
   void _addTurma(String turmaName) async {
     final response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=21&nome=$turmaName'));
+        '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=21&nome=$turmaName'));
     if (response.statusCode == 200) {
       setState(() {
         turmas.add(Turma(turma: turmaName));
@@ -82,7 +83,7 @@ class _TurmasPageState extends State<TurmasPage> {
   void _toggleRemoveSelection(int index) async {
     if (removerMode) {
       final response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}'));
       if (response.statusCode == 200) {
         _removeTurma(index);
         print('Turma removed successfully');
@@ -97,7 +98,7 @@ class _TurmasPageState extends State<TurmasPage> {
     for (int i = indexesToRemove.length - 1; i >= 0; i--) {
       final int index = indexesToRemove[i];
       final response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=22&nome=${turmas[index].turma}'));
 
       if (response.statusCode == 200) {
         _removeTurma(index);

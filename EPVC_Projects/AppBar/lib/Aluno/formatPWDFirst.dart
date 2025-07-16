@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:appbar_epvc/config/app_config.dart';
 
 // Utility function to generate MD5 hash
 String generateMD5(String input) {
@@ -48,7 +49,7 @@ class _FirstLoginState extends State<FirstLogin> {
 
     try {
       final response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=16&password=$encryptedPwd&email=$email'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=16&password=$encryptedPwd&email=$email'));
 
       if (response.statusCode == 200) {
         // Delay navigation for 1 second to show the login screen briefly

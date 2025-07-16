@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:appbar_epvc/Admin/users.dart';
 import 'package:appbar_epvc/Drawer/drawer.dart';
 import 'package:crypto/crypto.dart';
+import '../config/app_config.dart';
 
 // Function to generate random password
 String generateRandomPassword() {
@@ -63,7 +64,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
   Future<List<String>> _fetchTurmasFromAPI() async {
     try {
       final response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=20'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=20'));
       if (response.statusCode == 200) {
         final List<dynamic> responseData = json.decode(response.body);
         List<String> turmas =
@@ -444,7 +445,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
     if (base64Image != null) {
       try {
         var response = await http.post(
-            Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+            Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
             body: {
               'query_param': '2',
               'nome': nome,
@@ -516,7 +517,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
     } else if (base64Image == null) {
       try {
         var response = await http.post(
-            Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+            Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
             body: {
               'query_param': '2.1',
               'nome': nome,
@@ -546,7 +547,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
           } else {
             var response = await http.get(
               Uri.parse(
-                  'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14.2&email=$username&pwd=$_generatedPassword'),
+                  '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=14.2&email=$username&pwd=$_generatedPassword'),
             );
             dynamic res = json.decode(response.body);
             if (response.statusCode == 200 && res['success'] == true) {
@@ -614,7 +615,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
       // Call the API to send email with password
       var response = await http.get(
         Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14.2&email=${_usernameController.text}&pwd=$password'),
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=14.2&email=${_usernameController.text}&pwd=$password'),
       );
 
       if (response.statusCode == 200) {

@@ -18,6 +18,7 @@ import 'package:open_file/open_file.dart';
 // Adicionar import condicional para web
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+import '../config/app_config.dart';
 
 class PurchaseOrder {
   final String number;
@@ -68,7 +69,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
 
   Future<List<PurchaseOrder>> fetchPurchaseOrders() async {
     final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=9'));
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=9'));
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => PurchaseOrder.fromJson(json)).toList();
@@ -600,7 +601,7 @@ class _PurchaseOrdersPageState extends State<PedidosPage> {
 
   Future<void> removeAllApi() async {
     var response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=12'));
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=12'));
 
     if (response.statusCode == 200) {
       setState(() {

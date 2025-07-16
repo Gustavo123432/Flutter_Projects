@@ -5,6 +5,7 @@ import 'package:appbar_epvc/Aluno/drawerHome.dart';
 import 'package:appbar_epvc/Aluno/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class PedidosPageAlunos extends StatefulWidget {
   @override
@@ -39,7 +40,7 @@ class _PedidosPageAlunosState extends State<PedidosPageAlunos> {
 
     if (user != null) {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '1',
           'user': user,
@@ -63,7 +64,7 @@ class _PedidosPageAlunosState extends State<PedidosPageAlunos> {
 
       final response = await http.get(
         Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=13&nome=$user'),
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=13&nome=$user'),
       );
       if (response.statusCode == 200) {
         setState(() {

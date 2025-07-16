@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:open_file/open_file.dart';
 import 'package:intl/intl.dart';
 //import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart'; // Import Print Bluetooth Thermal
+import 'package:appbar_epvc/config/app_config.dart';
 
 class Order {
   final String number;
@@ -94,7 +95,7 @@ class _PedidosRegistadosPageState extends State<PedidosRegistadosPage> {
 
   Future<List<Order>> _fetchOrders() async {
     // Buscar todos os pedidos da API, sem filtrar por estado
-    final response = await http.get(Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=9'));
+    final response = await http.get(Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=9'));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
       return data.map((json) => Order.fromJson(json)).toList();

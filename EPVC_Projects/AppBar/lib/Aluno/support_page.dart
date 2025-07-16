@@ -2,6 +2,7 @@ import 'package:appbar_epvc/Aluno/drawerHome.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class SupportPage extends StatefulWidget {
   final String userEmail;
@@ -75,7 +76,7 @@ class _SupportPageState extends State<SupportPage> {
       try {
         final response = await http.get(
           Uri.parse(
-              'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14.1&email=${widget.userEmail}&motivo=${Uri.encodeComponent(finalReason)}&descricao=${Uri.encodeComponent(_descriptionController.text)}'),
+              '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=14.1&email=${widget.userEmail}&motivo=${Uri.encodeComponent(finalReason)}&descricao=${Uri.encodeComponent(_descriptionController.text)}'),
         );
 
         if (mounted) { // Check if the widget is still mounted before showing feedback

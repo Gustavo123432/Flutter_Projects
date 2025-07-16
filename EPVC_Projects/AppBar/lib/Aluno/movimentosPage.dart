@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:appbar_epvc/config/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,7 +41,7 @@ class _MovimentosPageState extends State<MovimentosPage> {
 
     if (user != null) {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '1',
           'user': user,
@@ -62,7 +63,7 @@ class _MovimentosPageState extends State<MovimentosPage> {
 
       final response = await http.get(
         Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=34&user=$user'),
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=34&user=$user'),
       );
       if (response.statusCode == 200) {
         setState(() {
@@ -88,7 +89,7 @@ class _MovimentosPageState extends State<MovimentosPage> {
     try {
       final response = await http.get(
         Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=35&npedido=$orderNumber'),
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=35&npedido=$orderNumber'),
       );
       
       if (response.statusCode == 200) {

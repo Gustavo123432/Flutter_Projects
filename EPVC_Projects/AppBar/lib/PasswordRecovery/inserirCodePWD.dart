@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:appbar_epvc/PasswordRecovery/reenserirPWD.dart';
 import 'package:appbar_epvc/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class InserirCodePWD extends StatefulWidget {
   @override
@@ -69,7 +70,7 @@ class _InserirCodePWDState extends State<InserirCodePWD> {
       var email = prefs.getString("email");
       
       var response = await _client!.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14&email=$email&tentativa=1'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=14&email=$email&tentativa=1'));
       
       if (!mounted) return;
 
@@ -171,7 +172,7 @@ class _InserirCodePWDState extends State<InserirCodePWD> {
       
       if (email != null) {
         var response = await _client!.get(Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=15&code=$code&email=$email'));
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=15&code=$code&email=$email'));
 
         if (!mounted) return;
 

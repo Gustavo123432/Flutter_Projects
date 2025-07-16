@@ -10,6 +10,7 @@ import 'order_declined_page.dart';
 import 'order_confirmation_page.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:intl/intl.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class MBWayPaymentWaitingPage extends StatefulWidget {
   final double amount;
@@ -471,7 +472,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
     
     // Criar o pedido na API
     final orderResponse = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+      Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php'),
       body: {
         'query_param': '5',
         'nome': widget.orderData['nome'],
@@ -558,7 +559,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
     // This function can be used to notify other parts of the system about the new order
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php'),
         body: {
           'query_param': 'notify_order',
           'order_number': orderNumber.toString(),
@@ -608,7 +609,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
       }
 
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '1',
           'user': user,
@@ -660,7 +661,7 @@ class _MBWayPaymentWaitingPageState extends State<MBWayPaymentWaitingPage> {
 
           // Send regular POST request
           final response = await http.post(
-            Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+            Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
             body: {
               'query_param': '6',
               'user': users[0]['Email'],

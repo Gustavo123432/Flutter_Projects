@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:appbar_epvc/PasswordRecovery/inserirCodePWD.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:appbar_epvc/login.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class EmailRequestPage extends StatefulWidget {
   final int tentativa;
@@ -68,7 +69,7 @@ class _EmailRequestPageState extends State<EmailRequestPage> {
       var tentativa = widget.tentativa;
 
       var response = await _client!.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=14&email=$email&tentativa=$tentativa'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=14&email=$email&tentativa=$tentativa'));
       
       if (!mounted) return;
       

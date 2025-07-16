@@ -10,6 +10,7 @@ import 'package:appbar_epvc/models/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:appbar_epvc/widgets/loading_overlay.dart';
 import '../services/base_product_service.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 List<Product> filteredProducts =
     []; // Assuming this is where filtered products will be stored
@@ -49,7 +50,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {'query_param': '4'},
       );
 
@@ -161,7 +162,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
     var availableValue = newAvailability ? "1" : "0";
     var response = await http.get(
       Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=1&id=$id&qtd=$availableValue'),
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=18&op=1&id=$id&qtd=$availableValue'),
     );
     if (response.statusCode == 200) {
       setState(() {
@@ -330,7 +331,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
       
       // Update base product first
       var baseResponse = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=1&ids=$baseProductId&quantities=$quantityToAdd'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=18&op=1&ids=$baseProductId&quantities=$quantityToAdd'),
       );
       
       if (baseResponse.statusCode == 200) {
@@ -360,7 +361,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
               print('Updating variation ${variation.name}: current=$currentVariationQuantity, target=$newBaseQuantity, adding=$quantityToAddToVariation');
               
               var variationResponse = await http.get(
-                Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=1&ids=${variation.id}&quantities=$quantityToAddToVariation'),
+                Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=18&op=1&ids=${variation.id}&quantities=$quantityToAddToVariation'),
               );
               
               if (variationResponse.statusCode == 200) {
@@ -433,7 +434,7 @@ class _ProdutoPageBarState extends State<ProdutoPageBar> {
       } else {
         // Fallback to regular update if no base product found
         var response = await http.get(
-          Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=18&op=1&ids=$variationId&quantities=$quantityToAdd'),
+          Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=18&op=1&ids=$variationId&quantities=$quantityToAdd'),
         );
         
         if (response.statusCode == 200) {

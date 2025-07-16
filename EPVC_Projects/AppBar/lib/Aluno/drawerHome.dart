@@ -1,3 +1,4 @@
+import 'package:appbar_epvc/config/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:appbar_epvc/Admin/produtoPage.dart';
 import 'package:appbar_epvc/Aluno/home.dart';
@@ -38,7 +39,7 @@ class _DrawerHomeState extends State<DrawerHome> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '1',
           'user': user,

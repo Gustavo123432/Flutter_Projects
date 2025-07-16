@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:appbar_epvc/config/app_config.dart';
 
 // Utility function to generate MD5 hash
 String generateMD5(String input) {
@@ -89,7 +90,7 @@ class _ReenserirPasswordState extends State<ReenserirPassword> {
       var encryptedPwd = generateMD5(pwd);
 
       var response = await _client!.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=16&password=$encryptedPwd&email=$email'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=16&password=$encryptedPwd&email=$email'));
 
       if (!mounted) return;
 

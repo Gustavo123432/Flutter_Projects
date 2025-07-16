@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http_parser/http_parser.dart';
+import '../config/app_config.dart';
 
 class UserTable extends StatefulWidget {
   @override
@@ -63,7 +64,7 @@ class _UserTableState extends State<UserTable> {
     var user = prefs.getString("username");
 
     final response = await http.post(
-      Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+      Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
       body: {
         'query_param': '1',
         'user': user,
@@ -90,7 +91,7 @@ class _UserTableState extends State<UserTable> {
   Future<List<String>> _fetchTurmasFromAPI() async {
     try {
       final response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=20'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=20'));
       if (response.statusCode == 200) {
         final List<dynamic> responseData = json.decode(response.body);
         List<String> turmas =
@@ -109,7 +110,7 @@ class _UserTableState extends State<UserTable> {
     var user = prefs.getString("username");
 
     var response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2'));
+        '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=2'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -125,7 +126,7 @@ class _UserTableState extends State<UserTable> {
     var user = prefs.getString("username");
 
     var response = await http.get(Uri.parse(
-        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2.1&limit=${rowsPerPage.toString()}&page=${currentPage.toString()}'));
+        '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=2.1&limit=${rowsPerPage.toString()}&page=${currentPage.toString()}'));
 
     if (response.statusCode == 200) {
       setState(() {
@@ -165,7 +166,7 @@ class _UserTableState extends State<UserTable> {
     print(estado);
     try {
       var response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=3&userId=$userId&user=$user&nome=$nome&apelido=$apelido&turma=$turma&permissao=$permissao&estado=$estado'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=3&userId=$userId&user=$user&nome=$nome&apelido=$apelido&turma=$turma&permissao=$permissao&estado=$estado'));
       if (response.statusCode == 200) {
         // Se a atualização foi bem-sucedida, exiba uma mensagem ou faça qualquer outra ação necessária
         ScaffoldMessenger.of(context).showSnackBar(
@@ -207,7 +208,7 @@ class _UserTableState extends State<UserTable> {
       );
     } else {
       var response = await http.get(Uri.parse(
-          'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=11&idUser=$idUser'));
+          '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=11&idUser=$idUser'));
 
       if (response.statusCode == 200) {
         setState(() {
@@ -371,7 +372,7 @@ class _UserTableState extends State<UserTable> {
                 } else {
                   try {
                     var response = await http.get(Uri.parse(
-                        'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2.3&op=$selectedTurma'));
+                        '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=2.3&op=$selectedTurma'));
 
                     if (response.statusCode == 200) {
                       final decodedData = json.decode(response.body);
@@ -465,7 +466,7 @@ class _UserTableState extends State<UserTable> {
     } else {
       try {
         var response = await http.get(Uri.parse(
-            'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=2.2&op=$query'));
+            '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=2.2&op=$query'));
 
         if (response.statusCode == 200) {
           final decodedData = json.decode(response.body);

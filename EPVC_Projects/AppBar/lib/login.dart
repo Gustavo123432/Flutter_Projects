@@ -15,6 +15,7 @@ import 'package:appbar_epvc/PasswordRecovery/reenserirPWD.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 String errorMessage = '';
 
@@ -85,7 +86,7 @@ class _LoginFormState extends State<LoginForm> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=1&name=$name&pwd=$encryptedPwd'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=1&name=$name&pwd=$encryptedPwd'),
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:appbar_epvc/Admin/produtoPage.dart';
 import 'package:flutter/services.dart';
+import '../config/app_config.dart';
 
 class AddProdutoPage extends StatefulWidget {
   @override
@@ -254,7 +255,7 @@ class _AddProdutoPageState extends State<AddProdutoPage> {
 
     try {
       var response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '5',
           'nome': nome,

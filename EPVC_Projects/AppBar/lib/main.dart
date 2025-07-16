@@ -7,6 +7,7 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'login.dart';
+import 'config/app_config.dart';
 
 void main() async {
   // Garantir que o Flutter está inicializado
@@ -50,6 +51,32 @@ class MyApp extends StatelessWidget {
         ),
       ),
       home: const Center(child: ConnectionCheckScreen()),
+      // builder removido, escolha de ambiente é feita via código em AppConfig
+    );
+  }
+}
+
+class _EnvironmentSwitcher extends StatefulWidget {
+  @override
+  State<_EnvironmentSwitcher> createState() => _EnvironmentSwitcherState();
+}
+
+class _EnvironmentSwitcherState extends State<_EnvironmentSwitcher> {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text('Testes', style: TextStyle(fontSize: 12)),
+        Switch(
+          value: AppConfig.environment == AppEnvironment.production,
+          onChanged: (val) {
+            setState(() {
+              AppConfig.environment = val ? AppEnvironment.production : AppEnvironment.test;
+            });
+          },
+        ),
+        Text('Produção', style: TextStyle(fontSize: 12)),
+      ],
     );
   }
 }
@@ -96,7 +123,7 @@ class _ConnectionCheckScreenState extends State<ConnectionCheckScreen> {
       print('Current app version: $currentVersion');
 
       final response = await http.get(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=settings'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=settings'),
       ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
@@ -195,7 +222,7 @@ class _ConnectionCheckScreenState extends State<ConnectionCheckScreen> {
       // Depois verifica a conexão com o servidor
       final response = await http
           .get(Uri.parse(
-              'https://appbar.epvc.pt/API/appBarAPI_GET.php?query_param=ping'))
+              '${AppConfig.apiBaseUrl}/appBarAPI_GET.php?query_param=ping'))
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode >= 200 && response.statusCode < 400) {

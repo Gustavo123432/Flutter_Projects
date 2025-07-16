@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../sibs_service.dart';
 import 'order_declined_page.dart';
 import 'order_confirmation_page.dart';
+import 'package:appbar_epvc/config/app_config.dart';
 
 class MBWayWaitingSaldoPage extends StatefulWidget {
   final String transactionId;
@@ -154,8 +155,8 @@ class _MBWayWaitingSaldoPageState extends State<MBWayWaitingSaldoPage> {
       }
 
       // Update user balance and record transaction in ab_movimentossaldo
-      final updateResponse = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '9',
           'email': username,
@@ -166,11 +167,11 @@ class _MBWayWaitingSaldoPageState extends State<MBWayWaitingSaldoPage> {
         },
       );
 
-      if (updateResponse.statusCode != 200) {
-        throw Exception('Failed to process balance load: ${updateResponse.statusCode}');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to process balance load: ${response.statusCode}');
       }
 
-      final responseData = json.decode(updateResponse.body);
+      final responseData = json.decode(response.body);
       if (responseData['success'] != true) {
         throw Exception('API reported failure: ${responseData['error'] ?? 'Unknown error'}');
       }

@@ -7,6 +7,7 @@ import 'drawerAdmin.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../config/app_config.dart';
 
 class BaseProductAdminPage extends StatefulWidget {
   @override
@@ -30,7 +31,7 @@ class _BaseProductAdminPageState extends State<BaseProductAdminPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://appbar.epvc.pt/API/appBarAPI_Post.php'),
+        Uri.parse('${AppConfig.apiBaseUrl}/appBarAPI_Post.php'),
         body: {
           'query_param': '4',
         },
